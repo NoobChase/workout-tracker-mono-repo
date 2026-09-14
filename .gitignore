@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# CDK
+cdk.out/
+.cdk.staging/
+
+# Secrets and local config — connection strings live in SSM, never in the repo
+.env
+.env.*
+!.env.example
+*.pem
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Agent local settings (CLAUDE.md itself is tracked, deliberately)
+.claude/settings.local.json

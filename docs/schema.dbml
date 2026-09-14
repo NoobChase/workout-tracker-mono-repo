@@ -1,0 +1,459 @@
+// Workout Tracker — schema for dbdiagram.io
+// Paste into https://dbdiagram.io/d
+// Companion to data-model.md
+//
+// PROVISIONAL. Once packages/db exists, the Drizzle schema is the source of
+// truth and this file should be generated or deleted — three hand-maintained
+// copies of one schema is two too many. See workout-tracker-build-plan.md.
+//
+// Every primary key is a UUIDv7 minted in application code, never a database
+// default, so an offline client can mint a whole session subtree
+// (data-model.md 2.11). Two deliberate exceptions: exercise_metrics is keyed by
+// (exercise_id, metric), and processed_stripe_events is keyed by Stripe's own
+// event id.
+
+//=============================================================
+// Enums
+//=============================================================
+
+Enum metric_kind {
+  REPS
+  WEIGHT
+  DURATION
+  DISTANCE
+  COMPLETED
+  RPE
+}
+
+Enum weight_unit {
+  LB
+  KG
+}
+
+Enum distance_unit {
+  MI
+  KM
+  M
+  FT
+}
+
+Enum program_status {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+Enum session_status {
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+Enum set_type {
+  NORMAL
+  WARMUP
+  DROP
+  // three values by decision (data-model.md 2.8). MYO / REST_PAUSE / CLUSTER
+  // are the same parent+children shape and are logged as DROP today; adding a
+  // label later is one ALTER TYPE ... ADD VALUE, no backfill, no query changes.
+}
+
+Enum sub_status {
+  NONE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  // no sub_tier enum by decision (data-model.md 3.8): one paid tier, so Pro-ness
+  // is derivable from sub_status. A tier column is additive if a second paid
+  // tier ever exists.
+}
+
+//=============================================================
+// Users
+//=============================================================
+
+Table users {
+  id                     uuid        [pk, note: 'UUIDv7, minted in app code — never a DB default. See data-model.md 2.11']
+  clerk_user_id          text        [not null, unique, note: 'Clerk owns identity: auth, email, username, MFA, sessions']
+  default_weight_unit    weight_unit [not null, default: 'LB', note: 'global default; overridable per exercise in user_exercise_settings']
+  sub_status             sub_status  [not null, default: 'NONE', note: 'cached from Stripe webhooks. Pro = TRIALING or ACTIVE; gates analytics + MCP only (data-model.md 3.8)']
+  sub_current_period_end timestamptz [note: 'so the UI can say "renews on..." without a Stripe round trip']
+  stripe_customer_id     text        [unique]
+  deleted_at             timestamptz [note: 'soft delete. Clerk user.deleted stamps this; a purge job hard-deletes after 6 months and the CASCADE does the rest']
+  created_at             timestamptz [not null, default: `now()`]
+  updated_at             timestamptz [not null, default: `now()`]
+
+  Note: '''
+  FK anchor + app-owned preferences. NO password_hash, email or username —
+  Clerk holds those, and a local copy would go stale on every profile edit.
+
+  Local UUID PK on purpose: putting Clerk string ids (user_2abc...) on
+  every FK would repeat the legacy string-key mistake and weld a vendor id
+  into the whole schema. clerk_user_id is the single point of coupling.
+
+  UUIDv7 rather than bigserial across the whole schema so an offline client can
+  mint a whole session subtree before the server sees it, and so the PK doubles
+  as the idempotency key on a retried flush.
+
+  The three billing columns (sub_status, sub_current_period_end,
+  stripe_customer_id) are here from day one (data-model.md 3.8), populated by
+  hand until Stripe lands, so entitlement checks go into each endpoint as it is
+  written instead of being retrofitted across all of them.
+
+  Provisioned just-in-time on first authenticated request (upsert in
+  middleware), not by the user.created webhook — a webhook can lag, so the
+  first request could beat the row into existence.
+
+  Clerk authenticates. It does NOT authorize: every query still needs
+  WHERE user_id = current_user.
+  '''
+}
+
+//=============================================================
+// Exercise catalog (the only entity shared across programs)
+//=============================================================
+
+Table exercises {
+  id            uuid   [pk]
+  owner_user_id uuid      [ref: > users.id, note: 'NULL = standard/shipped exercise']
+  name          text        [not null]
+  muscle_group  text
+  equipment     text
+  is_active     boolean     [not null, default: true, note: 'retire instead of deleting']
+  created_at    timestamptz [not null, default: `now()`]
+
+  indexes {
+    (owner_user_id, name) [unique, name: 'exercises_user_name_key', note: 'partial: WHERE owner_user_id IS NOT NULL']
+    (name)                [unique, name: 'exercises_standard_name_key', note: 'partial: WHERE owner_user_id IS NULL']
+  }
+
+  Note: 'owner_user_id IS NULL = standard, visible to all. Non-null = user-created.'
+}
+
+Table exercise_metrics {
+  exercise_id uuid      [not null, ref: > exercises.id]
+  metric      metric_kind [not null]
+  is_required boolean     [not null, default: true]
+
+  indexes {
+    (exercise_id, metric) [pk]
+  }
+
+  Note: '''
+  What an exercise tracks — composable, not a mode enum.
+  Bench    -> REPS, WEIGHT
+  Plank    -> DURATION
+  Pull-up  -> REPS (required), WEIGHT (optional, added plates)
+  Mobility -> COMPLETED
+  Cardio   -> DURATION, DISTANCE
+
+  No display-order column: field order comes from a fixed global precedence
+  over the metric kinds (weight, reps, duration, distance, rpe), rendering
+  whichever are present. Per-exercise ordering would make the logger LESS
+  consistent and is config with no screen worth visiting.
+  '''
+}
+
+Table user_exercise_settings {
+  id                  uuid   [pk]
+  user_id             uuid      [not null, ref: > users.id]
+  exercise_id         uuid      [not null, ref: > exercises.id]
+  setup               text        [note: 'J-cups at 14, safety bars at 5']
+  cues                text        [note: 'pull the bar apart, elbows tucked']
+  default_weight_unit weight_unit [note: 'NULL = fall back to users.default_weight_unit']
+  updated_at          timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, exercise_id) [unique]
+  }
+
+  Note: '''
+  Legacy exerciseList, done right: TEXT not varchar(45), and separate from the
+  catalog so a user can annotate a STANDARD exercise without forking it.
+  Persists across every program forever — write rack heights once, not into
+  each cycle's planned_exercises.notes.
+
+  default_weight_unit lives HERE, not on exercises: "the leg press at my gym is
+  in KG" is a fact about a user, and exercises rows with owner_user_id IS NULL
+  are shared by everyone. Write-time resolution is
+  COALESCE(user_exercise_settings.default_weight_unit, users.default_weight_unit).
+  '''
+}
+
+//=============================================================
+// Planning: Program > Plan (cycle) > Workout > Exercise > Set
+//=============================================================
+
+Table workout_programs {
+  id            uuid           [pk]
+  user_id       uuid           [not null, ref: > users.id]
+  name          text           [not null]
+  notes         text
+  status        program_status [not null, default: 'DRAFT']
+  target_cycles smallint       [note: 'a number = fixed length. NULL = open-ended. Also the denominator in "cycle 4 of 12"']
+  start_date    date
+  created_at    timestamptz    [not null, default: `now()`]
+  updated_at    timestamptz    [not null, default: `now()`]
+
+  indexes {
+    (user_id, name) [unique]
+    (user_id)       [unique, name: 'one_active_program_per_user', note: 'partial: WHERE status = ACTIVE']
+  }
+
+  Note: '''
+  A Workout Plan run for N cycles. Replaces legacy users.workoutPlan string.
+
+  target_cycles lives HERE, not on workout_plans — a workout_plans row IS one
+  cycle, so a per-cycle value would be meaningless. Length is a property of the
+  block.
+
+    12   -> all twelve cycles materialized up front; finishing the last one sets
+            status COMPLETED and offers "run another cycle?", which clones a
+            cycle and increments target_cycles.
+    NULL -> ONE cycle materialized; exhausting the program silently clones the
+            cycle just finished (NOT cycle 1, so edits carry forward). Never
+            auto-completes; the user archives it.
+
+  This replaces an earlier auto_extend boolean that stored no count and kept a
+  spare cycle materialized ahead of the user. The spare did nothing: extension
+  fires on program exhaustion, which is false while a spare exists, so it was
+  consumed before it could ever be refilled. Reading the denominator from a
+  column also removes the rule that it must never be displayed for open-ended
+  programs — NULL renders as no denominator.
+  '''
+}
+
+Table workout_plans {
+  id           uuid [pk]
+  program_id   uuid    [not null, ref: > workout_programs.id]
+  cycle_number smallint  [not null, note: '1..N']
+  name         text
+  notes        text
+
+  indexes {
+    (program_id, cycle_number) [unique]
+  }
+
+  Note: '''
+  ONE ROW PER CYCLE. A 12-cycle program has 12 rows.
+  Cycles are materialized, not overridden, so cycle 7 can differ freely
+  from cycle 1 with no resolution logic in any read path.
+  Editing one cycle does NOT propagate — "apply to cycles 2-12" is an
+  explicit app-layer action.
+  '''
+}
+
+Table workouts {
+  id       uuid [pk]
+  plan_id  uuid    [not null, ref: > workout_plans.id]
+  name     text      [not null, note: 'Back Day']
+  position smallint  [not null]
+  notes    text
+
+  indexes {
+    (plan_id, position) [unique, note: 'DEFERRABLE INITIALLY DEFERRED for reordering']
+  }
+
+  Note: 'One day within one cycle.'
+}
+
+Table planned_exercises {
+  id                uuid [pk]
+  workout_id        uuid    [not null, ref: > workouts.id]
+  exercise_id       uuid    [ref: > exercises.id, note: 'NULLABLE. ON DELETE RESTRICT']
+  placeholder_label text      [note: 'free text, no structure: "Quads", "weak point work", "do something that feels good"']
+  position          smallint  [not null]
+  target_sets       smallint  [note: 'a target, NOT a limit — logging more sets is legal']
+  group_key         smallint  [note: 'NULL = standalone; equal values = one superset/circuit. Order within the group is the position column']
+  notes             text
+
+  indexes {
+    (workout_id, position) [unique, note: 'DEFERRABLE INITIALLY DEFERRED']
+  }
+
+  Note: '''
+  CHECK (num_nonnulls(exercise_id, placeholder_label) = 1)
+  — a planned row is EITHER a concrete exercise OR a placeholder slot.
+
+  Placeholder slots are resolved at session time by the same mechanism as a
+  substitution: the session row carries the concrete exercise_id and points
+  planned_exercise_id back at this slot. Inventing catalog rows like
+  "Quads (choose one)" was rejected — it pollutes the shared exercise list
+  and breaks exercise_metrics.
+
+  The label is deliberately UNSTRUCTURED — no muscle_group FK, no enum. A slot
+  may be unclassifiable ("do something that feels good"), so the resolution UI
+  shows the label plus the full exercise list and lets the user pick.
+
+  notes here is also where rest guidance lives ("rest 90s") — by decision there
+  is no target_rest_seconds column anywhere. Free text cannot drive a timer,
+  but a nullable SMALLINT is trivially additive later with no backfill.
+  '''
+}
+
+Table planned_sets {
+  id                      uuid     [pk]
+  planned_exercise_id     uuid        [not null, ref: > planned_exercises.id]
+  set_number              smallint      [not null]
+  target_reps_min         smallint      [note: 'rep range: 8..12']
+  target_reps_max         smallint
+  target_weight           numeric(7,2)
+  weight_unit             weight_unit  [note: 'stamped by the app from users.default_weight_unit; never typed by the user']
+  target_weight_kg        numeric(10,4) [note: 'GENERATED ALWAYS AS (target_weight * CASE weight_unit WHEN KG THEN 1 WHEN LB THEN 0.45359237 END) STORED — every unit named, no ELSE, so an unmapped future unit goes NULL instead of silently converting as pounds']
+  target_duration_seconds int
+  target_distance         numeric(9,3)
+  distance_unit           distance_unit
+  target_rpe              numeric(3,1)
+  notes                   text
+
+  indexes {
+    (planned_exercise_id, set_number) [unique]
+  }
+
+  Note: '''
+  OPTIONAL per-set prescription. Every target column is nullable.
+    target_sets=3, no rows      -> "do 3 sets", log freely
+    target_sets=3, 3 rows       -> fully prescribed 5@135, 5@155, 5@165
+    target_sets=3, 1 row        -> set 1 prescribed, 2-3 freeform
+
+  CHECK (target_weight   IS NULL OR weight_unit   IS NOT NULL)
+  CHECK (target_distance IS NULL OR distance_unit IS NOT NULL)
+  Without these, a weight with a NULL unit is legal, the generated column's
+  CASE matches nothing, and the value silently vanishes from every aggregate —
+  the exact failure per-row units exist to stop. The conversion CASEs name
+  every unit and have NO ELSE, deliberately (data-model.md 2.5).
+
+  NO kind and NO parent_set_id: set technique is logged, never prescribed
+  (data-model.md 2.8). Removing the self-reference is what makes the clone
+  primitive a single pass at every level.
+  '''
+}
+
+//=============================================================
+// Logging: Session > Session Exercise > Session Set
+//=============================================================
+
+Table workout_sessions {
+  id           uuid      [pk]
+  user_id      uuid         [not null, ref: > users.id]
+  workout_id   uuid         [ref: > workouts.id, note: 'NULL = ad-hoc session, not part of a program. ON DELETE RESTRICT']
+  performed_at timestamptz    [not null, default: `now()`]
+  status       session_status [not null, default: 'IN_PROGRESS']
+  notes        text
+  created_at   timestamptz    [not null, default: `now()`]
+
+  indexes {
+    (user_id, performed_at) [name: 'workout_sessions_user_date_idx']
+    (workout_id)
+  }
+
+  Note: 'Replaces the legacy shared submissionTime convention. workout_id reaches program, cycle_number and workout in one join.'
+}
+
+Table session_exercises {
+  id                  uuid [pk]
+  session_id          uuid    [not null, ref: > workout_sessions.id]
+  exercise_id         uuid    [not null, ref: > exercises.id, note: 'ON DELETE RESTRICT']
+  planned_exercise_id uuid    [ref: > planned_exercises.id, note: 'NULL = added off-script. ON DELETE SET NULL']
+  position            smallint  [not null]
+  group_key           smallint  [note: 'superset/circuit grouping, as performed']
+  substitution_note   text      [note: 'e.g. "squat rack taken"']
+  notes               text
+
+  indexes {
+    (session_id, position) [unique, note: 'DEFERRABLE INITIALLY DEFERRED']
+    (exercise_id)
+  }
+
+  Note: '''
+  planned_exercise_id is the plan-to-log link legacy never had — it answers
+  "did I hit the prescription?" without matching name strings. Three kinds of
+  deviation fall out of one column:
+
+    substituted -> session.exercise_id <> planned.exercise_id  (rack was taken,
+                   or a placeholder slot being filled)
+    skipped     -> a planned_exercises row with no session row pointing at it
+    improvised  -> planned_exercise_id IS NULL
+
+  A session NEVER mutates the plan. Making a deviation stick is a separate,
+  explicit edit to the plan ("apply to cycles 4-12").
+  '''
+}
+
+Table session_sets {
+  id                  uuid     [pk]
+  session_exercise_id uuid        [not null, ref: > session_exercises.id]
+  set_number          smallint      [not null]
+  reps                smallint
+  weight              numeric(7,2)  [note: 'display truth — exactly as entered']
+  weight_unit         weight_unit   [note: 'stamped by the app; never typed by the user']
+  weight_kg           numeric(10,4) [note: 'GENERATED STORED. Comparison truth — every MAX/SUM/PR/chart reads THIS, not weight']
+  duration_seconds    int
+  distance            numeric(9,3)
+  distance_unit       distance_unit
+  distance_m          numeric(12,4) [note: 'GENERATED STORED canonical metres — aggregate on this, not distance']
+  completed           boolean       [note: 'the simple checkbox case']
+  rpe                 numeric(3,1)
+  kind                set_type      [not null, default: 'NORMAL', note: 'replaces is_warmup, which it subsumes']
+  parent_set_id       uuid          [ref: > session_sets.id, note: 'self-FK. NULL = a working set. Non-null = an extension of one (drop / myo / rest-pause / cluster, all logged as DROP)']
+  notes               text
+  logged_at           timestamptz   [not null, default: `now()`]
+
+  indexes {
+    (session_exercise_id, set_number) [unique, note: 'DEFERRABLE INITIALLY DEFERRED — deleting a logged set means renumbering the survivors in the same transaction']
+  }
+
+  Note: '''
+  Replaces repsSet1..6 / weightSet1..6. Fixed typed nullable columns, not EAV.
+  A set that was not performed is simply NO ROW — no 6-set cap, no empty-string-means-absent convention.
+  CHECKs: weight requires weight_unit; distance requires distance_unit;
+          at least one of reps/weight/duration/distance/completed must be present.
+
+  UNITS: the unit is stored per row so history is immutable — if it lived only
+  on users, flipping LB->KG would silently reinterpret every past row. But the
+  user never picks it; the app stamps it. Generated *_kg / *_m columns exist so
+  aggregation is unconditionally correct: one stray KG row makes MAX(weight)
+  wrong, MAX(weight_kg) is always right. You never convert back, so round-trip
+  precision never arises. 0.45359237 is exact (1959 international pound).
+
+  SET TECHNIQUE: a drop set (100x8 -> 80x6 -> 60x4) is ONE working set with two
+  children, not three sets. set_number stays one flat sequence per exercise;
+  parent_set_id supplies the grouping. So the predicate for "a set that counts"
+  toward target_sets, and for every PR / volume / progression query, is:
+
+      WHERE parent_set_id IS NULL AND kind <> 'WARMUP'
+
+  Nesting is one level deep by intent — a child may not itself be a parent.
+  Not expressible as a CHECK; enforce in the app or with a trigger.
+
+  Sets that did not happen are simply absent, so "3 of 5" needs no deletion.
+  Do NOT pre-create empty set rows when a session starts — insert on log.
+
+  OFFLINE: this table, session_exercises and workout_sessions are the only ones
+  written without a connection. The client mints the UUIDs, a durable queue
+  replays the inserts, and every one is ON CONFLICT (id) DO NOTHING — so the PK
+  is also the idempotency key. No updated_at, no tombstones, no change feed:
+  this is an offline write queue, not full local-first (data-model.md 2.11).
+  '''
+}
+
+//=============================================================
+// Billing (data-model.md 3.8)
+//=============================================================
+
+Table processed_stripe_events {
+  event_id     text        [pk, note: "Stripe's evt_... id — the one key in this schema that is not ours, deliberately"]
+  processed_at timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Webhook dedupe. Stripe redelivers, so insert the event id and apply the
+  subscription state change to users in ONE transaction; a duplicate delivery
+  hits the PK and is discarded.
+
+  Subscription state itself lives on users (sub_status,
+  sub_current_period_end, stripe_customer_id) so no request path ever calls the
+  Stripe API to answer "is this user entitled?".
+  '''
+}
