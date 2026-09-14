@@ -30,3 +30,9 @@ coverage/
 
 # Agent local settings (CLAUDE.md itself is tracked, deliberately)
 .claude/settings.local.json
+
+# Legacy analysis — local reference only, never tracked.
+# Contains a raw MySQL export from the old system with real account data.
+# Its conclusions already live in data-model.md section 6 and the build plan,
+# so nothing tracked depends on these files being present.
+docs/legacy-*

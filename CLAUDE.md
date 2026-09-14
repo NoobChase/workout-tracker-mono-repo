@@ -16,7 +16,7 @@ feature ships, the code wins and the doc should be fixed.
 | `docs/data-model.md` | Schema + the reasoning behind every decision. §7 is the settled-decisions table — **do not relitigate entries in it** |
 | `docs/operations.md` | Every user action → exact rows written, transaction boundaries, the clone primitive |
 | `docs/worked-example.md` | Row-level walkthrough; use it to sanity-check queries |
-| `docs/legacy-*` | Reference only. Never copy anything from legacy |
+| `docs/legacy-*` | **Untracked, local only** — gitignored, absent from a fresh clone. Reference; never copy anything from legacy |
 
 ## Non-negotiable rules
 
