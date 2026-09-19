@@ -4,7 +4,7 @@
 
 | Layer | Choice |
 |---|---|
-| Hosting | New AWS account, Paid Plan, region **`us-east-2`** (the ACM cert for CloudFront is the sole `us-east-1` exception) |
+| Hosting | New AWS account, Paid Plan, region **`us-east-2`** (a future ACM cert for CloudFront will be the sole `us-east-1` exception) |
 | Frontend | Vite + React + TypeScript + Tailwind + shadcn/ui, installable PWA |
 | Frontend hosting | S3 (private) + CloudFront with OAC |
 | API | TypeScript (Hono) on Lambda, **outside any VPC**, behind a Lambda Function URL with CloudFront OAC (no API Gateway — see step 1) |
@@ -89,7 +89,7 @@ Spec-driven, with the specs kept deliberately light:
 
 **Step 0 — Account and guardrails.** New AWS account on the Paid Plan, billing alerts, root locked down. No application code.
 
-**Step 1 — Infrastructure skeleton.** CDK stack that stands up the whole pipe end to end with nothing meaningful in it: CloudFront serving a static page, API Gateway, a Lambda, an empty Neon database. Small, because the expensive networking decisions have been designed out rather than solved.
+**Step 1 — Infrastructure skeleton.** CDK stack that stands up the whole pipe end to end with nothing meaningful in it: CloudFront serving a static page from its default `*.cloudfront.net` name, a Lambda behind a Function URL, an empty Neon database. No custom domain, no certificate. Small, because the expensive networking decisions have been designed out rather than solved.
 
 **Step 2 — Auth and core schema.** Clerk wired into both the frontend and the API. The plan-side tables from `data-model.md`, plus the seeded exercise catalog. Nothing beyond that.
 
@@ -107,14 +107,17 @@ The reason for this order: steps 0 through 3 are about de-risking, not features.
 
 ## Step 0 — Account and guardrails
 
-> **Status (September 2026).** Done and verified: AWS account on the Paid Plan,
-> region `us-east-2`, IAM Identity Center with user `chase` and CLI profile
-> `workout-tracker`, the setup-era IAM user deleted, Neon project
-> `super-bar-40420599` with `production` and `dev` branches, and all four SSM
-> parameters. **Not yet confirmed: root MFA, the $30 budget alert, and the
-> root-only billing-access toggle.** Those three are the easiest things in this
-> document to skip and the most annoying to discover missing. Concrete values
-> are recorded in step 1.
+> **Status (September 2026).** Done: AWS account on the Paid Plan, region
+> `us-east-2`, IAM Identity Center with user `chase` and CLI profile
+> `workout-tracker`, the setup-era IAM user deleted, the root-only
+> billing-access toggle, Neon project `super-bar-40420599` with `production`
+> and `dev` branches, and all four SSM parameters. Concrete values are recorded
+> in step 1.
+>
+> **Deferred by decision: root MFA and the $30 budget alert.** Both remain
+> worth doing before the account holds paying customers — root MFA especially,
+> since with no IAM users in the account, root is the only break-glass path
+> there is.
 
 **Goal:** an AWS account you can safely make mistakes in.
 
@@ -124,12 +127,13 @@ The reason for this order: steps 0 through 3 are about de-risking, not features.
 - **Choose the Paid Plan, not the Free Plan.** The Free Plan closes your account when credits run out or after six months, then deletes resources after a grace period. Both plans get the same credits ($100 at signup, another $100 for completing onboarding tasks), so the Free Plan buys you nothing and adds a deletion timer.
 - MFA on root, then never use root again. Create an IAM Identity Center user for daily work.
 - Set an AWS Budget with an alert threshold around $30. Setting up a budget is one of the credit-earning onboarding tasks, so you get paid to do the thing you should do anyway.
-- **Region: `us-east-2` (Ohio). Decided.** Everything lives there — Lambda, S3, the CloudFront origin, and the Neon project — with exactly one deliberate exception, the ACM certificate below. Create the Neon project in AWS `us-east-2` so Lambda and Postgres are co-located; that hop is the only latency in the app that is worth caring about.
+- **Region: `us-east-2` (Ohio). Decided.** Everything lives there — Lambda, S3, the CloudFront origin, and the Neon project — with exactly one future exception, the ACM certificate discussed below, which is deferred out of step 1. Create the Neon project in AWS `us-east-2` so Lambda and Postgres are co-located; that hop is the only latency in the app that is worth caring about.
 - Create the Neon project at the same time, and put its connection strings somewhere your CDK can read them. Neon has its own free tier and its own billing — that is a second bill to watch, not a second thing to forget.
 
 **Watch out for:**
 
-- **The ACM certificate for CloudFront must live in `us-east-1`**, and the chosen region is `us-east-2` — so this is a live requirement, not a hypothetical. CloudFront reads certificates only from `us-east-1`; one requested in Ohio is simply invisible to it, and the failure mode is confusing. In CDK this means a second stack pinned to `us-east-1` containing just the certificate, referenced from the main stack with `crossRegionReferences: true`. It is the only resource in the account outside `us-east-2` — expect to explain that to yourself again in six months, so leave a comment in the CDK saying why.
+- **No custom domain in step 1 — decided.** The distribution's default `*.cloudfront.net` hostname already serves HTTPS with a CloudFront-managed certificate, which is everything a hello-world pipe needs. Skip the ACM certificate, the hosted zone, and the alias for now. Adding a domain later is an alias plus a certificate on an existing distribution, not a restructuring, so there is no reason to block step 1 on a DNS decision.
+- **When the custom domain does land** — before launch, since Clerk's production instance requires one — **its ACM certificate must live in `us-east-1`** even though everything else is `us-east-2`. CloudFront reads certificates only from `us-east-1`; one requested in Ohio is simply invisible to it and the failure mode is confusing. That means a second stack pinned to `us-east-1` holding just the certificate, referenced with `crossRegionReferences: true` — the only resource in the account outside `us-east-2`, so leave a comment in the CDK saying why.
 - **Your domain.** If it is registered in Route 53 in the old account, sort out the transfer or decide to leave the hosted zone there and point records at the new account. Do this before closing anything.
 - **Orphaned resources bill silently.** Unattached EBS volumes, unassociated Elastic IPs, and snapshots survive the deletion of the thing they belonged to. Check the billing console after any teardown.
 - **The legacy RDS instance.** `legacy-overview.md` §0 lists live credentials committed to git history. If that instance is still running, rotate or destroy it now — this is independent of the rewrite and it is the only genuinely urgent item in this document.
@@ -351,6 +355,6 @@ Things to keep an eye on:
 - **Tests, from step 3.** There is no test strategy anywhere else in this document, and with agents writing the code it is the load-bearing safety net. The minimum worth having: integration tests against a real Neon branch for the clone primitive, the "what's next?" query, the offline replay path (same insert twice, one row), and the scoped-query helper refusing another user's data.
 - **Observability.** Structured logs from the Lambda, an error tracker on the frontend, and a CloudWatch alarm on Lambda errors and 5xx rates. Cheap, and the alternative is learning about breakage from a user who is paying you.
 - **Backups.** Neon handles PITR, but restoring is a thing you should have done once on purpose before you need to do it in a hurry.
-- **Your own training history.** `data-model.md` assumes no migration path, and that is a decision worth re-examining rather than inheriting: it is roughly 1,700 rows, and progression charts across years are most of what makes a tracker worth using. A one-off import script is about a day — one archived program, or sessions with `workout_id NULL` as ad-hoc — and the schema handles it without changes. Do it or decide not to, but decide.
+- **Your own training history — decided: not migrated.** No import script, no backfill; the new app starts empty. Note the consequence, accepted knowingly: the only legacy export on disk is a five-rows-per-table sample, so that history becomes unrecoverable once the legacy RDS instance is gone. Tearing that instance down is still open, and it is still costing money and still holding a live plaintext credential for a real person's account (`legacy-overview.md` §0, untracked).
 - **Check the billing console monthly.** The target is roughly $5 to $25/month: Neon free to about $19 depending on whether you pay to disable autosuspend, Lambda effectively free at your volume (and no API Gateway at all), CloudFront and S3 a couple of dollars, Parameter Store free, Clerk free below its MAU threshold, Stripe a percentage of revenue rather than a fixed cost.
 - **Verify pricing and free-tier terms yourself before committing.** AWS changed its free tier model in July 2025 and Clerk changed its pricing in February 2026. Both will change again, and so will Neon's.
