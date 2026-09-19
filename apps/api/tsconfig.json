@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "aws-lambda"],
+    "noEmit": true
+  },
+  "include": ["src"]
+}
