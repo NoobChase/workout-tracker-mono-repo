@@ -1,21 +1,44 @@
 #!/usr/bin/env node
 import { App } from "aws-cdk-lib";
+import { CertificateStack } from "../lib/certificate-stack.js";
 import { WorkoutTrackerStack } from "../lib/workout-tracker-stack.js";
 
 const app = new App();
 
-// Everything lives in us-east-2 (build plan, step 0). There is currently no
-// us-east-1 stack: the custom domain and its ACM certificate are deliberately
-// deferred out of step 1, so CloudFront serves its default *.cloudfront.net
-// name with a CloudFront-managed certificate. When the domain does land, the
-// certificate must be requested in us-east-1 -- CloudFront cannot see one
-// issued anywhere else -- which means a second stack pinned to that region
-// and `crossRegionReferences: true` on this one.
-new WorkoutTrackerStack(app, "WorkoutTrackerProduction", {
-  env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: "us-east-2",
-  },
-  stage: "production",
-  description: "Workout tracker: CloudFront, private S3, and Hono on Lambda behind a Function URL",
+// The domain, written down once. Registered through Route 53 on 2026-10-01 in
+// this account, which created the public hosted zone as a side effect -- both
+// stacks reference that zone by id and neither declares one.
+//
+// Registering a domain is the second and last exception to "everything is CDK
+// except Neon": it is a purchase, with a payment method and ICANN contact
+// details, and CloudFormation has no resource that performs one.
+const domainName = "tanrenstrength.com";
+const hostedZoneId = "Z06653052296L2W29VS9Q";
+
+const account = process.env.CDK_DEFAULT_ACCOUNT;
+
+// us-east-1 exists solely because CloudFront will only attach a viewer
+// certificate issued there. Everything else is us-east-2 (build plan, step 0).
+const certificates = new CertificateStack(app, "WorkoutTrackerCertificates", {
+  env: { account, region: "us-east-1" },
+  crossRegionReferences: true,
+  domainName,
+  hostedZoneId,
+  description: `ACM certificate for ${domainName} and *.${domainName} (CloudFront requires us-east-1)`,
 });
+
+const production = new WorkoutTrackerStack(app, "WorkoutTrackerProduction", {
+  env: { account, region: "us-east-2" },
+  crossRegionReferences: true,
+  stage: "production",
+  domainName,
+  hostedZoneId,
+  certificateArn: certificates.certificate.certificateArn,
+  description:
+    "Workout tracker: CloudFront, private S3, and Hono on Lambda behind a Function URL",
+});
+
+// The certificate must exist before CloudFront can reference it. CDK infers
+// this from the ARN reference, but stating it keeps the ordering obvious to a
+// reader and survives the reference being refactored away.
+production.addStackDependency(certificates);

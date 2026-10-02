@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "synth": "cdk synth",
-    "diff": "cdk diff",
-    "deploy": "cdk deploy --require-approval any-change",
-    "test": "node --import tsx --test lib/*.test.ts"
+    "synth": "cdk synth --all",
+    "diff": "cdk diff --all",
+    "deploy": "cdk deploy --all --require-approval any-change",
+    "test": "node --import tsx --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
     "aws-cdk-lib": "^2.270.0",

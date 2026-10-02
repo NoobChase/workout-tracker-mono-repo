@@ -15,11 +15,21 @@ function stubWebDist(): string {
   return dir;
 }
 
+const DOMAIN = "example-test.com";
+const ZONE_ID = "Z0TESTZONEID0000000";
+// A us-east-1 ARN specifically: `Distribution` rejects a viewer certificate
+// from any other region, and `fromCertificateArn` reads the region off the ARN.
+const CERT_ARN =
+  "arn:aws:acm:us-east-1:111111111111:certificate/00000000-0000-0000-0000-000000000000";
+
 function synth(): Template {
   const app = new App();
   const stack = new WorkoutTrackerStack(app, "TestStack", {
     env: { account: "111111111111", region: "us-east-2" },
     stage: "production",
+    domainName: DOMAIN,
+    hostedZoneId: ZONE_ID,
+    certificateArn: CERT_ARN,
     webDistPath: stubWebDist(),
   });
   return Template.fromStack(stack);
@@ -111,6 +121,54 @@ describe("WorkoutTrackerStack", () => {
         }),
       }),
     });
+  });
+
+  it("serves both the apex and www, with the us-east-1 certificate", () => {
+    template.hasResourceProperties("AWS::CloudFront::Distribution", {
+      DistributionConfig: Match.objectLike({
+        Aliases: Match.arrayWith([DOMAIN, `www.${DOMAIN}`]),
+        ViewerCertificate: Match.objectLike({
+          AcmCertificateArn: CERT_ARN,
+          SslSupportMethod: "sni-only",
+        }),
+      }),
+    });
+  });
+
+  // The www -> apex redirect has to hold for API paths too, or the API is
+  // reachable on two origins while `authorizedParties` only allows one.
+  it("runs the viewer-request function on /api/* as well as the default behaviour", () => {
+    const distributions = template.findResources("AWS::CloudFront::Distribution");
+    const config = Object.values(distributions)[0]?.Properties.DistributionConfig;
+
+    const apiBehavior = (config.CacheBehaviors as Array<Record<string, unknown>>).find(
+      (behavior) => behavior.PathPattern === "/api/*",
+    );
+    assert.ok(apiBehavior, "expected an /api/* behaviour");
+    assert.equal(
+      JSON.stringify(apiBehavior.FunctionAssociations),
+      JSON.stringify(config.DefaultCacheBehavior.FunctionAssociations),
+      "both behaviours must share one viewer-request function",
+    );
+  });
+
+  it("points A and AAAA records for both names at the distribution", () => {
+    for (const name of [`${DOMAIN}.`, `www.${DOMAIN}.`]) {
+      for (const type of ["A", "AAAA"]) {
+        template.hasResourceProperties("AWS::Route53::RecordSet", {
+          Name: name,
+          Type: type,
+          HostedZoneId: ZONE_ID,
+          AliasTarget: Match.objectLike({ DNSName: Match.anyValue() }),
+        });
+      }
+    }
+  });
+
+  // A second zone for the same name would publish an NS set the registrar does
+  // not delegate to; the symptom looks like slow propagation, not a bug.
+  it("references the existing hosted zone and never declares one", () => {
+    template.resourceCountIs("AWS::Route53::HostedZone", 0);
   });
 
   it("keeps the site bucket private", () => {

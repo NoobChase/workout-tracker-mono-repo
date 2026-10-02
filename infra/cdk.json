@@ -13,6 +13,8 @@
     "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": true,
     "@aws-cdk/aws-ecs:disableEcsImdsBlocking": true,
     "@aws-cdk/core:enablePartitionLiterals": true,
+    "_comment:defaultCrossStackReferences": "Set explicitly because the us-east-1 certificate stack exports to us-east-2. 'strong' is producer-protecting: CDK refuses to remove an export another stack still consumes, rather than letting a deploy break the consumer. The 'both' -> deploy -> 'weak' migration dance in the warning is for stacks already deployed with cross-region references; nothing is, so the value is simply chosen here.",
+    "@aws-cdk/core:defaultCrossStackReferences": "strong",
     "@aws-cdk/core:target-partitions": ["aws"]
   }
 }

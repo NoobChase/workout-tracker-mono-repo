@@ -6,12 +6,15 @@ import {
   Stack,
   type StackProps,
 } from "aws-cdk-lib";
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import * as logs from "aws-cdk-lib/aws-logs";
+import * as route53 from "aws-cdk-lib/aws-route53";
+import * as targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import type { Construct } from "constructs";
@@ -19,6 +22,16 @@ import type { Construct } from "constructs";
 export interface WorkoutTrackerStackProps extends StackProps {
   /** Selects the SSM parameter path the Lambda is allowed to read. */
   readonly stage: "production" | "dev";
+  /** Apex domain. Canonical origin: `www` only ever 301s here. */
+  readonly domainName: string;
+  /** The zone Route 53 created with the registration. Referenced, never created. */
+  readonly hostedZoneId: string;
+  /**
+   * Certificate covering the apex and `*.<domainName>`, issued in us-east-1 by
+   * `CertificateStack`. Crossing regions is what `crossRegionReferences` on
+   * both stacks is for.
+   */
+  readonly certificateArn: string;
   /**
    * Built frontend assets to upload. Defaults to the real `apps/web/dist`;
    * overridden by tests so synthesis does not depend on a prior web build.
@@ -32,7 +45,8 @@ export class WorkoutTrackerStack extends Stack {
   constructor(scope: Construct, id: string, props: WorkoutTrackerStackProps) {
     super(scope, id, props);
 
-    const { stage } = props;
+    const { stage, domainName, hostedZoneId, certificateArn } = props;
+    const wwwDomainName = `www.${domainName}`;
 
     // ---------------------------------------------------------------------
     // Frontend bucket. Private: CloudFront reaches it through Origin Access
@@ -123,26 +137,30 @@ export class WorkoutTrackerStack extends Stack {
     // CloudFront. Two origins, both reached through Origin Access Control:
     // the private bucket for the PWA, the Function URL for /api/*.
     // ---------------------------------------------------------------------
-    // Rewrites extensionless paths (client-side routes) to the SPA entry point
-    // so a deep link reloads correctly. Anything with a file extension falls
-    // through to the real S3 key.
-    const spaRouting = new cloudfront.Function(this, "SpaRoutingFunction", {
+    // Redirects `www` to the apex and rewrites client-side routes to the SPA
+    // entry point. Source lives in its own file with its own unit tests
+    // (`lib/edge/viewer-request.test.ts`, which evaluates these exact bytes),
+    // because it now has two ways to break something important: a bad rewrite
+    // breaks /api/*, a bad redirect breaks auth.
+    const viewerRequest = new cloudfront.Function(this, "ViewerRequestFunction", {
       runtime: cloudfront.FunctionRuntime.JS_2_0,
-      comment: "Rewrite client-side routes to /index.html",
-      code: cloudfront.FunctionCode.fromInline(`
-function handler(event) {
-  var request = event.request;
-  var uri = request.uri;
-  if (uri.indexOf('.') === -1) {
-    request.uri = '/index.html';
-  }
-  return request;
-}
-`),
+      comment: "Redirect www to apex; rewrite client-side routes to /index.html",
+      code: cloudfront.FunctionCode.fromFile({
+        filePath: fileURLToPath(new URL("./edge/viewer-request.js", import.meta.url)),
+      }),
     });
+
+    const viewerRequestAssociation = [
+      {
+        function: viewerRequest,
+        eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+      },
+    ];
 
     const distribution = new cloudfront.Distribution(this, "Distribution", {
       comment: `workout-tracker ${stage}`,
+      domainNames: [domainName, wwwDomainName],
+      certificate: acm.Certificate.fromCertificateArn(this, "SiteCertificate", certificateArn),
       defaultRootObject: "index.html",
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100, // US-only product.
@@ -156,12 +174,7 @@ function handler(event) {
         // silently rewrite a genuine API 403 or 404 into a 200 carrying
         // index.html -- invisible now, and actively misleading once Clerk
         // starts returning 403 in step 2.
-        functionAssociations: [
-          {
-            function: spaRouting,
-            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-          },
-        ],
+        functionAssociations: viewerRequestAssociation,
       },
       additionalBehaviors: {
         "/api/*": {
@@ -178,6 +191,12 @@ function handler(event) {
           // origin, so there is no preflight to satisfy, and an
           // allow-all-origins default would be the wrong thing to carry into
           // step 2's authenticated routes.
+          //
+          // The viewer-request function runs here too, so `www` redirects for
+          // API paths as well and the API has exactly one origin. It guards
+          // /api/* out of the SPA rewrite; that guard is the single most
+          // load-bearing line in the file and is tested directly.
+          functionAssociations: viewerRequestAssociation,
         },
       },
     });
@@ -202,6 +221,45 @@ function handler(event) {
       }),
     });
 
+    // ---------------------------------------------------------------------
+    // DNS. The zone already exists -- Route 53 created it with the domain
+    // registration -- so it is referenced by id, never declared. Creating a
+    // second zone for the same name would publish an NS record set the
+    // registrar does not delegate to, and the symptom reads as a propagation
+    // delay rather than a mistake.
+    //
+    // By id rather than `HostedZone.fromLookup` on purpose: a lookup needs live
+    // AWS credentials at synth time, which would drag an SSO session into
+    // `cdk synth`, the tests, and any future CI synth -- and it silently
+    // substitutes a dummy zone when it cannot run.
+    // ---------------------------------------------------------------------
+    const zone = route53.HostedZone.fromHostedZoneAttributes(this, "Zone", {
+      hostedZoneId,
+      zoneName: domainName,
+    });
+
+    const distributionTarget = route53.RecordTarget.fromAlias(
+      new targets.CloudFrontTarget(distribution),
+    );
+
+    // A and AAAA for both names: CloudFront is dual-stack, and an IPv6-only
+    // client with no AAAA record simply cannot reach the site.
+    for (const [id, recordName] of [
+      ["Apex", domainName],
+      ["Www", wwwDomainName],
+    ] as const) {
+      new route53.ARecord(this, `${id}ARecord`, {
+        zone,
+        recordName,
+        target: distributionTarget,
+      });
+      new route53.AaaaRecord(this, `${id}AaaaRecord`, {
+        zone,
+        recordName,
+        target: distributionTarget,
+      });
+    }
+
     new s3deploy.BucketDeployment(this, "SiteDeployment", {
       sources: [s3deploy.Source.asset(props.webDistPath ?? `${repoRoot}apps/web/dist`)],
       destinationBucket: siteBucket,
@@ -210,12 +268,16 @@ function handler(event) {
     });
 
     new CfnOutput(this, "SiteUrl", {
-      value: `https://${distribution.distributionDomainName}`,
-      description: "Public entry point (CloudFront default domain, no custom domain in step 1)",
+      value: `https://${domainName}`,
+      description: "Canonical public entry point",
     });
     new CfnOutput(this, "HelloUrl", {
-      value: `https://${distribution.distributionDomainName}/api/hello`,
+      value: `https://${domainName}/api/hello`,
       description: "Hello-world route: CloudFront -> Lambda Function URL -> Hono -> Neon",
+    });
+    new CfnOutput(this, "DistributionDomainName", {
+      value: distribution.distributionDomainName,
+      description: "CloudFront default domain, for testing the edge without DNS",
     });
     new CfnOutput(this, "ApiFunctionName", { value: apiFunction.functionName });
     new CfnOutput(this, "SiteBucketName", { value: siteBucket.bucketName });

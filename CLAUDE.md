@@ -68,3 +68,10 @@ A task is complete when:
   mcp. `packages/db` holds Drizzle schema + the query helpers above.
 - Nested `CLAUDE.md` per workspace for package-specific conventions; this file
   stays under 100 lines.
+- **Frontend UI work uses both design systems:** load `emil-design-eng` for
+  interaction and animation craft, and Impeccable for design, critique, audit,
+  or polish workflows before editing UI.
+- **Procedures live in `.claude/skills/<name>/SKILL.md`**, not here: `spec`,
+  `schema-change`, `neon-branch`, `implement-operation`, `deploy`,
+  `verify-done`. Read the one that matches the task before starting it; fix it
+  in the same commit that invalidates it (`.claude/skills/README.md`).
