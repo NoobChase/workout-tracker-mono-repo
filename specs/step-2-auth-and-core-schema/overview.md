@@ -174,19 +174,45 @@ auth is the thing that most depends on it. Reversed after deliberation — the
 first draft of this spec shipped a Clerk development instance and scheduled the
 swap for later.
 
-Why the reversal. A Clerk production instance requires DNS records on a domain
-you control, so "dev instance now" is not a preference, it is a consequence of
-not having one. Carrying it forward costs more than it saves:
+**Correction to how this was first written.** The original framing — dev
+instance now, swap to production later — was a false choice. A Clerk application
+carries a development **and** a production instance simultaneously, with separate
+keys and separate user pools. The development instance is what makes `localhost`
+work at all, since a production instance only answers for its configured domain,
+so it is not something to be swapped away from; it stays, permanently, as the
+local-development instance. What decision 5 actually settles is that the
+**production instance exists from step 2** rather than being stood up later.
 
-- Dev and production instances are separate universes — different signing keys,
-  different issuer, **different user ids**. Every `users` row created before a
-  swap is orphaned by it, exactly as §4 describes for re-signup, applied to the
-  whole table at once.
+Consequences that follow from both existing, and that the implementation has to
+respect:
+
+- **Clerk keys are per-stage, like the database URL.** The API reads
+  `/workout-tracker/<stage>/clerk-secret-key`; the web build takes the matching
+  publishable key. Mixing them across stages fails verification, since the two
+  instances sign with different keys.
+- The Clerk application is **`tanren strength`**, id
+  `app_3KA3b5gVTRR1hOgmTvWtG0HSj9f` — a non-secret identifier, recorded here
+  because both instances hang off it and the dashboard is otherwise the only
+  place it is written down.
+- **A locally created user is not a production user.** Local development points
+  at the Neon `dev` branch, so dev-instance `clerk_user_id`s land in the dev
+  database and production-instance ids in production. That separation is the
+  existing setup, not new work — but running local dev against the production
+  database would write dev-instance ids into it, which is a reason not to.
+- `authorizedParties` therefore carries the apex **and** `http://localhost:5173`
+  (decision 2), because both instances are legitimately in use.
+
+Why production now rather than later:
+
+- Had production been deferred, every `users` row created against the
+  development instance in the meantime would have been orphaned when it landed —
+  different ids, exactly as §4 describes for re-signup, applied to the whole
+  table at once.
 - Clerk relaxes security on development instances (notably shared OAuth
-  credentials for social sign-in), so the real configuration is never exercised
-  until the swap.
-- The swap is a change to the authentication system, and every candidate date
-  for it is a bad one.
+  credentials for social sign-in), so the production configuration would never
+  be exercised until the day it had to be.
+- Standing up production later is a change to the authentication system, and
+  every candidate date for it is a bad one.
 - Decision 2's `azp` check is theoretical without a domain and load-bearing with
   one.
 
