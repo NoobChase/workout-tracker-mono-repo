@@ -260,6 +260,38 @@ export class WorkoutTrackerStack extends Stack {
       });
     }
 
+    // Clerk's production instance. These five names are CNAMEd to Clerk, so
+    // CloudFront never sees them and the wildcard certificate is simply unused
+    // for them -- Clerk serves their TLS. There is no collision to worry about
+    // because the distribution claims only the apex and `www`, never `*`.
+    //
+    // In CDK rather than the console like every other record: a console-made
+    // record is invisible to `cdk diff` and gets either silently reverted or
+    // silently kept forever.
+    //
+    // `ovnv81phd63o` is this instance's own subdomain in Clerk's mail
+    // infrastructure; it is not a secret, and it is per-instance, so these
+    // values do not transfer to another Clerk application.
+    const clerkRecords = {
+      // Routes authentication requests through the custom domain.
+      clerk: "frontend-api.clerk.services",
+      // Clerk's hosted account portal.
+      accounts: "accounts.clerk.services",
+      // Email sending and receiving, then the two DKIM signing keys. These
+      // three verify more slowly than the two above; that lag is propagation.
+      clkmail: "mail.ovnv81phd63o.clerk.services",
+      "clk._domainkey": "dkim1.ovnv81phd63o.clerk.services",
+      "clk2._domainkey": "dkim2.ovnv81phd63o.clerk.services",
+    } as const;
+
+    for (const [recordName, target] of Object.entries(clerkRecords)) {
+      new route53.CnameRecord(this, `Clerk-${recordName}`, {
+        zone,
+        recordName,
+        domainName: target,
+      });
+    }
+
     new s3deploy.BucketDeployment(this, "SiteDeployment", {
       sources: [s3deploy.Source.asset(props.webDistPath ?? `${repoRoot}apps/web/dist`)],
       destinationBucket: siteBucket,

@@ -171,6 +171,36 @@ describe("WorkoutTrackerStack", () => {
     template.resourceCountIs("AWS::Route53::HostedZone", 0);
   });
 
+  // Clerk's production instance will not verify without all five. They are
+  // here rather than in the console so `cdk diff` can see them.
+  it("declares every Clerk CNAME the production instance needs", () => {
+    const expected: Record<string, string> = {
+      clerk: "frontend-api.clerk.services",
+      accounts: "accounts.clerk.services",
+      clkmail: "mail.ovnv81phd63o.clerk.services",
+      "clk._domainkey": "dkim1.ovnv81phd63o.clerk.services",
+      "clk2._domainkey": "dkim2.ovnv81phd63o.clerk.services",
+    };
+
+    for (const [name, target] of Object.entries(expected)) {
+      template.hasResourceProperties("AWS::Route53::RecordSet", {
+        Name: `${name}.${DOMAIN}.`,
+        Type: "CNAME",
+        HostedZoneId: ZONE_ID,
+        ResourceRecords: [target],
+      });
+    }
+
+    const cnames = Object.values(
+      template.findResources("AWS::Route53::RecordSet"),
+    ).filter((record) => record.Properties.Type === "CNAME");
+    assert.equal(
+      cnames.length,
+      Object.keys(expected).length,
+      "an unexpected CNAME would mean a stray record in the zone",
+    );
+  });
+
   it("keeps the site bucket private", () => {
     template.hasResourceProperties("AWS::S3::Bucket", {
       PublicAccessBlockConfiguration: {
