@@ -14,7 +14,10 @@ const source = readFileSync(
 interface CfRequest {
   uri: string;
   headers: Record<string, { value: string }>;
-  querystring: Record<string, { value?: string; multiValue?: Array<{ value: string }> }>;
+  querystring: Record<
+    string,
+    { value?: string; multiValue?: Array<{ value: string }> }
+  >;
 }
 interface CfResponse {
   statusCode: number;
@@ -22,6 +25,8 @@ interface CfResponse {
   headers: Record<string, { value: string }>;
 }
 
+// The function file is a script, not a module, so it is evaluated as source.
+// eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call
 const handler = new Function(`${source}; return handler;`)() as (event: {
   request: CfRequest;
 }) => CfRequest | CfResponse;
@@ -37,7 +42,11 @@ function request(
 const isRedirect = (result: CfRequest | CfResponse): result is CfResponse =>
   "statusCode" in result;
 
-function redirect(host: string, uri: string, qs?: CfRequest["querystring"]): string {
+function redirect(
+  host: string,
+  uri: string,
+  qs?: CfRequest["querystring"],
+): string {
   const result = handler({ request: request(host, uri, qs) });
   assert.ok(isRedirect(result), "expected a redirect response");
   assert.equal(result.statusCode, 301);
@@ -48,14 +57,20 @@ function redirect(host: string, uri: string, qs?: CfRequest["querystring"]): str
 
 function rewritten(host: string, uri: string): string {
   const result = handler({ request: request(host, uri) });
-  assert.ok(!isRedirect(result), `expected a request, got a ${(result as CfResponse).statusCode}`);
+  assert.ok(
+    !isRedirect(result),
+    `expected a request, got a ${(result as CfResponse).statusCode}`,
+  );
   return result.uri;
 }
 
 describe("viewer-request function", () => {
   describe("www -> apex redirect", () => {
     it("301s the apex, preserving the path", () => {
-      assert.equal(redirect("www.tanrenstrength.com", "/"), "https://tanrenstrength.com/");
+      assert.equal(
+        redirect("www.tanrenstrength.com", "/"),
+        "https://tanrenstrength.com/",
+      );
       assert.equal(
         redirect("www.tanrenstrength.com", "/history/123"),
         "https://tanrenstrength.com/history/123",
@@ -67,7 +82,9 @@ describe("viewer-request function", () => {
     // redirect bug.
     it("preserves the query string, single and repeated keys", () => {
       assert.equal(
-        redirect("www.tanrenstrength.com", "/history", { tab: { value: "sets" } }),
+        redirect("www.tanrenstrength.com", "/history", {
+          tab: { value: "sets" },
+        }),
         "https://tanrenstrength.com/history?tab=sets",
       );
       assert.equal(
@@ -95,27 +112,42 @@ describe("viewer-request function", () => {
 
   describe("SPA routing on the apex", () => {
     it("rewrites extensionless client-side routes to the entry point", () => {
-      assert.equal(rewritten("tanrenstrength.com", "/history/123"), "/index.html");
+      assert.equal(
+        rewritten("tanrenstrength.com", "/history/123"),
+        "/index.html",
+      );
       assert.equal(rewritten("tanrenstrength.com", "/"), "/index.html");
     });
 
     it("leaves real assets alone", () => {
-      assert.equal(rewritten("tanrenstrength.com", "/assets/app.js"), "/assets/app.js");
-      assert.equal(rewritten("tanrenstrength.com", "/manifest.webmanifest"), "/manifest.webmanifest");
+      assert.equal(
+        rewritten("tanrenstrength.com", "/assets/app.js"),
+        "/assets/app.js",
+      );
+      assert.equal(
+        rewritten("tanrenstrength.com", "/manifest.webmanifest"),
+        "/manifest.webmanifest",
+      );
     });
 
     // The regression that matters. This function is attached to /api/* as well,
     // so an unguarded extensionless rewrite would turn every API call into the
     // HTML shell -- step 1's failure mode reached from a different direction.
     it("never rewrites /api/*, however extensionless", () => {
-      for (const uri of ["/api/hello", "/api/programs/abc", "/api/webhooks/clerk"]) {
+      for (const uri of [
+        "/api/hello",
+        "/api/programs/abc",
+        "/api/webhooks/clerk",
+      ]) {
         assert.equal(rewritten("tanrenstrength.com", uri), uri);
       }
     });
   });
 
   it("does not redirect when the host header is absent", () => {
-    const result = handler({ request: { uri: "/", headers: {}, querystring: {} } });
+    const result = handler({
+      request: { uri: "/", headers: {}, querystring: {} },
+    });
     assert.ok(!isRedirect(result));
   });
 });

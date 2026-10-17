@@ -2,7 +2,13 @@
   "app": "npx tsx bin/infra.ts",
   "watch": {
     "include": ["**"],
-    "exclude": ["README.md", "cdk*.json", "tsconfig.json", "package*.json", "node_modules"]
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "tsconfig.json",
+      "package*.json",
+      "node_modules"
+    ]
   },
   "context": {
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,

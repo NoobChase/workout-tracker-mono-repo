@@ -38,11 +38,14 @@ async function assertRejects(
 }
 
 async function seedPlan(client: PoolClient): Promise<void> {
-  await client.query("INSERT INTO users (id, clerk_user_id) VALUES ($1, 'seed_test')", [USER]);
-  await client.query("INSERT INTO workout_programs (id, user_id, name) VALUES ($1, $2, 'P')", [
-    PROGRAM,
-    USER,
-  ]);
+  await client.query(
+    "INSERT INTO users (id, clerk_user_id) VALUES ($1, 'seed_test')",
+    [USER],
+  );
+  await client.query(
+    "INSERT INTO workout_programs (id, user_id, name) VALUES ($1, $2, 'P')",
+    [PROGRAM, USER],
+  );
   await client.query(
     "INSERT INTO workout_plans (id, program_id, cycle_number) VALUES ($1, $2, 1)",
     [PLAN, PROGRAM],
@@ -50,9 +53,15 @@ async function seedPlan(client: PoolClient): Promise<void> {
 }
 
 describe("position uniques", () => {
-  for (const name of ["workouts_plan_id_position_key", "planned_exercises_workout_id_position_key"]) {
+  for (const name of [
+    "workouts_plan_id_position_key",
+    "planned_exercises_workout_id_position_key",
+  ]) {
     it(`${name} is DEFERRABLE INITIALLY DEFERRED`, async () => {
-      const { rows } = await pool.query<{ condeferrable: boolean; condeferred: boolean }>(
+      const { rows } = await pool.query<{
+        condeferrable: boolean;
+        condeferred: boolean;
+      }>(
         "SELECT condeferrable, condeferred FROM pg_constraint WHERE conname = $1",
         [name],
       );
@@ -67,7 +76,10 @@ describe("position uniques", () => {
         "INSERT INTO workouts (id, plan_id, name, position) VALUES ($1, $3, 'A', 0), ($2, $3, 'B', 1)",
         [WORKOUT_A, WORKOUT_B, PLAN],
       );
-      await client.query("UPDATE workouts SET position = 1 - position WHERE plan_id = $1", [PLAN]);
+      await client.query(
+        "UPDATE workouts SET position = 1 - position WHERE plan_id = $1",
+        [PLAN],
+      );
       await client.query("SET CONSTRAINTS ALL IMMEDIATE");
     });
   });
@@ -81,7 +93,12 @@ describe("position uniques", () => {
         "INSERT INTO workouts (id, plan_id, name, position) VALUES ($1, $3, 'A', 0), ($2, $3, 'B', 0)",
         [WORKOUT_A, WORKOUT_B, PLAN],
       );
-      await assertRejects(client, "SET CONSTRAINTS ALL IMMEDIATE", [], UNIQUE_VIOLATION);
+      await assertRejects(
+        client,
+        "SET CONSTRAINTS ALL IMMEDIATE",
+        [],
+        UNIQUE_VIOLATION,
+      );
     });
   });
 });
@@ -90,15 +107,18 @@ describe("planned_sets.target_weight_kg", () => {
   it("converts each unit, with no fallback for a missing one", async () => {
     await inRolledBackTransaction(async (client) => {
       await seedPlan(client);
-      await client.query("INSERT INTO workouts (id, plan_id, name, position) VALUES ($1, $2, 'A', 0)", [
-        WORKOUT_A,
-        PLAN,
-      ]);
+      await client.query(
+        "INSERT INTO workouts (id, plan_id, name, position) VALUES ($1, $2, 'A', 0)",
+        [WORKOUT_A, PLAN],
+      );
       await client.query(
         "INSERT INTO planned_exercises (id, workout_id, placeholder_label, position) VALUES ($1, $2, 'Quads', 0)",
         [PLANNED_EXERCISE, WORKOUT_A],
       );
-      const { rows } = await client.query<{ weight_unit: string | null; target_weight_kg: string | null }>(
+      const { rows } = await client.query<{
+        weight_unit: string | null;
+        target_weight_kg: string | null;
+      }>(
         `INSERT INTO planned_sets (id, planned_exercise_id, set_number, target_weight, weight_unit) VALUES
            ('01900000-0000-7000-8000-0000000000a1', $1, 1, 100, 'LB'),
            ('01900000-0000-7000-8000-0000000000a2', $1, 2, 100, 'KG'),
@@ -127,16 +147,29 @@ describe("planned_exercises exercise-or-placeholder", () => {
   it("requires exactly one of exercise_id and placeholder_label", async () => {
     await inRolledBackTransaction(async (client) => {
       await seedPlan(client);
-      await client.query("INSERT INTO workouts (id, plan_id, name, position) VALUES ($1, $2, 'A', 0)", [
-        WORKOUT_A,
-        PLAN,
-      ]);
-      await client.query("INSERT INTO exercises (id, name) VALUES ($1, 'Test Squat')", [EXERCISE]);
+      await client.query(
+        "INSERT INTO workouts (id, plan_id, name, position) VALUES ($1, $2, 'A', 0)",
+        [WORKOUT_A, PLAN],
+      );
+      await client.query(
+        "INSERT INTO exercises (id, name) VALUES ($1, 'Test Squat')",
+        [EXERCISE],
+      );
       const insert =
         "INSERT INTO planned_exercises (id, workout_id, exercise_id, placeholder_label, position) VALUES ($1, $2, $3, $4, 0)";
 
-      await assertRejects(client, insert, [PLANNED_EXERCISE, WORKOUT_A, null, null], CHECK_VIOLATION);
-      await assertRejects(client, insert, [PLANNED_EXERCISE, WORKOUT_A, EXERCISE, "Quads"], CHECK_VIOLATION);
+      await assertRejects(
+        client,
+        insert,
+        [PLANNED_EXERCISE, WORKOUT_A, null, null],
+        CHECK_VIOLATION,
+      );
+      await assertRejects(
+        client,
+        insert,
+        [PLANNED_EXERCISE, WORKOUT_A, EXERCISE, "Quads"],
+        CHECK_VIOLATION,
+      );
       await client.query(insert, [PLANNED_EXERCISE, WORKOUT_A, EXERCISE, null]);
     });
   });
@@ -145,8 +178,14 @@ describe("planned_exercises exercise-or-placeholder", () => {
 describe("partial unique indexes", () => {
   it("standard exercise names are unique ignoring case; user names only per user", async () => {
     await inRolledBackTransaction(async (client) => {
-      await client.query("INSERT INTO users (id, clerk_user_id) VALUES ($1, 'seed_test')", [USER]);
-      await client.query("INSERT INTO exercises (id, name) VALUES ($1, 'Test Squat')", [EXERCISE]);
+      await client.query(
+        "INSERT INTO users (id, clerk_user_id) VALUES ($1, 'seed_test')",
+        [USER],
+      );
+      await client.query(
+        "INSERT INTO exercises (id, name) VALUES ($1, 'Test Squat')",
+        [EXERCISE],
+      );
 
       await assertRejects(
         client,
@@ -171,10 +210,19 @@ describe("partial unique indexes", () => {
 
   it("a user has at most one ACTIVE program", async () => {
     await inRolledBackTransaction(async (client) => {
-      await client.query("INSERT INTO users (id, clerk_user_id) VALUES ($1, 'seed_test')", [USER]);
-      const insert = "INSERT INTO workout_programs (id, user_id, name, status) VALUES ($1, $2, $3, $4)";
+      await client.query(
+        "INSERT INTO users (id, clerk_user_id) VALUES ($1, 'seed_test')",
+        [USER],
+      );
+      const insert =
+        "INSERT INTO workout_programs (id, user_id, name, status) VALUES ($1, $2, $3, $4)";
       await client.query(insert, [PROGRAM, USER, "One", "ACTIVE"]);
-      await client.query(insert, ["01900000-0000-7000-8000-0000000000c1", USER, "Two", "DRAFT"]);
+      await client.query(insert, [
+        "01900000-0000-7000-8000-0000000000c1",
+        USER,
+        "Two",
+        "DRAFT",
+      ]);
       await assertRejects(
         client,
         insert,

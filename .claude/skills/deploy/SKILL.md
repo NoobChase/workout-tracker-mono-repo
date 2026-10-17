@@ -29,12 +29,18 @@ npm run deploy                              # from the repo root
 Root `deploy` builds `apps/web` first, because the `BucketDeployment` asset-bundles
 `apps/web/dist`. Running `cdk deploy` from `infra/` alone ships a stale frontend.
 
-**Two stacks**, so every cdk command here is `--all`:
+**Three stacks**, so every cdk command here is `--all`:
 
 | Stack | Region | Holds |
 |---|---|---|
 | `WorkoutTrackerCertificates` | `us-east-1` | the ACM cert for `tanrenstrength.com` + `*.tanrenstrength.com`, nothing else |
-| `WorkoutTrackerProduction` | `us-east-2` | everything else |
+| `WorkoutTrackerProduction` | `us-east-2` | everything else for the app |
+| `WorkoutTrackerCi` | `us-east-2` | GitHub's OIDC provider and the CI `test`/`migrate` roles; no dependency on the others |
+
+`WorkoutTrackerCi` outputs the two role ARNs. They go into the repository's
+Actions **variables** (`AWS_CI_TEST_ROLE_ARN`, `AWS_CI_MIGRATE_ROLE_ARN`), not
+secrets — an ARN is not a credential. The roles can read SSM and nothing else:
+CI does not deploy, and widening that is a deliberate change.
 
 Both regions need `cdk bootstrap`. Account comes from the profile at deploy
 time and is deliberately not written down in the repo; the domain and its

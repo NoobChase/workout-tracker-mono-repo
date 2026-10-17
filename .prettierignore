@@ -1,0 +1,14 @@
+# Generated -- never reformat what a tool wrote.
+package-lock.json
+packages/db/migrations/
+cdk.out/
+dist/
+
+# Hand-written prose and tables; reflowing them is churn, not formatting.
+*.md
+
+# Local-only or another tool's workspace.
+docs/legacy-*
+design/
+.impeccable/
+.claude/

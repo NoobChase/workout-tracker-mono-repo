@@ -1,4 +1,7 @@
-import { healthResponseSchema, type HealthResponse } from "@workout-tracker/shared";
+import {
+  healthResponseSchema,
+  type HealthResponse,
+} from "@workout-tracker/shared";
 import { Hono } from "hono";
 import { getPool } from "./db.js";
 
