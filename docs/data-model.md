@@ -480,26 +480,16 @@ PostgreSQL — every feature above is available. Connect with the WebSocket driv
 `operations.md` are genuinely interactive multi-statement transactions, which
 the HTTP driver cannot do.
 
-A `dbdiagram.io` version of everything below lives in [`schema.dbml`](schema.dbml)
-— paste it into <https://dbdiagram.io/d> for the visual ERD.
-
-**This DDL is provisional.** Once `packages/db` exists, the Drizzle schema is the
-source of truth and these blocks get deleted, leaving this document to hold the
-*reasoning* — the part that cannot be generated and does not go stale. Three
-hand-maintained copies of one schema (here, `schema.dbml`, and Drizzle) is two
-too many, and the build plan's own rule says so.
+**The schema itself lives in [`packages/db/src/schema.ts`](../packages/db/src/schema.ts).**
+The DDL that used to be here (and in `schema.dbml`) was deleted when that file
+landed, leaving this section to hold the *reasoning* — the part that cannot be
+generated and does not go stale. Two exceptions remain below, each marked: the
+session tables (§3.6, step 3) and `processed_stripe_events` (§3.8, step 5), which
+stay as spec until the step that adds them to the schema file deletes them.
 
 ### 3.1 Enums
 
-```sql
-CREATE TYPE metric_kind    AS ENUM ('REPS','WEIGHT','DURATION','DISTANCE','COMPLETED','RPE');
-CREATE TYPE weight_unit    AS ENUM ('LB','KG');
-CREATE TYPE distance_unit  AS ENUM ('MI','KM','M','FT');
-CREATE TYPE program_status AS ENUM ('DRAFT','ACTIVE','COMPLETED','ARCHIVED');
-CREATE TYPE session_status AS ENUM ('IN_PROGRESS','COMPLETED','SKIPPED');
-CREATE TYPE set_type       AS ENUM ('NORMAL','WARMUP','DROP');
-CREATE TYPE sub_status     AS ENUM ('NONE','TRIALING','ACTIVE','PAST_DUE','CANCELED');
-```
+Defined in [`packages/db/src/schema.ts`](../packages/db/src/schema.ts) (the enums).
 
 `set_type` is three values by decision (§2.8), not an oversight. The billing
 enum is used in §3.8. An earlier draft also had a `sub_tier ENUM ('FREE','PRO')`
@@ -509,22 +499,7 @@ tier column is additive (§3.7's line applies: defer the additive).
 
 ### 3.2 Users (Clerk-backed)
 
-```sql
-CREATE TABLE users (
-  id                  UUID        PRIMARY KEY,   -- UUIDv7, minted in app code
-  clerk_user_id       TEXT        NOT NULL UNIQUE,
-  default_weight_unit weight_unit NOT NULL DEFAULT 'LB',
-  sub_status          sub_status  NOT NULL DEFAULT 'NONE',
-  sub_current_period_end TIMESTAMPTZ,
-  stripe_customer_id  TEXT        UNIQUE,
-  deleted_at          TIMESTAMPTZ,
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX users_pending_purge_idx ON users (deleted_at)
-  WHERE deleted_at IS NOT NULL;
-```
+Defined in [`packages/db/src/schema.ts`](../packages/db/src/schema.ts) (`users`).
 
 No `password_hash`, no `email`, no `username` — see §2.6. The `UNIQUE` on
 `clerk_user_id` doubles as the lookup index for the request path below.
@@ -566,30 +541,7 @@ and none of the authorization half.
 
 ### 3.3 Exercise catalog
 
-```sql
-CREATE TABLE exercises (
-  id            UUID        PRIMARY KEY,
-  owner_user_id UUID        REFERENCES users(id) ON DELETE CASCADE,  -- NULL = standard
-  name          TEXT        NOT NULL,
-  muscle_group  TEXT,
-  equipment     TEXT,
-  is_active     BOOLEAN     NOT NULL DEFAULT TRUE,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Standard exercises: globally unique name. User exercises: unique per user.
-CREATE UNIQUE INDEX exercises_standard_name_key
-  ON exercises (lower(name)) WHERE owner_user_id IS NULL;
-CREATE UNIQUE INDEX exercises_user_name_key
-  ON exercises (owner_user_id, lower(name)) WHERE owner_user_id IS NOT NULL;
-
-CREATE TABLE exercise_metrics (
-  exercise_id UUID        NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
-  metric      metric_kind NOT NULL,
-  is_required BOOLEAN     NOT NULL DEFAULT TRUE,
-  PRIMARY KEY (exercise_id, metric)
-);
-```
+Defined in [`packages/db/src/schema.ts`](../packages/db/src/schema.ts) (`exercises`, `exercise_metrics`).
 
 `owner_user_id IS NULL` = ships with the app, visible to everyone. Non-null =
 the user's own. A user's list is `WHERE owner_user_id IS NULL OR owner_user_id = $1`.
@@ -608,18 +560,7 @@ fixture is portable.
 
 ### 3.4 Per-user exercise settings
 
-```sql
-CREATE TABLE user_exercise_settings (
-  id                  UUID   PRIMARY KEY,
-  user_id             UUID   NOT NULL REFERENCES users(id)     ON DELETE CASCADE,
-  exercise_id         UUID   NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
-  setup               TEXT,        -- "J-cups at 14, safety bars at 5"
-  cues                TEXT,        -- "pull the bar apart, keep elbows tucked"
-  default_weight_unit weight_unit, -- NULL = fall back to users.default_weight_unit
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (user_id, exercise_id)
-);
-```
+Defined in [`packages/db/src/schema.ts`](../packages/db/src/schema.ts) (`user_exercise_settings`).
 
 This is the legacy `exerciseList` done properly: `TEXT` instead of `varchar(45)`
 (which truncated real notes mid-sentence), and separated from the catalog so a
@@ -627,81 +568,7 @@ user can annotate a **standard** exercise without forking their own copy of it.
 
 ### 3.5 Program → Plan → Workout → Planned Exercise → Planned Set
 
-```sql
-CREATE TABLE workout_programs (
-  id            UUID           PRIMARY KEY,
-  user_id       UUID           NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name          TEXT           NOT NULL,
-  notes         TEXT,
-  status        program_status NOT NULL DEFAULT 'DRAFT',
-  target_cycles SMALLINT       CHECK (target_cycles >= 1),  -- NULL = open-ended
-  start_date    DATE,
-  created_at    TIMESTAMPTZ    NOT NULL DEFAULT now(),
-  updated_at    TIMESTAMPTZ    NOT NULL DEFAULT now(),
-  UNIQUE (user_id, name)
-);
-
--- Replaces legacy users.workoutPlan: at most one ACTIVE program per user.
-CREATE UNIQUE INDEX one_active_program_per_user
-  ON workout_programs (user_id) WHERE status = 'ACTIVE';
-
--- One row per cycle. 12 cycles = 12 rows.
-CREATE TABLE workout_plans (
-  id           UUID     PRIMARY KEY,
-  program_id   UUID     NOT NULL REFERENCES workout_programs(id) ON DELETE CASCADE,
-  cycle_number SMALLINT NOT NULL CHECK (cycle_number >= 1),
-  name         TEXT,
-  notes        TEXT,
-  UNIQUE (program_id, cycle_number)
-);
-
-CREATE TABLE workouts (
-  id       UUID     PRIMARY KEY,
-  plan_id  UUID     NOT NULL REFERENCES workout_plans(id) ON DELETE CASCADE,
-  name     TEXT     NOT NULL,              -- "Back Day"
-  position SMALLINT NOT NULL CHECK (position >= 0),
-  notes    TEXT,
-  UNIQUE (plan_id, position) DEFERRABLE INITIALLY DEFERRED
-);
-
-CREATE TABLE planned_exercises (
-  id                UUID     PRIMARY KEY,
-  workout_id        UUID     NOT NULL REFERENCES workouts(id)  ON DELETE CASCADE,
-  exercise_id       UUID     REFERENCES exercises(id) ON DELETE RESTRICT,
-  placeholder_label TEXT,     -- "Quads", "Hamstring accessory" — chosen on the day
-  position          SMALLINT NOT NULL CHECK (position >= 0),
-  target_sets       SMALLINT CHECK (target_sets > 0),
-  group_key         SMALLINT, -- NULL = standalone; equal values = one superset/circuit
-  notes             TEXT,
-  UNIQUE (workout_id, position) DEFERRABLE INITIALLY DEFERRED,
-  CHECK (num_nonnulls(exercise_id, placeholder_label) = 1)
-);
-
-CREATE TABLE planned_sets (
-  id                      UUID     PRIMARY KEY,
-  planned_exercise_id     UUID     NOT NULL REFERENCES planned_exercises(id) ON DELETE CASCADE,
-  set_number              SMALLINT NOT NULL CHECK (set_number >= 1),
-  target_reps_min         SMALLINT CHECK (target_reps_min >= 0),
-  target_reps_max         SMALLINT CHECK (target_reps_max >= 0),
-  target_weight           NUMERIC(7,2) CHECK (target_weight >= 0),
-  weight_unit             weight_unit,
-  target_weight_kg        NUMERIC(10,4) GENERATED ALWAYS AS (
-                            target_weight * CASE weight_unit
-                              WHEN 'KG' THEN 1
-                              WHEN 'LB' THEN 0.45359237 END
-                          ) STORED,
-  target_duration_seconds INT      CHECK (target_duration_seconds >= 0),
-  target_distance         NUMERIC(9,3) CHECK (target_distance >= 0),
-  distance_unit           distance_unit,
-  target_rpe              NUMERIC(3,1) CHECK (target_rpe BETWEEN 0 AND 10),
-  notes                   TEXT,
-  UNIQUE (planned_exercise_id, set_number),
-  CHECK (target_reps_min IS NULL OR target_reps_max IS NULL
-         OR target_reps_min <= target_reps_max),
-  CHECK (target_weight   IS NULL OR weight_unit   IS NOT NULL),
-  CHECK (target_distance IS NULL OR distance_unit IS NOT NULL)
-);
-```
+Defined in [`packages/db/src/schema.ts`](../packages/db/src/schema.ts) (`workout_programs`, `workout_plans`, `workouts`, `planned_exercises`, `planned_sets`).
 
 The two unit `CHECK`s are not optional politeness. Without them,
 `target_weight = 100` with a `NULL` `weight_unit` is legal, the generated
@@ -721,6 +588,9 @@ No `kind`, no `parent_set_id` — set technique is logged, not prescribed (§2.8
 exercises within a transaction would otherwise trip the constraint mid-update.
 
 ### 3.6 Session → Session Exercise → Session Set
+
+**Not yet in `schema.ts`** — the session tables land in step 3. Until then this
+block is the spec; delete it in the change that adds them to the schema file.
 
 ```sql
 CREATE TABLE workout_sessions (
@@ -865,12 +735,7 @@ Stripe owns subscriptions; `users` caches the parts an authorization check needs
 so that no request path calls the Stripe API (`workout-tracker-build-plan.md`
 step 5).
 
-```sql
--- on users (§3.2)
-sub_status             sub_status  NOT NULL DEFAULT 'NONE',
-sub_current_period_end TIMESTAMPTZ,
-stripe_customer_id     TEXT        UNIQUE
-```
+Defined in [`packages/db/src/schema.ts`](../packages/db/src/schema.ts) (`users`).
 
 **Entitlement is `sub_status IN ('TRIALING','ACTIVE')`** — call it `isPro` —
 read from the local row on every request that needs it. `PAST_DUE` deliberately
@@ -905,6 +770,8 @@ the local columns and hardcoded-entitled until step 5 of the build plan.
 
 Webhooks are the only writer of these columns, and Stripe redelivers, so they
 need a dedupe table:
+
+**Not yet in `schema.ts`** — lands with step 5. Until then this block is the spec:
 
 ```sql
 CREATE TABLE processed_stripe_events (

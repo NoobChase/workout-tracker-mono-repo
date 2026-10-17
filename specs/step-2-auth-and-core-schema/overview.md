@@ -297,6 +297,43 @@ position uniques is the expected gap; the partial indexes, the generated
 `target_weight_kg` column and the `num_nonnulls` check may or may not be. Phase 2
 of `plan.md` establishes which, rather than assuming.
 
+**Phase-2 result (2026-10-17, drizzle-orm 0.45.3 / drizzle-kit 0.31.11, Neon
+Postgres 18.6).** Only the two deferrable uniques need `--custom`. Generated, applied
+to a throwaway branch, and checked by behaviour, not just by reading the SQL:
+
+| Construct | Drizzle form | Result |
+|---|---|---|
+| Seven enums | `pgEnum` | generates |
+| Three partial uniques, incl. `lower(name)` | `uniqueIndex().on(sql…).where(sql…)` | generates; case-folded duplicate rejected |
+| `target_weight_kg` | `numeric().generatedAlwaysAs(sql…)` | generates; LB → 45.3592, KG → 100, `NULL` unit → `NULL` |
+| `num_nonnulls(…) = 1` | `check()` | generates; both-null row rejected |
+| Two `DEFERRABLE INITIALLY DEFERRED` uniques | no API | **`--custom`**; single-statement position swap succeeds |
+
+A second `generate` with no schema change is a no-op, so none of the expression
+forms drift. Postgres prints the generation expression back with an
+`ELSE NULL` it adds itself; that is the no-`ELSE` form, semantically identical — do
+not "fix" the schema to match it.
+
+**How the custom migration is shaped — settled by the spike.** `schema.ts`
+declares each position unique as a plain `unique("<name>")` with an explicit
+name, and the `--custom` migration that follows drops and re-adds it under the
+same name with `DEFERRABLE INITIALLY DEFERRED`. Drop-and-add, because
+`ALTER CONSTRAINT … DEFERRABLE` still rejects non-foreign-key constraints on
+Postgres 18. Declaring the constraint (rather than leaving it out of `schema.ts`
+and creating it only in custom SQL) because the spike showed what each choice
+costs:
+
+- An unrelated change to the same table (adding a column) leaves the constraint
+  alone. Both approaches are safe there.
+- Changing the declared constraint's columns makes `generate` emit a drop and a
+  re-add **without** `DEFERRABLE` — the silent loss described below, confirmed.
+  The fix is a `--custom` migration straight after it, and the test catches a
+  forgotten one.
+- Leaving the constraint out of `schema.ts` means the file a reader trusts shows
+  no uniqueness on `position` at all, and a later attempt to "add the missing
+  unique" collides with the existing name. That is the bigger dent in "the schema
+  file is the source of truth", for no protection the test does not already give.
+
 Not up for debate: whether to simply avoid the constructs. Dropping `DEFERRABLE`
 and reordering with a two-phase offset would keep `schema.ts` a complete
 description of the database, but `data-model.md` §7 entry #1 settles that

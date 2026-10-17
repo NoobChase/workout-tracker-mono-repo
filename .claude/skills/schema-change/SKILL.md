@@ -5,24 +5,20 @@ description: Change the database schema — add or alter a table, column, index,
 
 # Changing the schema
 
-## Where the truth lives — check this first
+## Where the truth lives
 
-`packages/db/src/index.ts` is still a placeholder as of build step 1, so
-**`docs/data-model.md` §3 and `docs/schema.dbml` are authoritative right now**.
-The moment a Drizzle schema file exists, that inverts:
-
-- the Drizzle schema file becomes the source of truth, and
-- the DDL in `docs/data-model.md` and the whole of `docs/schema.dbml` get
-  **deleted** in that same change. The *reasoning* prose in `data-model.md`
-  stays — that is the part that cannot be regenerated and does not rot.
-
-Three hand-maintained copies of one schema is two too many, and the stale ones
-are what an agent reads.
+**`packages/db/src/schema.ts`** is the source of truth for every table that
+exists. `docs/data-model.md` §3 holds the *reasoning* behind each table, not its
+DDL — with two marked exceptions that are still spec because their tables do not
+exist yet: the session tables (§3.6, step 3) and `processed_stripe_events`
+(§3.8, step 5). The change that adds either to `schema.ts` deletes its block from
+the doc. Never re-add DDL to the doc for a table that is in the schema file.
 
 ## The loop
 
 1. Edit the Drizzle schema file. Never edit the SQL directly.
-2. `drizzle-kit generate` → a new migration file.
+2. `npm run generate -w @workout-tracker/db` → a new migration in
+   `packages/db/migrations/`.
 3. Read the generated SQL before committing it. Drizzle will happily emit a
    drop-and-recreate for something you meant as a rename.
 4. Commit schema + migration together.
@@ -35,6 +31,15 @@ migration, and it silently diverges every environment that already ran it.
 
 **Never hand-edit a generated migration**, applied or not. If the generated SQL
 is wrong, the schema file is wrong — fix that and regenerate.
+
+**The one exception: what Drizzle cannot express.** `DEFERRABLE` has no Drizzle
+API, so the two position uniques are declared as plain uniques and made
+deferrable by `drizzle-kit generate --custom` (an empty file you write by hand —
+the sanctioned path, not a hand-edit of generated SQL). drizzle-kit cannot see
+custom SQL: change either constraint's columns and it recreates the constraint
+*without* `DEFERRABLE`, silently. Follow any such migration with another
+`--custom` one; `packages/db/test/schema.test.ts` fails if you forget. Anything
+else Drizzle turns out not to express gets the same treatment *and* a test.
 
 ## Applying
 
@@ -51,7 +56,9 @@ mode breaks the session-level features migration tools rely on:
 
 (SSM Parameter Store, `us-east-2`, `SecureString`.) Iterating locally: apply
 against a throwaway Neon branch, not `dev` and never `production` — see the
-`neon-branch` skill.
+`neon-branch` skill. `npm test -w @workout-tracker/db` does this for you: it
+creates a branch off `dev`, migrates it, runs the integration tests, and deletes
+it.
 
 As of step 1 there is no CI workflow yet. If you are the change that needs one,
 building it is part of the task, not a follow-up.

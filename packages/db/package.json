@@ -7,6 +7,20 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate": "drizzle-kit generate",
+    "test": "scripts/with-test-branch.sh node --import tsx --test \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "drizzle-orm": "^0.45.3",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/ws": "^8.18.2",
+    "drizzle-kit": "^0.31.11",
+    "neon": "^4.14.1",
+    "tsx": "^4.23.13"
   }
 }
