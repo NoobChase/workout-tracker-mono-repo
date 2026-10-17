@@ -59,7 +59,10 @@ describe("WorkoutTrackerStack", () => {
   // through CloudFront is a 403 AccessDeniedException and the function is never
   // invoked, so there is no log line pointing at the cause.
   it("grants CloudFront both invoke actions the Function URL needs", () => {
-    for (const action of ["lambda:InvokeFunctionUrl", "lambda:InvokeFunction"]) {
+    for (const action of [
+      "lambda:InvokeFunctionUrl",
+      "lambda:InvokeFunction",
+    ]) {
       template.hasResourceProperties("AWS::Lambda::Permission", {
         Action: action,
         Principal: CLOUDFRONT,
@@ -71,7 +74,12 @@ describe("WorkoutTrackerStack", () => {
   it("scopes the Lambda to its single SSM parameter, never a path wildcard", () => {
     const policies = template.findResources("AWS::IAM::Policy");
     const ssmResources = Object.values(policies)
-      .flatMap((policy) => policy.Properties.PolicyDocument.Statement as Array<Record<string, unknown>>)
+      .flatMap(
+        (policy) =>
+          policy.Properties.PolicyDocument.Statement as Array<
+            Record<string, unknown>
+          >,
+      )
       .filter((statement) => JSON.stringify(statement.Action).includes("ssm:"))
       // The ARN renders as an Fn::Join unless the partition-literal feature
       // flag is on, so compare the serialised form rather than a literal.
@@ -80,10 +88,15 @@ describe("WorkoutTrackerStack", () => {
     assert.equal(ssmResources.length, 1, "expected exactly one ssm statement");
     const [resource] = ssmResources;
     assert.ok(
-      resource?.includes(":parameter/workout-tracker/production/database-url-pooled"),
+      resource?.includes(
+        ":parameter/workout-tracker/production/database-url-pooled",
+      ),
       `unexpected ssm resource: ${resource}`,
     );
-    assert.ok(!resource?.includes("*"), `ssm resource must not be a wildcard: ${resource}`);
+    assert.ok(
+      !resource?.includes("*"),
+      `ssm resource must not be a wildcard: ${resource}`,
+    );
   });
 
   it("puts no VPC configuration on the API function", () => {
@@ -138,12 +151,15 @@ describe("WorkoutTrackerStack", () => {
   // The www -> apex redirect has to hold for API paths too, or the API is
   // reachable on two origins while `authorizedParties` only allows one.
   it("runs the viewer-request function on /api/* as well as the default behaviour", () => {
-    const distributions = template.findResources("AWS::CloudFront::Distribution");
-    const config = Object.values(distributions)[0]?.Properties.DistributionConfig;
-
-    const apiBehavior = (config.CacheBehaviors as Array<Record<string, unknown>>).find(
-      (behavior) => behavior.PathPattern === "/api/*",
+    const distributions = template.findResources(
+      "AWS::CloudFront::Distribution",
     );
+    const config =
+      Object.values(distributions)[0]?.Properties.DistributionConfig;
+
+    const apiBehavior = (
+      config.CacheBehaviors as Array<Record<string, unknown>>
+    ).find((behavior) => behavior.PathPattern === "/api/*");
     assert.ok(apiBehavior, "expected an /api/* behaviour");
     assert.equal(
       JSON.stringify(apiBehavior.FunctionAssociations),

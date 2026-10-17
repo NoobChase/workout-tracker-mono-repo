@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { App } from "aws-cdk-lib";
 import { CertificateStack } from "../lib/certificate-stack.js";
+import { CiStack } from "../lib/ci-stack.js";
 import { WorkoutTrackerStack } from "../lib/workout-tracker-stack.js";
 
 const app = new App();
@@ -42,3 +43,11 @@ const production = new WorkoutTrackerStack(app, "WorkoutTrackerProduction", {
 // this from the ARN reference, but stating it keeps the ordering obvious to a
 // reader and survives the reference being refactored away.
 production.addStackDependency(certificates);
+
+// GitHub Actions' OIDC roles. Account-wide provider, roles spanning both
+// stages, so a stack of its own with no dependency on the others.
+new CiStack(app, "WorkoutTrackerCi", {
+  env: { account, region: "us-east-2" },
+  githubRepository: "NoobChase/workout-tracker-mono-repo",
+  description: "GitHub Actions OIDC provider and the CI test/migrate roles",
+});

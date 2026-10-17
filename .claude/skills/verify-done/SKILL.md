@@ -12,12 +12,13 @@ Report the results, including what failed.
 
 ```bash
 npm run typecheck        # all workspaces
-npm run lint             # see the honest note below
+npm run lint             # ESLint (type-aware) + prettier --check
+npm run format           # if only the Prettier half failed
 ```
 
-`npm run lint` is currently a **no-op** — no linter is configured in any
-workspace, so the "lint passes" clause is vacuous. Do not report it as passing.
-Say it is unconfigured, or configure one if that is what the task is.
+Lint is real: `recommended-type-checked`, chiefly for `no-floating-promises`. A
+dropped `await` on a query or transaction is the bug it exists to catch, so do
+not silence it with `void` without saying why in a comment.
 
 ## 2. Tests exist for the behavior and pass
 

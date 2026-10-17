@@ -18,13 +18,14 @@ trusting this file — the build plan's step 0 and step 1 prose disagree on when
 
 ## Getting a connection string
 
-Four parameters, SSM Parameter Store, `us-east-2`, `SecureString`:
+SSM Parameter Store, `us-east-2`, `SecureString`, all created by hand:
 
 ```
 /workout-tracker/production/database-url-pooled   Lambda runtime
-/workout-tracker/production/database-url-direct   CI migrations
+/workout-tracker/production/database-url-direct   CI migrations (migrate role)
 /workout-tracker/dev/database-url-pooled          dev runtime
-/workout-tracker/dev/database-url-direct          dev migrations
+/workout-tracker/dev/database-url-direct          dev migrations (CI test role)
+/workout-tracker/ci/neon-api-key                  CI test branches (CI test role)
 ```
 
 ```bash

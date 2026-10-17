@@ -1,4 +1,7 @@
-import { healthResponseSchema, type HealthResponse } from "@workout-tracker/shared";
+import {
+  healthResponseSchema,
+  type HealthResponse,
+} from "@workout-tracker/shared";
 import { useEffect, useState } from "react";
 
 type State =
@@ -34,10 +37,13 @@ export function App() {
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-6 p-8 font-sans">
       <h1 className="text-2xl font-semibold tracking-tight">Workout Tracker</h1>
       <p className="text-sm text-neutral-500">
-        Step 1 — infrastructure skeleton. Browser → CloudFront → Lambda Function URL → Neon.
+        Step 1 — infrastructure skeleton. Browser → CloudFront → Lambda Function
+        URL → Neon.
       </p>
 
-      {state.status === "loading" && <p className="text-sm">Checking the pipe…</p>}
+      {state.status === "loading" && (
+        <p className="text-sm">Checking the pipe…</p>
+      )}
 
       {state.status === "error" && (
         <p className="rounded border border-red-300 bg-red-50 p-4 text-sm text-red-800">

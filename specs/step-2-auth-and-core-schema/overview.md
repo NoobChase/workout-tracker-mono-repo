@@ -469,6 +469,16 @@ already demonstrates for the Lambda. **Not** a broad deploy role: deploys stay o
 the laptop in step 2, and widening this is a later deliberate change rather than
 something pre-granted.
 
+**As built (phase 4).** Two refinements, neither widening what a pull request
+can reach. The test role is also assumable from `main`, because the merge
+workflow migrates `dev` through it — `dev` follows what merged, rather than
+whatever an open (or abandoned) pull request last applied. And there is one
+workflow file, not two: `check` on every pull request and push, then
+`migrate-dev` and `migrate-production` on `main` only, each `needs:` the one
+before, so no migration reaches a database from a commit whose tests failed.
+The trust policies match `sub` exactly (`StringEquals`, no wildcards), and
+`infra/lib/ci-stack.test.ts` pins both that and the parameter scoping.
+
 For later, not now: production migrations run automatically on merge to `main`,
 which is right while there are no users. Once there are, production should become
 a GitHub Environment with a required reviewer — real value then, pure friction

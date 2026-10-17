@@ -81,11 +81,17 @@ export const users = pgTable(
   "users",
   {
     id: uuid("id").primaryKey(),
-    clerkUserId: text("clerk_user_id").notNull().unique("users_clerk_user_id_key"),
-    defaultWeightUnit: weightUnit("default_weight_unit").notNull().default("LB"),
+    clerkUserId: text("clerk_user_id")
+      .notNull()
+      .unique("users_clerk_user_id_key"),
+    defaultWeightUnit: weightUnit("default_weight_unit")
+      .notNull()
+      .default("LB"),
     subStatus: subStatus("sub_status").notNull().default("NONE"),
     subCurrentPeriodEnd: timestamptz("sub_current_period_end"),
-    stripeCustomerId: text("stripe_customer_id").unique("users_stripe_customer_id_key"),
+    stripeCustomerId: text("stripe_customer_id").unique(
+      "users_stripe_customer_id_key",
+    ),
     deletedAt: timestamptz("deleted_at"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
@@ -134,7 +140,10 @@ export const exerciseMetrics = pgTable(
     isRequired: boolean("is_required").notNull().default(true),
   },
   (t) => [
-    primaryKey({ name: "exercise_metrics_pkey", columns: [t.exerciseId, t.metric] }),
+    primaryKey({
+      name: "exercise_metrics_pkey",
+      columns: [t.exerciseId, t.metric],
+    }),
   ],
 );
 
@@ -158,7 +167,12 @@ export const userExerciseSettings = pgTable(
     defaultWeightUnit: weightUnit("default_weight_unit"),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
-  (t) => [unique("user_exercise_settings_user_id_exercise_id_key").on(t.userId, t.exerciseId)],
+  (t) => [
+    unique("user_exercise_settings_user_id_exercise_id_key").on(
+      t.userId,
+      t.exerciseId,
+    ),
+  ],
 );
 
 // --- Program -> Plan -> Workout -> Planned exercise -> Planned set (3.5) ---
@@ -203,7 +217,10 @@ export const workoutPlans = pgTable(
     notes: text("notes"),
   },
   (t) => [
-    unique("workout_plans_program_id_cycle_number_key").on(t.programId, t.cycleNumber),
+    unique("workout_plans_program_id_cycle_number_key").on(
+      t.programId,
+      t.cycleNumber,
+    ),
     check("workout_plans_cycle_number_check", sql`${t.cycleNumber} >= 1`),
   ],
 );
@@ -246,7 +263,10 @@ export const plannedExercises = pgTable(
   },
   (t) => [
     // DEFERRABLE INITIALLY DEFERRED in the database -- see the header.
-    unique("planned_exercises_workout_id_position_key").on(t.workoutId, t.position),
+    unique("planned_exercises_workout_id_position_key").on(
+      t.workoutId,
+      t.position,
+    ),
     check("planned_exercises_position_check", sql`${t.position} >= 0`),
     check("planned_exercises_target_sets_check", sql`${t.targetSets} > 0`),
     check(
@@ -270,7 +290,10 @@ export const plannedSets = pgTable(
     targetWeight: numeric("target_weight", { precision: 7, scale: 2 }),
     weightUnit: weightUnit("weight_unit"),
     // Comparison-only canonical weight. Every unit named, no ELSE (2.5).
-    targetWeightKg: numeric("target_weight_kg", { precision: 10, scale: 4 }).generatedAlwaysAs(
+    targetWeightKg: numeric("target_weight_kg", {
+      precision: 10,
+      scale: 4,
+    }).generatedAlwaysAs(
       sql`target_weight * CASE weight_unit WHEN 'KG' THEN 1 WHEN 'LB' THEN 0.45359237 END`,
     ),
     targetDurationSeconds: integer("target_duration_seconds"),
@@ -293,7 +316,10 @@ export const plannedSets = pgTable(
       sql`${t.targetDurationSeconds} >= 0`,
     ),
     check("planned_sets_target_distance_check", sql`${t.targetDistance} >= 0`),
-    check("planned_sets_target_rpe_check", sql`${t.targetRpe} BETWEEN 0 AND 10`),
+    check(
+      "planned_sets_target_rpe_check",
+      sql`${t.targetRpe} BETWEEN 0 AND 10`,
+    ),
     check(
       "planned_sets_reps_range_check",
       sql`${t.targetRepsMin} IS NULL OR ${t.targetRepsMax} IS NULL OR ${t.targetRepsMin} <= ${t.targetRepsMax}`,

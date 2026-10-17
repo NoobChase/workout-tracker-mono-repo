@@ -122,7 +122,9 @@ export class WorkoutTrackerStack extends Stack {
         actions: ["kms:Decrypt"],
         resources: ["*"],
         conditions: {
-          StringEquals: { "kms:ViaService": `ssm.${this.region}.amazonaws.com` },
+          StringEquals: {
+            "kms:ViaService": `ssm.${this.region}.amazonaws.com`,
+          },
         },
       }),
     );
@@ -142,13 +144,20 @@ export class WorkoutTrackerStack extends Stack {
     // (`lib/edge/viewer-request.test.ts`, which evaluates these exact bytes),
     // because it now has two ways to break something important: a bad rewrite
     // breaks /api/*, a bad redirect breaks auth.
-    const viewerRequest = new cloudfront.Function(this, "ViewerRequestFunction", {
-      runtime: cloudfront.FunctionRuntime.JS_2_0,
-      comment: "Redirect www to apex; rewrite client-side routes to /index.html",
-      code: cloudfront.FunctionCode.fromFile({
-        filePath: fileURLToPath(new URL("./edge/viewer-request.js", import.meta.url)),
-      }),
-    });
+    const viewerRequest = new cloudfront.Function(
+      this,
+      "ViewerRequestFunction",
+      {
+        runtime: cloudfront.FunctionRuntime.JS_2_0,
+        comment:
+          "Redirect www to apex; rewrite client-side routes to /index.html",
+        code: cloudfront.FunctionCode.fromFile({
+          filePath: fileURLToPath(
+            new URL("./edge/viewer-request.js", import.meta.url),
+          ),
+        }),
+      },
+    );
 
     const viewerRequestAssociation = [
       {
@@ -160,7 +169,11 @@ export class WorkoutTrackerStack extends Stack {
     const distribution = new cloudfront.Distribution(this, "Distribution", {
       comment: `workout-tracker ${stage}`,
       domainNames: [domainName, wwwDomainName],
-      certificate: acm.Certificate.fromCertificateArn(this, "SiteCertificate", certificateArn),
+      certificate: acm.Certificate.fromCertificateArn(
+        this,
+        "SiteCertificate",
+        certificateArn,
+      ),
       defaultRootObject: "index.html",
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100, // US-only product.
@@ -178,8 +191,10 @@ export class WorkoutTrackerStack extends Stack {
       },
       additionalBehaviors: {
         "/api/*": {
-          origin: origins.FunctionUrlOrigin.withOriginAccessControl(apiFunctionUrl),
-          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          origin:
+            origins.FunctionUrlOrigin.withOriginAccessControl(apiFunctionUrl),
+          viewerProtocolPolicy:
+            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           // Nothing behind /api/* is cacheable, and the origin request policy
           // forwards every header except Host -- the Function URL has to see
@@ -293,7 +308,9 @@ export class WorkoutTrackerStack extends Stack {
     }
 
     new s3deploy.BucketDeployment(this, "SiteDeployment", {
-      sources: [s3deploy.Source.asset(props.webDistPath ?? `${repoRoot}apps/web/dist`)],
+      sources: [
+        s3deploy.Source.asset(props.webDistPath ?? `${repoRoot}apps/web/dist`),
+      ],
       destinationBucket: siteBucket,
       distribution,
       distributionPaths: ["/*"],
@@ -305,11 +322,13 @@ export class WorkoutTrackerStack extends Stack {
     });
     new CfnOutput(this, "HelloUrl", {
       value: `https://${domainName}/api/hello`,
-      description: "Hello-world route: CloudFront -> Lambda Function URL -> Hono -> Neon",
+      description:
+        "Hello-world route: CloudFront -> Lambda Function URL -> Hono -> Neon",
     });
     new CfnOutput(this, "DistributionDomainName", {
       value: distribution.distributionDomainName,
-      description: "CloudFront default domain, for testing the edge without DNS",
+      description:
+        "CloudFront default domain, for testing the edge without DNS",
     });
     new CfnOutput(this, "ApiFunctionName", { value: apiFunction.functionName });
     new CfnOutput(this, "SiteBucketName", { value: siteBucket.bucketName });

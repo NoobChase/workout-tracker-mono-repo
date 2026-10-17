@@ -60,8 +60,10 @@ against a throwaway Neon branch, not `dev` and never `production` — see the
 creates a branch off `dev`, migrates it, runs the integration tests, and deletes
 it.
 
-As of step 1 there is no CI workflow yet. If you are the change that needs one,
-building it is part of the task, not a follow-up.
+CI (`.github/workflows/ci.yml`) is the only path to `dev` and `production`: on
+merge to `main` it runs the checks, then migrates `dev`, then `production`. A
+migration therefore reaches a shared database only after it has merged and its
+tests have passed.
 
 ## Non-negotiables for new tables
 
