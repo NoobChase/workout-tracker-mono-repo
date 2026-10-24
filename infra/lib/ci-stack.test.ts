@@ -4,7 +4,7 @@ import { App } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import { CiStack } from "./ci-stack.js";
 
-const REPO = "example-owner/example-repo";
+const REPO = "example-owner@111/example-repo@222";
 
 function synth(): Template {
   const app = new App();

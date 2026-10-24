@@ -48,6 +48,6 @@ production.addStackDependency(certificates);
 // stages, so a stack of its own with no dependency on the others.
 new CiStack(app, "WorkoutTrackerCi", {
   env: { account, region: "us-east-2" },
-  githubRepository: "NoobChase/workout-tracker-mono-repo",
+  githubRepository: "NoobChase@98501255/workout-tracker-mono-repo@1350890986",
   description: "GitHub Actions OIDC provider and the CI test/migrate roles",
 });
