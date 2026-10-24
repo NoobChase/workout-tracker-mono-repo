@@ -3,7 +3,11 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import type { Construct } from "constructs";
 
 export interface CiStackProps extends StackProps {
-  /** `owner/name` of the GitHub repository allowed to assume the roles. */
+  /**
+   * The GitHub repository allowed to assume the roles, in the immutable
+   * `owner@ownerId/name@repoId` form its OIDC `sub` claims carry. Read it from
+   * `sub_claim_prefix` in `gh api repos/{owner}/{name}/actions/oidc/customization/sub`.
+   */
   readonly githubRepository: string;
 }
 
@@ -39,7 +43,9 @@ export class CiStack extends Stack {
     });
 
     // `sub` claims GitHub issues for this repository: one per pull request
-    // event, one per push to a ref.
+    // event, one per push to a ref. The repository uses immutable subject
+    // claims, which pin the owner and repository ids -- a renamed, deleted or
+    // re-created repository of the same name cannot match.
     const repo = `repo:${props.githubRepository}`;
     const fromPullRequest = `${repo}:pull_request`;
     const fromMain = `${repo}:ref:refs/heads/main`;
