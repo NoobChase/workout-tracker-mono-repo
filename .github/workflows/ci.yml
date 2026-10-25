@@ -1,11 +1,14 @@
 # The repository's CI (specs step 2, decisions 10 and 11).
 #
 #   pull request  -> check
-#   push to main  -> check, then migrate dev, then migrate production
+#   push to main  -> check, then migrate + seed dev, then migrate + seed production
 #
 # One workflow rather than separate check and migrate files, so a migration can
 # `needs:` the checks: nothing reaches a database from a commit whose tests
-# failed. Migrations reach dev and production from here and nowhere else.
+# failed. Migrations -- and the catalog seed, which mutates the database just
+# the same (spec step 2, decision 8) -- reach dev and production from here and
+# nowhere else. The seed runs after every migration: it is idempotent, so an
+# unchanged catalog writes nothing.
 #
 # GitHub holds no secrets. The two role ARNs are repository *variables*; every
 # credential is read from SSM through those roles, and masked on read.
@@ -70,13 +73,14 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_CI_TEST_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-      - name: Migrate dev
+      - name: Migrate and seed dev
         run: |
           url="$(aws ssm get-parameter --with-decryption \
             --name /workout-tracker/dev/database-url-direct \
             --query Parameter.Value --output text)"
           echo "::add-mask::$url"
           DATABASE_URL="$url" npm run migrate -w @workout-tracker/db
+          DATABASE_URL="$url" npm run seed -w @workout-tracker/db
 
   # Automatic on merge while there are no users. Once there are, this job gets
   # a GitHub Environment with a required reviewer -- and the migrate role's
@@ -98,10 +102,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_CI_MIGRATE_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-      - name: Migrate production
+      - name: Migrate and seed production
         run: |
           url="$(aws ssm get-parameter --with-decryption \
             --name /workout-tracker/production/database-url-direct \
             --query Parameter.Value --output text)"
           echo "::add-mask::$url"
           DATABASE_URL="$url" npm run migrate -w @workout-tracker/db
+          DATABASE_URL="$url" npm run seed -w @workout-tracker/db

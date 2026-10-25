@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "generate": "drizzle-kit generate",
     "test": "scripts/with-test-branch.sh node --import tsx --test \"test/**/*.test.ts\"",
-    "migrate": "drizzle-kit migrate"
+    "migrate": "drizzle-kit migrate",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
