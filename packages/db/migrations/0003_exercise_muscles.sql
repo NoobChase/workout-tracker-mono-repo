@@ -1,0 +1,4 @@
+ALTER TABLE "exercises" ADD COLUMN "primary_muscles" "muscle_group"[] DEFAULT '{}' NOT NULL;--> statement-breakpoint
+ALTER TABLE "exercises" ADD COLUMN "secondary_muscles" "muscle_group"[] DEFAULT '{}' NOT NULL;--> statement-breakpoint
+ALTER TABLE "exercises" ADD CONSTRAINT "exercises_secondary_needs_primary_check" CHECK (cardinality("exercises"."primary_muscles") > 0 OR cardinality("exercises"."secondary_muscles") = 0);--> statement-breakpoint
+ALTER TABLE "exercises" ADD CONSTRAINT "exercises_muscles_disjoint_check" CHECK (NOT ("exercises"."primary_muscles" && "exercises"."secondary_muscles"));

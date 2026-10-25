@@ -65,6 +65,51 @@ export const sessionStatus = pgEnum("session_status", [
   "SKIPPED",
 ]);
 export const setType = pgEnum("set_type", ["NORMAL", "WARMUP", "DROP"]);
+// What an exercise works (data-model.md 3.3). CARDIO is not a muscle; it is
+// the honest group for a treadmill or a rower, hence `muscle_group`.
+export const muscleGroup = pgEnum("muscle_group", [
+  "CHEST",
+  "LATS",
+  "UPPER_BACK",
+  "TRAPS",
+  "LOWER_BACK",
+  "FRONT_DELTS",
+  "SIDE_DELTS",
+  "REAR_DELTS",
+  "BICEPS",
+  "TRICEPS",
+  "FOREARMS",
+  "ABS",
+  "OBLIQUES",
+  "GLUTES",
+  "QUADS",
+  "HAMSTRINGS",
+  "ADDUCTORS",
+  "CALVES",
+  "CARDIO",
+]);
+// An exercise's main implement (data-model.md 3.3). One per exercise.
+export const equipment = pgEnum("equipment", [
+  "BARBELL",
+  "EZ_BAR",
+  "TRAP_BAR",
+  "DUMBBELL",
+  "KETTLEBELL",
+  "PLATE",
+  "MACHINE",
+  "SMITH_MACHINE",
+  "CABLE",
+  "BODYWEIGHT",
+  "BAND",
+  "SUSPENSION",
+  "MEDICINE_BALL",
+  "SANDBAG",
+  "MACE",
+  "CLUBBELL",
+  "SLED",
+  "CARDIO_MACHINE",
+  "OTHER",
+]);
 export const subStatus = pgEnum("sub_status", [
   "NONE",
   "TRIALING",
@@ -114,8 +159,17 @@ export const exercises = pgTable(
       onDelete: "cascade",
     }),
     name: text("name").notNull(),
-    muscleGroup: text("muscle_group"),
-    equipment: text("equipment"),
+    // Both optional, so a custom exercise can be saved without them; a
+    // secondary muscle without a primary is refused by the check below.
+    primaryMuscles: muscleGroup("primary_muscles")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
+    secondaryMuscles: muscleGroup("secondary_muscles")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
+    equipment: equipment("equipment"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
   },
@@ -127,6 +181,14 @@ export const exercises = pgTable(
     uniqueIndex("exercises_user_name_key")
       .on(t.ownerUserId, sql`lower(${t.name})`)
       .where(sql`${t.ownerUserId} IS NOT NULL`),
+    check(
+      "exercises_secondary_needs_primary_check",
+      sql`cardinality(${t.primaryMuscles}) > 0 OR cardinality(${t.secondaryMuscles}) = 0`,
+    ),
+    check(
+      "exercises_muscles_disjoint_check",
+      sql`NOT (${t.primaryMuscles} && ${t.secondaryMuscles})`,
+    ),
   ],
 );
 
@@ -197,9 +259,8 @@ export const workoutPrograms = pgTable(
     // Copying a program auto-suffixes the name rather than colliding here
     // (operations.md 3.9).
     unique("workout_programs_user_id_name_key").on(t.userId, t.name),
-    uniqueIndex("one_active_program_per_user")
-      .on(t.userId)
-      .where(sql`${t.status} = 'ACTIVE'`),
+    // Any number may be ACTIVE at once -- a lifting block alongside a running
+    // block (data-model.md 7). "What's next?" answers per program.
     check("workout_programs_target_cycles_check", sql`${t.targetCycles} >= 1`),
   ],
 );

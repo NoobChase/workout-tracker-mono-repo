@@ -181,8 +181,10 @@ Two statements, one transaction. The metrics are the part that matters — they
 decide which input fields the logger renders later:
 
 ```sql
-INSERT INTO exercises (id, owner_user_id, name, muscle_group, equipment)
-VALUES ($ex_id, $user, 'Reverse Hyper', 'posterior chain', 'machine');
+INSERT INTO exercises (id, owner_user_id, name,
+                       primary_muscles, secondary_muscles, equipment)
+VALUES ($ex_id, $user, 'Reverse Hyper',
+        '{GLUTES}', '{HAMSTRINGS,LOWER_BACK}', 'MACHINE');
 
 INSERT INTO exercise_metrics (exercise_id, metric, is_required)
 VALUES ($ex_id, 'REPS',   TRUE),
@@ -433,18 +435,19 @@ each level is one insert and one join.
 **Writes:** `workout_programs.status`
 
 ```sql
-UPDATE workout_programs SET status = 'ARCHIVED' WHERE user_id = $user AND status = 'ACTIVE';
-UPDATE workout_programs SET status = 'ACTIVE'   WHERE id = $program;
+UPDATE workout_programs SET status = 'ACTIVE' WHERE id = $program;
 ```
 
-Both statements in one transaction. `one_active_program_per_user` is a partial
-unique index, so doing them in the wrong order — or forgetting the first — fails
-loudly instead of leaving two active programs.
+One statement. Any number of programs may be active at once (data-model.md §7
+#30), so activating one **never touches another** — a running block started
+alongside a lifting block leaves the lifting block running. Replacing a program
+is two user actions: activate the new one, archive the old one (§3.11). The UI
+may offer the second as a follow-up; it is never implied.
 
-The displaced program becomes `ARCHIVED`, not `COMPLETED`. Starting a different
-program is abandonment, not completion, and marking it `COMPLETED` would make
-"programs I finished" a lie. `COMPLETED` is written in exactly one place: §4.13,
-when the final cycle is actually trained.
+An abandoned program becomes `ARCHIVED`, not `COMPLETED`. Stopping a program is
+abandonment, not completion, and marking it `COMPLETED` would make "programs I
+finished" a lie. `COMPLETED` is written in exactly one place: §4.13, when the
+final cycle is actually trained.
 
 ### 3.11 Archive a program
 
@@ -499,8 +502,8 @@ SET target_cycles = target_cycles + 1,
 WHERE id = $program;
 ```
 
-Reactivating is subject to `one_active_program_per_user`, so no other program may
-be active at the time — it fails loudly rather than leaving two.
+Reactivating needs nothing else to be inactive — any number of programs may be
+active at once (data-model.md §7 #30).
 
 For an **open-ended** program `target_cycles` stays `NULL` and `status` is
 already `ACTIVE`; only the clone runs.
@@ -546,9 +549,11 @@ editing happens in the app. Export is the same format in reverse — §5.4.
 
 **Reads:** `workout_programs`, `workout_plans`, `workouts`, `workout_sessions`
 
-The query in §5 of the data model. Note its predicate is
-`status IN ('COMPLETED','SKIPPED')` — a skipped workout is *resolved*, and
-matching only `COMPLETED` would wedge the program behind it forever.
+The query in §5 of the data model: one row per active program, each program's
+earliest unresolved workout, and the user picks which to train. Note its
+predicate is `status IN ('COMPLETED','SKIPPED')` — a skipped workout is
+*resolved*, and matching only `COMPLETED` would wedge the program behind it
+forever.
 
 ### 4.2 Start the workout
 

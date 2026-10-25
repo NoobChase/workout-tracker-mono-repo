@@ -15,6 +15,20 @@
       "when": 1792272115017,
       "tag": "0001_deferrable_position_uniques",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792893705369,
+      "tag": "0002_multiple_active_programs_and_equipment_enum",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792893706164,
+      "tag": "0003_exercise_muscles",
+      "breakpoints": true
     }
   ]
 }

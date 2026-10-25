@@ -1,0 +1,5 @@
+CREATE TYPE "public"."equipment" AS ENUM('BARBELL', 'EZ_BAR', 'TRAP_BAR', 'DUMBBELL', 'KETTLEBELL', 'PLATE', 'MACHINE', 'SMITH_MACHINE', 'CABLE', 'BODYWEIGHT', 'BAND', 'SUSPENSION', 'MEDICINE_BALL', 'SANDBAG', 'MACE', 'CLUBBELL', 'SLED', 'CARDIO_MACHINE', 'OTHER');--> statement-breakpoint
+CREATE TYPE "public"."muscle_group" AS ENUM('CHEST', 'LATS', 'UPPER_BACK', 'TRAPS', 'LOWER_BACK', 'FRONT_DELTS', 'SIDE_DELTS', 'REAR_DELTS', 'BICEPS', 'TRICEPS', 'FOREARMS', 'ABS', 'OBLIQUES', 'GLUTES', 'QUADS', 'HAMSTRINGS', 'ADDUCTORS', 'CALVES', 'CARDIO');--> statement-breakpoint
+DROP INDEX "one_active_program_per_user";--> statement-breakpoint
+ALTER TABLE "exercises" ALTER COLUMN "equipment" SET DATA TYPE "public"."equipment" USING "equipment"::"public"."equipment";--> statement-breakpoint
+ALTER TABLE "exercises" DROP COLUMN "muscle_group";
