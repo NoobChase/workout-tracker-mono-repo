@@ -79,12 +79,15 @@ than concluding the change did not work.
   apply to *every* behaviour, so a genuine API 401/403/404 comes back as a `200`
   carrying the HTML shell — fatal once `requireAuth` exists. A test asserts
   `CustomErrorResponses` is absent; do not "fix" it.
-- **Function URL OAC needs two grants.** CDK's
-  `FunctionUrlOrigin.withOriginAccessControl` emits only
-  `lambda:InvokeFunctionUrl`. AWS requires `lambda:InvokeFunction` as well, and
-  without it CloudFront's signature verifies, the request is refused upstream of
-  the runtime, and **CloudWatch holds nothing at all** — an empty log is the
-  tell. The stack adds the second grant explicitly and tests both.
+- **No OAC on the Function URL.** It looks like the secure choice and breaks
+  the API: OAC signs the origin request with its own `Authorization` header,
+  overwriting the viewer's Clerk `Bearer` token, and Lambda refuses any signed
+  POST whose body is not hashed in `x-amz-content-sha256` — so webhooks and MCP
+  clients get a bare 403 from AWS, with nothing in CloudWatch. The URL is
+  `AuthType: NONE`; CloudFront sends the generated `OriginVerifySecret` as
+  `x-origin-verify`, and `apps/api/src/origin.ts` refuses requests without it.
+  Tests assert there is no lambda-type OAC and that the header value is a
+  Secrets Manager reference, never a literal.
 - **No VPC configuration on the Lambda, ever.** That absence is the entire
   reason the bill is small and Stripe/Clerk/Neon all reach. Adding a VPC to
   "secure" it costs ~$33/mo in NAT and breaks step 5.

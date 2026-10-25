@@ -573,6 +573,37 @@ and gets unit tests that load that exact file. It is also attached to the
 rewrite needs an explicit `/api/` guard — tested, because an unguarded rewrite
 would turn every API call into `index.html`.
 
+**14. The API is reached through CloudFront by a shared secret header, not
+origin access control.** Added at implementation (phase 5), reversing step 1's
+"Function URL locked down with OAC". The first deploy of the auth path showed
+two failures, neither visible in step 1, which only had an unauthenticated
+`GET`:
+
+- OAC signs the origin request with SigV4 by writing **its own `Authorization`
+  header**, overwriting the viewer's `Bearer` token. The Lambda saw
+  `AWS4-HMAC-SHA256 …`, so every authenticated request would have been a 401 —
+  and the "forged token is refused" check passed for that wrong reason. The tell
+  was the log: no "session token rejected" line, a 3 ms invocation.
+- Lambda refuses a signed request whose body is not hashed in
+  `x-amz-content-sha256`, so **every POST with a body** was a bare AWS 403 that
+  never reached the function. Clerk's webhook cannot add that header; nor will
+  an MCP client (step 6) or Stripe (step 5).
+
+So the Function URL is `AuthType: NONE`, CloudFront sends a CDK-generated
+Secrets Manager secret as the `x-origin-verify` origin header (CloudFront
+overwrites a viewer header of that name), and `apps/api/src/origin.ts` refuses
+anything without it, ahead of every route including the public ones.
+CloudFormation resolves the secret into CloudFront's config at deploy time, so
+the template never holds it.
+
+Rejected: keeping OAC with the token in a custom header and client-side body
+hashing (fixes only our own frontend — webhooks and MCP would need a second,
+public front door); Lambda@Edge rewriting headers and hashing bodies ahead of
+signing (an `us-east-1` function on every API request, latency, and a 1 MB body
+cap); API Gateway (publicly addressable too, so it needs the same secret, plus a
+per-request charge). Accepted cost: a secret instead of IAM, readable by anyone
+who can read the distribution config, and rotated by hand.
+
 ## Deliberately not done
 
 - **Session tables** (`data-model.md` §3.6) and everything over them — step 3.

@@ -1,5 +1,5 @@
-// The auth boundary and the Clerk webhook, through the real Hono app with fake
-// identity dependencies. Token verification itself is Clerk's; what is tested
+// The CloudFront check, the auth boundary and the Clerk webhook, through the
+// real Hono app with fake identity dependencies. Token verification itself is Clerk's; what is tested
 // here is everything this repo decides around it. Identity resolution against
 // a real database is packages/db/test/users.test.ts.
 import assert from "node:assert/strict";
@@ -9,8 +9,10 @@ import type { ResolvedUser, SubStatus } from "@workout-tracker/db";
 import { Hono } from "hono";
 import { createApp, type AppDeps } from "../src/app";
 import { requireAuth, requirePro, type AuthEnv } from "../src/auth";
+import { ORIGIN_VERIFY_HEADER } from "../src/origin";
 
 const SIGNING_SECRET = `whsec_${randomBytes(24).toString("base64")}`;
+const ORIGIN_SECRET = randomBytes(24).toString("base64");
 
 interface Fakes {
   deps: AppDeps;
@@ -23,6 +25,7 @@ function fakes(): Fakes {
   const users = new Map<string, ResolvedUser>();
   const softDeleted: string[] = [];
   const deps: AppDeps = {
+    originVerifySecret: () => Promise.resolve(ORIGIN_SECRET),
     verifySessionToken: (token) =>
       token.startsWith("valid:")
         ? Promise.resolve(token.slice("valid:".length))
@@ -46,25 +49,67 @@ function fakes(): Fakes {
   return { deps, users, softDeleted };
 }
 
+/** The app as CloudFront reaches it: every request carries the origin secret. */
+function viaCloudFront(deps: AppDeps) {
+  const app = createApp(deps);
+  return {
+    request(path: string, init: RequestInit = {}) {
+      const headers = new Headers(init.headers);
+      headers.set(ORIGIN_VERIFY_HEADER, ORIGIN_SECRET);
+      return app.request(path, { ...init, headers });
+    },
+  };
+}
+
 const bearer = (token: string) => ({
   headers: { Authorization: `Bearer ${token}` },
 });
 
+describe("requireCloudFront", () => {
+  const direct = () => createApp(fakes().deps);
+
+  it("refuses a request without the origin header, public routes included", async () => {
+    assert.equal((await direct().request("/api/hello")).status, 403);
+    assert.equal(
+      (await direct().request("/api/webhooks/clerk", { method: "POST" }))
+        .status,
+      403,
+    );
+  });
+
+  it("runs before auth: a valid token does not get past it", async () => {
+    const res = await direct().request("/api/me", bearer("valid:user_a"));
+    assert.equal(res.status, 403);
+  });
+
+  it("refuses the wrong secret", async () => {
+    const res = await direct().request("/api/hello", {
+      headers: { [ORIGIN_VERIFY_HEADER]: `${ORIGIN_SECRET}x` },
+    });
+    assert.equal(res.status, 403);
+  });
+
+  it("lets the right secret through", async () => {
+    const res = await viaCloudFront(fakes().deps).request("/api/hello");
+    assert.equal(res.status, 200);
+  });
+});
+
 describe("requireAuth", () => {
   it("refuses a request with no Authorization header", async () => {
-    const res = await createApp(fakes().deps).request("/api/me");
+    const res = await viaCloudFront(fakes().deps).request("/api/me");
     assert.equal(res.status, 401);
   });
 
   it("refuses a non-Bearer scheme", async () => {
-    const res = await createApp(fakes().deps).request("/api/me", {
+    const res = await viaCloudFront(fakes().deps).request("/api/me", {
       headers: { Authorization: "Basic dXNlcjpwYXNz" },
     });
     assert.equal(res.status, 401);
   });
 
   it("refuses a token that fails verification", async () => {
-    const res = await createApp(fakes().deps).request(
+    const res = await viaCloudFront(fakes().deps).request(
       "/api/me",
       bearer("forged"),
     );
@@ -73,7 +118,7 @@ describe("requireAuth", () => {
 
   it("resolves a valid token to the internal user", async () => {
     const { deps, users } = fakes();
-    const res = await createApp(deps).request(
+    const res = await viaCloudFront(deps).request(
       "/api/me",
       bearer("valid:user_a"),
     );
@@ -93,7 +138,7 @@ describe("requireAuth", () => {
       subStatus: "ACTIVE",
       deletedAt: new Date(),
     });
-    const res = await createApp(deps).request(
+    const res = await viaCloudFront(deps).request(
       "/api/me",
       bearer("valid:user_gone"),
     );
@@ -101,7 +146,7 @@ describe("requireAuth", () => {
   });
 
   it("fails closed: an unknown path is 401 signed out, 404 signed in", async () => {
-    const app = createApp(fakes().deps);
+    const app = viaCloudFront(fakes().deps);
     assert.equal((await app.request("/api/nope")).status, 401);
     assert.equal(
       (await app.request("/api/nope", bearer("valid:user_a"))).status,
@@ -110,7 +155,7 @@ describe("requireAuth", () => {
   });
 
   it("leaves exactly the health route and the webhook public", async () => {
-    const app = createApp(fakes().deps);
+    const app = viaCloudFront(fakes().deps);
     assert.equal((await app.request("/api/hello")).status, 200);
     // Reaches the handler (400: unsigned), rather than being stopped at 401.
     assert.equal(
@@ -159,7 +204,7 @@ describe("requirePro", () => {
   it("is mounted on the analytics group", async () => {
     // With the bypass on, an entitled request passes the gate and finds no
     // route yet (404) -- proving the gate runs after auth, not instead of it.
-    const app = createApp(fakes().deps);
+    const app = viaCloudFront(fakes().deps);
     assert.equal((await app.request("/api/analytics/x")).status, 401);
     assert.equal(
       (await app.request("/api/analytics/x", bearer("valid:user_a"))).status,
@@ -198,7 +243,7 @@ describe("POST /api/webhooks/clerk", () => {
 
   it("soft-deletes on a correctly signed user.deleted", async () => {
     const { deps, softDeleted } = fakes();
-    const res = await createApp(deps).request(
+    const res = await viaCloudFront(deps).request(
       "/api/webhooks/clerk",
       signed(deletedEvent),
     );
@@ -209,7 +254,7 @@ describe("POST /api/webhooks/clerk", () => {
   it("refuses a body signed with another secret, and acts on nothing", async () => {
     const { deps, softDeleted } = fakes();
     const other = `whsec_${randomBytes(24).toString("base64")}`;
-    const res = await createApp(deps).request(
+    const res = await viaCloudFront(deps).request(
       "/api/webhooks/clerk",
       signed(deletedEvent, other),
     );
@@ -221,14 +266,17 @@ describe("POST /api/webhooks/clerk", () => {
     const { deps, softDeleted } = fakes();
     const request = signed(deletedEvent);
     request.body = request.body.replace("user_deleted_1", "user_victim");
-    const res = await createApp(deps).request("/api/webhooks/clerk", request);
+    const res = await viaCloudFront(deps).request(
+      "/api/webhooks/clerk",
+      request,
+    );
     assert.equal(res.status, 400);
     assert.deepEqual(softDeleted, []);
   });
 
   it("acknowledges and ignores other event types", async () => {
     const { deps, softDeleted } = fakes();
-    const res = await createApp(deps).request(
+    const res = await viaCloudFront(deps).request(
       "/api/webhooks/clerk",
       signed({ type: "user.created", object: "event", data: { id: "user_x" } }),
     );

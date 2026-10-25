@@ -1,7 +1,7 @@
 import { Pool, neonConfig } from "@neondatabase/serverless";
 import { createDb, type Db } from "@workout-tracker/db";
 import ws from "ws";
-import { getSecureParameter, requireEnv } from "./ssm.js";
+import { getSecureParameter, requireEnv } from "./secrets.js";
 
 // The WebSocket driver, not the HTTP one. The HTTP driver cannot do interactive
 // transactions, and the clone primitive (operations.md 0.2), copy-program (3.9),

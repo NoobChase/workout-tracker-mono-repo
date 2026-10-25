@@ -9,6 +9,7 @@
     "test": "node --import tsx --test \"test/**/*.test.ts\""
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1156.0",
     "@aws-sdk/client-ssm": "^3.876.0",
     "@clerk/backend": "^3.26.2",
     "@neondatabase/serverless": "^1.0.1",

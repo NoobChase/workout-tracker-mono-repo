@@ -7,13 +7,16 @@ lives in the service layer, queries in `packages/db` (root `CLAUDE.md`).
 
 - `src/app.ts` — `createApp(deps)`: every route and the auth wiring. Takes its
   dependencies as an argument so tests run the real app with fakes.
-- `src/deps.ts` — the production dependencies (Clerk, Neon, SSM). The only file
-  that reads `CLERK_*` env vars.
+- `src/deps.ts` — the production dependencies (Clerk, Neon, SSM, Secrets
+  Manager). The only file that reads the `CLERK_*` and `ORIGIN_*` env vars.
 - `src/lambda.ts` — `handle(createApp(productionDeps()))`, nothing else.
+- `src/origin.ts` — `requireCloudFront`: refuses any request without the
+  `x-origin-verify` secret. Runs first, before the public routes too. The
+  Function URL is public; this is what keeps CloudFront the only way in.
 - `src/auth.ts` — `requireAuth`, `requirePro`, `BILLING_NOT_LIVE`.
-- `src/ssm.ts` — memoised SecureString reads. Add a parameter here *and* to the
-  Lambda's grant in `infra/lib/workout-tracker-stack.ts`; the infra test pins
-  the exact list.
+- `src/secrets.ts` — memoised SSM SecureString and Secrets Manager reads. A new
+  SSM parameter also goes in the Lambda's grant in
+  `infra/lib/workout-tracker-stack.ts`; the infra test pins the exact list.
 
 ## Auth
 
@@ -40,7 +43,9 @@ and acknowledge event types they do not handle with a 2xx.
 
 ## Tests
 
-`npm test -w @workout-tracker/api` — no database, no network. Webhook tests
+`npm test -w @workout-tracker/api` — no database, no network. Send requests
+through the test file's `viaCloudFront` helper, which adds the origin secret;
+`createApp(...).request` directly is refused with 403. Webhook tests
 sign requests with HMAC like Clerk does, so they exercise the real
 `verifyWebhook`. Anything that needs real rows belongs in `packages/db`'s
 integration tests.
