@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tanren — Evidence</title>
+<meta name="description" content="Mockup 8: the Lexicon entry with a live product specimen. Each character of 鍛錬 shows its half of the app: 鍛 the offline log, 錬 the progression.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&family=Shippori+Mincho+B1:wght@700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>try { const t = localStorage.getItem('tanren-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+<style>
+  :root {
+    --bg: #131210; --card: #1b1916; --line: #2d2924; --line-2: #3e3832;
+    --text: #f1ebe4; --muted: #a79e95; --faint: #91877e;
+    --copper: #d07b4b; --copper-btn: #ab5428; --on-copper: #fff7f1;
+    --scr: #0e0d0b; --scr-row: #171512; --shadow: 0 32px 48px -28px rgba(0,0,0,.8), 0 10px 20px -12px rgba(0,0,0,.5);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --ease-io: cubic-bezier(0.77, 0, 0.175, 1);
+    --sans: "Albert Sans", system-ui, sans-serif; --jp: "Shippori Mincho B1", serif; --mono: "Geist Mono", ui-monospace, monospace;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f1ec; --card: #ebe6df; --line: #d9d1c7; --line-2: #c4b9ad;
+    --text: #1a1613; --muted: #574f48; --faint: #6a6159;
+    --copper: #a04a1d; --copper-btn: #a04a1d; --on-copper: #fff7f1;
+    --scr: #fbf9f6; --scr-row: #f3efe9; --shadow: 0 30px 48px -28px rgba(60,40,20,.32), 0 10px 20px -12px rgba(60,40,20,.16);
+    color-scheme: light;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scrollbar-color: var(--line-2) var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: clip; }
+  ::selection { background: var(--copper); color: var(--on-copper); }
+  :focus-visible { outline: 2px solid var(--copper); outline-offset: 3px; border-radius: 3px; }
+  a { color: inherit; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 720px) { .wrap { padding: 0 36px; } }
+  .sc { font: 600 12px/1.4 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--copper); }
+  .mono { font: 400 13px/1.5 var(--mono); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  .nav { display: flex; align-items: center; gap: 16px; height: 64px; border-bottom: 1px solid var(--line); }
+  .lock { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .lock .jp { font: 800 20px/1 var(--jp); }
+  .lock .en { font: 700 13px/1 var(--sans); letter-spacing: .22em; }
+  .nav-links { display: none; gap: 24px; margin-left: auto; font-size: 14px; }
+  .nav-links a { text-decoration: none; color: var(--muted); transition: color .15s ease; } .nav-links a:hover { color: var(--text); }
+  .nav-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  @media (min-width: 860px) { .nav-links { display: flex; } .nav-right { margin-left: 20px; } }
+  .tt { all: unset; cursor: pointer; height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line-2); border-radius: 8px; font: 500 13px var(--sans); color: var(--muted); transition: color .15s ease, border-color .15s ease, transform .16s var(--ease-out); }
+  .tt:hover { color: var(--text); border-color: var(--muted); } .tt:active { transform: scale(.96); }
+  .tt svg { width: 15px; height: 15px; }
+  .tt .l, :root[data-theme="light"] .tt .d { display: none; } :root[data-theme="light"] .tt .l { display: inline; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 8px; border: 1px solid var(--line-2); color: var(--text); text-decoration: none; font: 600 15px var(--sans); background: transparent; transition: transform .16s var(--ease-out), background-color .15s ease, border-color .15s ease; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--copper-btn); border-color: var(--copper-btn); color: var(--on-copper); }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { border-color: var(--muted); } .btn.primary:hover { background: color-mix(in oklab, var(--copper-btn) 86%, black); } }
+  .nav .btn { height: 36px; padding: 0 14px; font-size: 14px; display: none; } @media (min-width: 480px) { .nav .btn { display: inline-flex; } }
+
+  /* ── hero: etymology → evidence ─────────────────────────────── */
+  .hero { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "word" "def" "act" "ety" "spec";
+    padding-top: 28px; padding-bottom: 64px; border-bottom: 1px solid var(--line); }
+  @media (min-width: 1040px) {
+    .hero { grid-template-columns: minmax(0, 1fr) 408px; grid-template-areas: "word spec" "ety spec" "def spec" "act spec";
+      grid-template-rows: auto auto auto 1fr; column-gap: clamp(48px, 6vw, 96px); padding-top: 44px; padding-bottom: 56px; min-height: calc(100svh - 64px); max-height: 900px; }
+  }
+
+  .headword { grid-area: word; display: flex; align-items: center; gap: clamp(14px, 3vw, 36px); }
+  .kanji { display: flex; font: 800 clamp(80px, 22vw, 150px)/.95 var(--jp); user-select: none; }
+  .kanji span { cursor: pointer; transition: color .2s ease; }
+  .kanji span.on { color: var(--copper); }
+  .romaji { display: grid; gap: clamp(6px, 1vw, 12px); min-width: 0; }
+  .romaji b { font: 800 clamp(30px, 8.6vw, 64px)/.9 var(--sans); letter-spacing: .12em; }
+  .romaji span { font: 400 clamp(13px, 1.4vw, 16px)/1 var(--mono); color: var(--muted); white-space: nowrap; }
+  @media (max-width: 479.98px) { .romaji .lang { display: none; } }
+
+  /* the two senses double as the specimen's tabs */
+  .ety { grid-area: ety; position: relative; margin: 28px 0 0; }
+  .tab { all: unset; box-sizing: border-box; cursor: pointer; position: relative; display: grid; grid-template-columns: 26px auto 1fr auto; align-items: baseline; gap: 12px;
+    width: 100%; padding: 13px 2px 12px; border-top: 1px solid var(--line); color: var(--faint); font-size: 15px; transition: color .2s ease; }
+  .tab:last-child { border-bottom: 1px solid var(--line); }
+  .tab:focus-visible { outline-offset: -2px; }
+  .tab b { font: 800 22px/1 var(--jp); color: var(--muted); transition: color .2s ease; }
+  .tab .rom { font: 500 15px var(--mono); color: var(--muted); transition: color .2s ease; }
+  .tab .gl { min-width: 0; }
+  .tab .short { display: none; }
+  .tab .see { display: inline-flex; align-items: center; gap: 6px; font: 400 12px var(--mono); letter-spacing: .02em; color: var(--faint); transition: color .2s ease; }
+  .tab .see svg { width: 14px; height: 14px; transition: transform .25s var(--ease-out); }
+  .tab[aria-selected="true"] { color: var(--text); }
+  .tab[aria-selected="true"] b, .tab[aria-selected="true"] .see { color: var(--copper); }
+  .tab[aria-selected="true"] .rom { color: var(--text); }
+  .tab[aria-selected="true"] .see svg { transform: translateX(3px); }
+  @media (hover: hover) and (pointer: fine) { .tab:hover { color: var(--text); } .tab:hover .rom { color: var(--text); } }
+  /* auto-advance hairline: tells you it will move on, and when */
+  .tab .run { position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: var(--copper); transform: scaleX(0); transform-origin: left; opacity: 0; }
+  .tab .run.go { opacity: .9; transform: scaleX(1); transition: transform var(--dwell, 6s) linear; }
+
+  .def { grid-area: def; margin-top: clamp(26px, 3.4vw, 40px); }
+  .defn { margin: 0; font: 500 clamp(28px, 3.3vw, 46px)/1.12 var(--sans); letter-spacing: -.025em; max-width: 21ch; text-wrap: balance; }
+  .defn em { font-style: normal; color: var(--copper); }
+  .defn .pos { font: italic 500 max(13px, .44em)/1 var(--sans); letter-spacing: 0; color: var(--copper); margin-right: .5em; vertical-align: .32em; }
+  .act { grid-area: act; margin-top: 22px; }
+  .act p { margin: 0 0 22px; color: var(--muted); font-size: 17px; max-width: 50ch; }
+  .act p b { color: var(--text); font-weight: 600; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  /* ── specimen ── */
+  .spec { grid-area: spec; margin: 0; align-self: center; width: 100%; max-width: 408px; justify-self: center; }
+  .device { position: relative; padding: 9px; border: 1px solid var(--line-2); border-radius: 36px; background: var(--card); box-shadow: var(--shadow); }
+  .screen { position: relative; display: grid; border-radius: 28px; overflow: hidden; background: var(--scr); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .view { grid-area: 1 / 1; display: flex; flex-direction: column; min-width: 0;
+    transition: opacity .32s var(--ease-out) 70ms, transform .42s var(--ease-out) 70ms, filter .32s var(--ease-out) 70ms; }
+  .view[hidden] { display: flex; opacity: 0; transform: translateY(10px) scale(.985); filter: blur(4px); pointer-events: none; visibility: hidden;
+    transition: opacity .18s ease, transform .2s ease, filter .18s ease, visibility 0s linear .2s; }
+  figcaption { margin-top: 16px; padding-left: 4px; font: 400 12px/1.5 var(--mono); color: var(--faint); min-height: 36px; }
+  figcaption b { font: 800 13px var(--jp); color: var(--copper); margin-right: 4px; }
+
+  .sb { display: flex; justify-content: space-between; align-items: center; padding: 12px 22px 4px; font: 500 12px var(--mono); color: var(--text); }
+  .sb .ic { display: flex; gap: 7px; align-items: center; color: var(--text); }
+  .sig rect { fill: currentColor; transition: opacity .3s ease; }
+  .sig[data-off] rect:not(:first-child) { opacity: .22; }
+  .bat { width: 22px; height: 11px; }
+
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 18px 12px; }
+  .top .ttl { margin: 0; font: 700 17px/1.2 var(--sans); }
+  .top small { display: block; white-space: nowrap; font: 400 11.5px/1.4 var(--mono); color: var(--faint); margin-top: 2px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line-2); font: 500 11.5px var(--mono); color: var(--muted); white-space: nowrap;
+    transition: color .25s ease, border-color .25s ease, background-color .25s ease; }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; flex: none; }
+  .chip svg { width: 11px; height: 11px; display: none; flex: none; }
+  .chip[data-s="sync"] { color: var(--copper); border-color: color-mix(in oklab, var(--copper) 55%, transparent); }
+  .chip[data-s="sync"] .dot { background: currentColor; animation: pulse 0.9s ease-in-out infinite; }
+  .chip[data-s="done"] { color: var(--text); }
+  .chip[data-s="done"] .dot { display: none; } .chip[data-s="done"] svg { display: block; color: var(--copper); }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .chip .t { transition: opacity .16s ease, filter .16s ease; } .chip .t.swap { opacity: 0; filter: blur(2px); }
+
+  .exr { margin: 0 12px; padding: 14px 14px 12px; border-radius: 16px; background: var(--scr-row); border: 1px solid var(--line); }
+  .exr .hd { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .exr .ex-n { margin: 0; font: 700 19px/1.2 var(--sans); letter-spacing: -.01em; }
+  .exr .of { font: 400 11.5px var(--mono); color: var(--faint); }
+  .exr .rx { margin-top: 4px; font: 500 13px var(--mono); color: var(--copper); }
+  .exr .rx span { color: var(--faint); font-weight: 400; }
+  .sets { list-style: none; margin: 10px 0 0; padding: 0; }
+  .sets .h, .set { display: grid; grid-template-columns: 30px 1fr 1fr 34px; align-items: center; gap: 6px; }
+  .sets .h { font: 500 11px var(--mono); letter-spacing: .1em; color: var(--faint); padding: 4px 0 6px; }
+  .set { position: relative; height: 46px; border-top: 1px solid var(--line); font: 500 14px var(--mono); color: var(--faint); transition: color .2s ease; }
+  .set::before { content: ""; position: absolute; inset: 3px -8px; border-radius: 10px; background: color-mix(in oklab, var(--copper) 10%, transparent); opacity: 0; transition: opacity .25s ease; }
+  .set.cur::before { opacity: 1; }
+  .set > * { position: relative; }
+  .set .n { color: var(--faint); }
+  .set .lst { font-weight: 400; color: var(--faint); }
+  .set.done, .set.cur { color: var(--text); }
+  .ck { justify-self: end; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--line-2); display: grid; place-items: center; transition: background-color .18s ease, border-color .18s ease, transform .16s var(--ease-out); }
+  .set.cur .ck { border-color: var(--copper); }
+  .ck svg { width: 15px; height: 15px; color: var(--on-copper); }
+  .ck path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .28s var(--ease-out) .05s; }
+  .set.done .ck { background: var(--copper-btn); border-color: var(--copper-btn); }
+  .set.done .ck path { stroke-dashoffset: 0; }
+  .set.press .ck { transform: scale(.88); }
+  .tap { position: absolute; right: -2px; top: 50%; width: 34px; height: 34px; margin-top: -17px; border-radius: 50%; border: 2px solid var(--copper); opacity: 0; pointer-events: none; }
+
+  .rest { margin: 12px 12px 0; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; align-items: center; row-gap: 8px; }
+  .rest .lb { font: 500 12px var(--sans); color: var(--muted); }
+  .rest .tm { font: 500 18px var(--mono); }
+  .rest .tr { grid-column: 1 / -1; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .rest .tr i { display: block; height: 100%; background: var(--copper); transform-origin: left; transform: scaleX(1); transition: transform 1s linear; }
+  .rest[data-idle] .tm { color: var(--faint); } .rest[data-idle] .tr i { transform: scaleX(0); }
+  .next { display: flex; justify-content: space-between; gap: 10px; padding: 14px 24px 22px; margin-top: auto; font: 400 12px var(--mono); color: var(--faint); }
+  .next b { font: 600 13px var(--sans); color: var(--muted); }
+
+  .tk { display: inline-grid; overflow: hidden; vertical-align: bottom; } .tk > span { grid-area: 1 / 1; }
+
+  /* refine view */
+  .pro { font: 600 11px var(--sans); letter-spacing: .12em; color: var(--copper); border: 1px solid currentColor; border-radius: 4px; padding: 2px 6px; }
+  .big { padding: 0 20px; display: flex; align-items: baseline; gap: 12px; }
+  .big strong { font: 500 34px/1 var(--mono); letter-spacing: -.03em; }
+  .big strong small { font-size: 16px; color: var(--muted); letter-spacing: 0; }
+  .big > span { font: 500 12px var(--mono); color: var(--copper); }
+  .chart { margin: 12px 8px 0; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart .grid line { stroke: var(--line); stroke-width: 1; }
+  .chart text { font: 400 11px var(--mono); fill: var(--faint); }
+  .chart .plan { fill: none; stroke: var(--muted); stroke-width: 1.25; stroke-dasharray: 3 4; opacity: .7; }
+  .chart .act-l { fill: none; stroke: var(--copper); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
+  .chart .pt { fill: var(--scr); stroke: var(--copper); stroke-width: 2; }
+  .chart .pt.miss { stroke: var(--muted); stroke-dasharray: 2 2; }
+  .chart .pt.last { fill: var(--copper); }
+  .chart .lbl { font: 500 11px var(--mono); fill: var(--text); }
+  .chart .note-t { fill: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 6px 20px 0; font: 400 11px var(--mono); color: var(--faint); }
+  .legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--copper); vertical-align: middle; margin-right: 6px; }
+  .legend i.p { border-top: 1.5px dashed var(--muted); }
+  .adh { margin: 16px 12px 0; padding: 14px; border-radius: 16px; background: var(--scr-row); border: 1px solid var(--line); }
+  .adh .hd { display: flex; justify-content: space-between; align-items: baseline; font: 600 13px var(--sans); }
+  .adh .hd span { font: 500 12px var(--mono); color: var(--muted); }
+  .adh .hd span b { color: var(--text); font-weight: 500; }
+  .weeks { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 12px; }
+  .wk { display: grid; gap: 4px; }
+  .wk i { height: 8px; border-radius: 2px; background: color-mix(in oklab, var(--copper) 78%, var(--scr-row)); transform-origin: bottom; }
+  .wk i.miss { background: transparent; border: 1px dashed var(--muted); opacity: 1; }
+  .wk em { font: normal 400 11px var(--mono); color: var(--faint); text-align: center; margin-top: 2px; }
+  .foot { padding: 14px 24px 22px; margin-top: auto; font: 400 11px/1.5 var(--mono); color: var(--faint); }
+
+  /* mobile: the senses become a compact segmented control above the specimen */
+  @media (max-width: 1039.98px) {
+    .headword { padding-top: 4px; }
+    .def { margin-top: 22px; }
+    .act p { font-size: 16px; margin-bottom: 18px; }
+    .ety { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border: 1px solid var(--line-2); border-radius: 12px; max-width: 408px; width: 100%; justify-self: center; }
+    .ety::before { content: ""; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 8px; background: var(--card); border: 1px solid var(--line-2);
+      transition: transform .32s var(--ease-out); }
+    .ety[data-v="refine"]::before { transform: translateX(100%); }
+    .tab, .tab:last-child { display: flex; justify-content: center; gap: 8px; border: 0; padding: 0; height: 42px; align-items: center; border-radius: 8px; }
+    .tab .long, .tab .see, .tab .rom { display: none; }
+    .tab .short { display: inline; font: 600 14px var(--sans); }
+    .tab b { font-size: 18px; }
+    .tab .run { left: 14px; right: 14px; bottom: 4px; }
+    .tab:active { transform: scale(.97); transition: transform .16s var(--ease-out); }
+    .spec { margin-top: 14px; }
+  }
+    @media (max-width: 360px) { .chip .q { display: none; } }
+
+  /* usage notes (unchanged from Lexicon) */
+  .note { display: grid; gap: 16px; padding: 72px 0; border-bottom: 1px solid var(--line); }
+  @media (min-width: 980px) { .note { grid-template-columns: 220px 1fr; gap: 40px; padding: 96px 0; } }
+  .note h2 { margin: 0 0 14px; font: 700 clamp(30px, 5vw, 52px)/1.06 var(--sans); letter-spacing: -.025em; text-wrap: balance; }
+  .note h2 em { font-style: normal; color: var(--copper); }
+  .note .lead { color: var(--muted); font-size: 17px; max-width: 58ch; margin: 0; }
+
+  .senses { margin: 36px 0 0; padding: 0; list-style: none; display: grid; gap: 0; counter-reset: s; }
+  .senses li { display: grid; gap: 14px; padding: 24px 0; border-top: 1px solid var(--line); counter-increment: s; }
+  @media (min-width: 900px) { .senses li { grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; } }
+  .senses h3 { margin: 0 0 6px; font: 700 22px/1.2 var(--sans); }
+  .senses h3::before { content: counter(s, lower-alpha) ". "; color: var(--copper); font-weight: 600; }
+  .senses p { margin: 0; color: var(--muted); }
+  .senses .pro { font: 600 11px var(--sans); letter-spacing: .12em; color: var(--copper); border: 1px solid currentColor; border-radius: 4px; padding: 2px 6px; margin-left: 8px; vertical-align: 3px; }
+  .ex { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font: 400 13px/1.55 var(--mono); font-variant-numeric: tabular-nums; }
+  .ex .r { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .ex .r:last-child { border-bottom: 0; }
+  .ex .r span:last-child { color: var(--muted); }
+  .ex .hi { color: var(--copper) !important; }
+  .ex .bars { display: flex; align-items: flex-end; gap: 5px; height: 84px; padding-top: 8px; }
+  .ex .bars span { flex: 1; background: var(--line-2); border-radius: 3px 3px 0 0; } .ex .bars span:last-child { background: var(--copper); }
+
+  .usage { display: grid; gap: 22px; margin-top: 32px; }
+  @media (min-width: 900px) { .usage { grid-template-columns: repeat(3, 1fr); gap: 32px; } }
+  .usage div { border-top: 2px solid var(--copper); padding-top: 16px; }
+  .usage b { display: block; font-size: 19px; margin-bottom: 6px; }
+  .usage p { margin: 0; color: var(--muted); }
+
+  .chat { margin-top: 32px; display: grid; gap: 10px; max-width: 760px; }
+  .msg { padding: 13px 15px; border-radius: 12px; font-size: 15.5px; max-width: 92%; }
+  .msg.me { justify-self: end; background: var(--copper-btn); color: var(--on-copper); }
+  .msg.it { background: var(--card); border: 1px solid var(--line); }
+  .msg.it b { color: var(--copper); }
+  .calls { color: var(--faint); font: 400 12px var(--mono); }
+
+  .tiers { display: grid; margin-top: 32px; border: 1px solid var(--line-2); border-radius: 14px; overflow: hidden; }
+  @media (min-width: 820px) { .tiers { grid-template-columns: 1fr 1fr; } .tiers > div + div { border-left: 1px solid var(--line-2); } }
+  .tiers > div { padding: 26px 22px; display: flex; flex-direction: column; } .tiers > div + div { border-top: 1px solid var(--line-2); }
+  @media (min-width: 820px) { .tiers > div + div { border-top: 0; } }
+  .tiers .pro-t { background: var(--card); }
+  .tiers .price { font: 800 44px/1 var(--sans); letter-spacing: -.02em; margin: 10px 0 0; }
+  .tiers .price small { font: 400 12px var(--mono); color: var(--faint); }
+  .tiers ul { list-style: none; padding: 0; margin: 20px 0 24px; display: grid; gap: 9px; color: var(--muted); }
+  .tiers li::before { content: "—"; color: var(--copper); margin-right: 10px; }
+  .tiers .btn { margin-top: auto; align-self: flex-start; }
+
+  .close { padding: 110px 0 100px; }
+  .close .headword { justify-content: flex-start; }
+  .close .kanji { font-size: clamp(56px, 12vw, 120px); }
+  .close .romaji b { font-size: clamp(24px, 5vw, 52px); }
+  .close p { color: var(--muted); font-size: 18px; margin: 22px 0 26px; }
+  footer { border-top: 1px solid var(--line); padding: 22px 0 calc(22px + env(safe-area-inset-bottom)); color: var(--faint); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0ms !important; }
+    .view, .view[hidden] { transform: none !important; filter: none !important; transition: opacity .2s ease, visibility 0s linear .2s !important; }
+    .view:not([hidden]) { transition: opacity .2s ease !important; }
+    .ety::before, .tab .see svg, .btn, .tt, .ck, .rest .tr i { transition-duration: 0ms !important; }
+    .tab .run { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="wrap nav">
+  <a class="lock" href="#" aria-label="Tanren home"><span class="jp">鍛錬</span><span class="en">TANREN</span></a>
+  <nav class="nav-links" aria-label="Primary"><a href="#usage">Features</a><a href="#ai">Your AI</a><a href="#pricing">Pricing</a><a href="#">Log in</a></nav>
+  <div class="nav-right">
+    <button class="tt" id="theme" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg>
+      <span class="d">Dark</span><span class="l">Light</span>
+    </button>
+    <a class="btn primary" href="#pricing">Get started</a>
+  </div>
+</header>
+
+<main>
+  <section class="wrap hero" aria-label="Tanren">
+    <div class="headword">
+      <h1 class="sr">Tanren, a workout log for lifters who run a program</h1>
+      <div class="kanji" lang="ja" aria-hidden="true"><span data-v="forge" class="on">鍛</span><span data-v="refine">錬</span></div>
+      <div class="romaji" aria-hidden="true"><b>TANREN</b><span>/tahn·ren/<span class="lang"> &nbsp;·&nbsp; Japanese</span></span></div>
+    </div>
+
+    <div class="ety" role="tablist" aria-label="Each character, in the app" data-v="forge">
+      <button class="tab" role="tab" id="t-forge" data-v="forge" aria-selected="true" aria-controls="spec" tabindex="0">
+        <b lang="ja">鍛</b><span class="rom">tan</span><span class="gl"><span class="long">to forge, to temper</span><span class="short">forge</span></span>
+        <span class="see">the log<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5"/></svg></span>
+        <i class="run" aria-hidden="true"></i>
+      </button>
+      <button class="tab" role="tab" id="t-refine" data-v="refine" aria-selected="false" aria-controls="spec" tabindex="-1">
+        <b lang="ja">錬</b><span class="rom">ren</span><span class="gl"><span class="long">to refine, to train</span><span class="short">refine</span></span>
+        <span class="see">the trend<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5"/></svg></span>
+        <i class="run" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="def">
+      <p class="defn"><i class="pos">noun</i>The hardening of <em>body and mind</em> through deliberate, repeated training.</p>
+    </div>
+
+    <div class="act">
+      <p><b>A workout log for lifters who run a program.</b> Plan it, log every set in seconds even with no signal, and see the progress add up.</p>
+      <div class="cta"><a class="btn primary" href="#pricing">Start training</a><a class="btn" href="#usage">How it works</a></div>
+    </div>
+
+    <figure class="spec">
+      <div class="device">
+        <div class="screen" id="spec" role="tabpanel" aria-labelledby="t-forge">
+          <!-- 鍛 · the log -->
+          <div class="view" id="v-forge" data-v="forge">
+            <p class="sr">Today's workout, Lower A, cycle 3. Back Squat, five sets of five at 225 pounds, with last session's 220 shown beside each set. Logged with no signal: sets queue on the phone and sync when it reconnects.</p>
+            <div aria-hidden="true" style="display:contents">
+              <div class="sb"><span>6:12</span><span class="ic">
+                <svg class="sig" id="sig" data-off width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="8" width="3" height="3" rx=".8"/><rect x="4.6" y="5.5" width="3" height="5.5" rx=".8"/><rect x="9.2" y="3" width="3" height="8" rx=".8"/><rect x="13.8" y="0" width="3" height="11" rx=".8"/></svg>
+                <svg class="bat" viewBox="0 0 22 11" fill="none" stroke="currentColor"><rect x=".5" y=".5" width="18.5" height="10" rx="2.5" opacity=".45"/><rect x="2.2" y="2.2" width="11" height="6.6" rx="1.2" fill="currentColor" stroke="none"/><path d="M20.6 4v3" stroke-linecap="round" opacity=".45"/></svg>
+              </span></div>
+              <div class="top">
+                <div><div class="ttl">Lower A</div><small>Cycle 3 of 8 · Day 1</small></div>
+                <span class="chip" id="chip" data-s="off"><span class="dot"></span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.4 5 8.8l4.6-5.6"/></svg><span class="t" id="chip-t">Offline · <span class="tk" id="q"><span>2</span></span><span class="q"> sets</span> queued</span></span>
+              </div>
+              <div class="exr">
+                <div class="hd"><div class="ex-n">Back Squat</div><span class="of">1 of 5 · <span class="tk" id="done-n"><span>2</span></span>/5 sets</span></div>
+                <div class="rx">5 × 5 @ 225 lb <span>· last 220 × 5</span></div>
+                <ol class="sets" id="sets">
+                  <li class="h"><span>SET</span><span>TODAY</span><span>LAST</span><span></span></li>
+                  <li class="set done"><span class="n">1</span><span>225 × 5</span><span class="lst">220 × 5</span><span class="ck"><svg viewBox="0 0 16 16" fill="none"><path pathLength="1" d="M3.5 8.4 6.6 11.4 12.6 4.6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></li>
+                  <li class="set done"><span class="n">2</span><span>225 × 5</span><span class="lst">220 × 5</span><span class="ck"><svg viewBox="0 0 16 16" fill="none"><path pathLength="1" d="M3.5 8.4 6.6 11.4 12.6 4.6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></li>
+                  <li class="set cur"><span class="n">3</span><span>225 × 5</span><span class="lst">220 × 5</span><span class="ck"><svg viewBox="0 0 16 16" fill="none"><path pathLength="1" d="M3.5 8.4 6.6 11.4 12.6 4.6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><i class="tap"></i></li>
+                  <li class="set"><span class="n">4</span><span>225 × 5</span><span class="lst">220 × 5</span><span class="ck"><svg viewBox="0 0 16 16" fill="none"><path pathLength="1" d="M3.5 8.4 6.6 11.4 12.6 4.6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></li>
+                  <li class="set"><span class="n">5</span><span>225 × 5</span><span class="lst">220 × 5</span><span class="ck"><svg viewBox="0 0 16 16" fill="none"><path pathLength="1" d="M3.5 8.4 6.6 11.4 12.6 4.6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></li>
+                </ol>
+              </div>
+              <div class="rest" id="rest" data-idle><span class="lb" id="rest-l">Rest after set 2 · done</span><span class="tm" id="rest-t">0:00</span><span class="tr"><i id="rest-b"></i></span></div>
+              <div class="next"><span>Next</span><span><b>Romanian Deadlift</b> &nbsp;3 × 8 @ 185</span></div>
+            </div>
+          </div>
+
+          <!-- 錬 · the trend -->
+          <div class="view" id="v-refine" data-v="refine" hidden>
+            <p class="sr">Back Squat top set across eight cycles of the Strength Block, planned against actual: 215 pounds in cycle 1 rising to 245 in cycle 8, with a dip in cycle 4 where two sessions were missed. Adherence: 29 of 32 planned sessions, 91 percent. Warmups and drop sets are excluded.</p>
+            <div aria-hidden="true" style="display:contents">
+              <div class="sb"><span>6:58</span><span class="ic">
+                <svg class="sig" width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="8" width="3" height="3" rx=".8"/><rect x="4.6" y="5.5" width="3" height="5.5" rx=".8"/><rect x="9.2" y="3" width="3" height="8" rx=".8"/><rect x="13.8" y="0" width="3" height="11" rx=".8"/></svg>
+                <svg class="bat" viewBox="0 0 22 11" fill="none" stroke="currentColor"><rect x=".5" y=".5" width="18.5" height="10" rx="2.5" opacity=".45"/><rect x="2.2" y="2.2" width="9" height="6.6" rx="1.2" fill="currentColor" stroke="none"/><path d="M20.6 4v3" stroke-linecap="round" opacity=".45"/></svg>
+              </span></div>
+              <div class="top">
+                <div><div class="ttl">Back Squat</div><small>Top set · Strength Block · 8 cycles</small></div>
+                <span class="pro">PRO</span>
+              </div>
+              <div class="big"><strong><span class="tk" id="top-v"><span>215</span></span> <small>× 5</small></strong><span id="top-d">C1</span></div>
+              <div class="chart" id="chart"></div>
+              <div class="legend"><span><i></i>actual</span><span><i class="p"></i>plan</span><span>warmups &amp; drop sets excluded</span></div>
+              <div class="adh">
+                <div class="hd">Plan vs actual <span><b id="adh-n">29</b> / 32 sessions · 91%</span></div>
+                <div class="weeks" id="weeks"></div>
+              </div>
+              <div class="foot">C4: two sessions missed, top set held back. Every other cycle hit the plan.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption id="cap" aria-live="polite"><b lang="ja">鍛</b>tan, in use: logging Lower A in a basement gym with no signal. Sets queue, then sync.</figcaption>
+    </figure>
+  </section>
+
+  <div class="wrap">
+    <div class="note" id="usage">
+      <span class="sc">In practice</span>
+      <div>
+        <h2>Three things, <em>done properly.</em></h2>
+        <p class="lead">No feed, no streak guilt, no social anything. A program, a log, and the proof.</p>
+        <ol class="senses">
+          <li><div><h3>Plan the work</h3><p>Programs, cycles, workouts, sets. Build week one and Tanren copies it forward. Change week six without touching week five.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Strength Block</span><span>8 cycles</span></div><div class="r"><span>&nbsp;&nbsp;Cycle 3 · Lower A</span><span>5 exercises</span></div><div class="r"><span class="hi">&nbsp;&nbsp;&nbsp;&nbsp;Back Squat</span><span>5 × 5 @ 225</span></div></div></li>
+          <li><div><h3>Repeat the work</h3><p>One tap per set with last session's numbers inline. No signal? Sets queue in order and sync later. Swap an exercise and the plan stays the plan.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Set 2 · 225 × 5</span><span>logged</span></div><div class="r"><span>Set 3 · 225 × 5</span><span>logged</span></div><div class="r"><span>2 sets waiting</span><span class="hi">syncs when online</span></div></div></li>
+          <li><div><h3>See it harden <span class="pro">PRO</span></h3><p>Cycle-over-cycle progression and plan-versus-actual adherence. Warmups and drop sets never pad the numbers.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Back Squat · top set</span><span>demo data</span></div><div class="bars"><span style="height:44%"></span><span style="height:52%"></span><span style="height:58%"></span><span style="height:55%"></span><span style="height:67%"></span><span style="height:75%"></span><span style="height:84%"></span><span style="height:92%"></span></div></div></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="sc">Who uses it</span>
+      <div>
+        <h2>Lifters who already <em>show up.</em></h2>
+        <div class="usage">
+          <div><b>You run a program</b><p>5/3/1, a PPL split, your coach's spreadsheet. Tanren holds the plan and puts the right numbers in front of you.</p></div>
+          <div><b>You train anywhere</b><p>Garage racks, concrete basements, hotel gyms. Logging never waits on a network.</p></div>
+          <div><b>You keep your record</b><p>Years of training shouldn't be locked in someone else's app. Export whenever you like.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" id="ai">
+      <span class="sc">See also: your AI</span>
+      <div>
+        <h2>Your assistant, reading <em>your real training.</em></h2>
+        <p class="lead">Connect the AI you already use. It reads your history and writes the next block straight into Tanren. We never pay for inference, so we never charge you for it. No AI? Programs import and export as plain JSON.</p>
+        <div class="chat" aria-label="Example conversation">
+          <div class="msg me">Look at my last eight weeks of squat and adjust the next block.</div>
+          <div class="calls">read progression · Back Squat · 8 cycles &nbsp;/&nbsp; read adherence · Strength Block</div>
+          <div class="msg it">Your top set rose every cycle except C4, where you missed two sessions. Next block starts at <b>235 × 5</b>, adds 5 lb a cycle, deloads at C4. Saved as <b>Strength Block II</b>.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" id="pricing" style="border-bottom:0">
+      <span class="sc">Pricing</span>
+      <div>
+        <h2>Log for free. <em>Go Pro</em> to see the trend.</h2>
+        <div class="tiers">
+          <div><span class="sc" style="color:var(--muted)">Free</span><div class="price">$0</div><ul><li>Unlimited logging, offline</li><li>Build and copy programs</li><li>Import and export</li></ul><a class="btn" href="#">Create account</a></div>
+          <div class="pro-t"><span class="sc">Pro</span><div class="price">$— <small>/ mo · price TBD</small></div><ul><li>Everything in Free</li><li>Progression and adherence analytics</li><li>Connect your own AI</li></ul><a class="btn primary" href="#">Start free trial</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="close" style="border-top:1px solid var(--line)"><div class="wrap">
+    <div class="headword"><div class="kanji" lang="ja">鍛錬</div><div class="romaji"><b>TANREN</b><span>/tahn·ren/</span></div></div>
+    <p>Deliberate. Repeated. Recorded.</p>
+    <a class="btn primary" href="#pricing">Start training</a>
+  </div></div>
+</main>
+<footer><div class="wrap"><span>鍛錬 Tanren · US only</span><span>Mockup 8 · Evidence</span></div></footer>
+
+<script>
+(() => {
+  const root = document.documentElement;
+  const $ = id => document.getElementById(id);
+  $('theme').addEventListener('click', () => { root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light'; try { localStorage.setItem('tanren-theme', root.dataset.theme); } catch {} });
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
+
+  // ── scheduling: every demo step is cancellable, so a switch never leaves stray timers
+  let timers = [], clock = null;
+  const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+  const clearAll = () => { timers.forEach(clearTimeout); timers = []; clearInterval(clock); clock = null; };
+
+  // number tick: old value slides up and out, new value rises in
+  function tick(el, val) {
+    const cur = el.lastElementChild;
+    if (cur && cur.textContent === String(val)) return;
+    if (reduce || !cur) { el.innerHTML = `<span>${val}</span>`; return; }
+    [...el.children].slice(0, -1).forEach(n => n.remove());
+    const nu = document.createElement('span'); nu.textContent = val; el.appendChild(nu);
+    cur.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-90%)', opacity: 0 }], { duration: 220, easing: EASE, fill: 'forwards' }).onfinish = () => cur.remove();
+    nu.animate([{ transform: 'translateY(90%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }], { duration: 260, easing: EASE });
+  }
+
+  // ── 鍛 the log ───────────────────────────────────────────────
+  const sets = [...document.querySelectorAll('#sets .set')];
+  const chip = $('chip'), chipT = $('chip-t'), sig = $('sig'), rest = $('rest');
+  function chipTo(state, html) {
+    if (reduce) { chip.dataset.s = state; chipT.innerHTML = html; return; }
+    chipT.classList.add('swap');
+    at(150, () => { chip.dataset.s = state; chipT.innerHTML = html; chipT.classList.remove('swap'); });
+  }
+  function restIdle() { rest.dataset.idle = ''; $('rest-l').textContent = 'Rest after set 2 · done'; $('rest-t').textContent = '0:00'; }
+  function restStart(from) {
+    delete rest.dataset.idle; $('rest-l').textContent = 'Rest · set 4 next';
+    let s = from; const bar = $('rest-b');
+    const paint = () => { $('rest-t').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; bar.style.transform = `scaleX(${s / from})`; };
+    bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)'; bar.getBoundingClientRect(); bar.style.transition = '';
+    paint(); clock = setInterval(() => { if (s > 0) { s--; paint(); } }, 1000);
+  }
+  function forgeReset() {
+    sets.forEach((r, i) => { r.classList.toggle('done', i < 2); r.classList.toggle('cur', i === 2); r.classList.remove('press'); });
+    chip.dataset.s = 'off'; chipT.innerHTML = 'Offline · <span class="tk" id="q"><span>2</span></span><span class="q"> sets</span> queued'; chipT.classList.remove('swap');
+    sig.setAttribute('data-off', ''); tick($('done-n'), 2); restIdle();
+  }
+  function logSet3() {
+    const r = sets[2], ring = r.querySelector('.tap');
+    r.classList.add('press');
+    if (!reduce) ring.animate([{ transform: 'scale(.6)', opacity: .9 }, { transform: 'scale(1.45)', opacity: 0 }], { duration: 520, easing: EASE });
+    at(110, () => { r.classList.remove('press', 'cur'); r.classList.add('done'); sets[3].classList.add('cur'); tick($('q'), 3); tick($('done-n'), 3); restStart(180); });
+  }
+  function playForge() {
+    forgeReset();
+    if (reduce) { // the story, told still: three logged, still offline, waiting to sync
+      logSet3(); return;
+    }
+    at(1300, logSet3);
+    at(3300, () => sig.removeAttribute('data-off'));
+    at(3600, () => chipTo('sync', 'Syncing 3 sets…'));
+    at(4700, () => { chipTo('done', 'Synced · 6:14'); say('Back online. Three queued sets synced.'); });
+  }
+
+  // ── 錬 the trend ─────────────────────────────────────────────
+  const actual = [215, 220, 225, 220, 230, 235, 240, 245], plan = [215, 220, 225, 230, 235, 240, 245, 250];
+  const W = 320, H = 156, L = 30, R = 14, T = 16, B = 26, lo = 205, hi = 255;
+  const x = i => L + i * (W - L - R) / 7, y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  const pts = a => a.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  $('chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="presentation">
+    <g class="grid">${[220, 235, 250].map(v => `<line x1="${L}" x2="${W - R + 4}" y1="${y(v)}" y2="${y(v)}"/><text x="0" y="${y(v) + 3}">${v}</text>`).join('')}</g>
+    ${actual.map((_, i) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">C${i + 1}</text>`).join('')}
+    <polyline class="plan" points="${pts(plan)}"/>
+    <polyline class="act-l" id="line" pathLength="1" points="${pts(actual)}"/>
+    ${actual.map((v, i) => `<circle class="pt${i === 3 ? ' miss' : ''}${i === 7 ? ' last' : ''}" cx="${x(i)}" cy="${y(v)}" r="${i === 7 ? 4.5 : 3.5}"/>`).join('')}
+    <text class="lbl" x="${x(7) + 2}" y="${y(245) + 19}" text-anchor="middle">245</text>
+    <text class="note-t" x="${x(3)}" y="${y(220) + 17}" text-anchor="middle">2 missed</text>
+  </svg>`;
+  const misses = { 3: [2, 3], 6: [3] };
+  $('weeks').innerHTML = actual.map((_, c) => `<div class="wk">${[0, 1, 2, 3].map(s => `<i class="${(misses[c] || []).includes(s) ? 'miss' : ''}"></i>`).join('')}<em>C${c + 1}</em></div>`).join('');
+  const line = $('line'), dots = [...document.querySelectorAll('#chart .pt')], labels = [...document.querySelectorAll('#chart .lbl, #chart .note-t')], cells = [...document.querySelectorAll('#weeks i')];
+
+  function playRefine() {
+    tick($('top-v'), reduce ? 245 : 215); $('top-d').textContent = reduce ? '+30 lb since C1' : 'C1';
+    if (reduce) return;
+    line.animate([{ strokeDasharray: '1', strokeDashoffset: 1 }, { strokeDasharray: '1', strokeDashoffset: 0 }], { duration: 1400, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'backwards', delay: 120 });
+    dots.forEach((d, i) => d.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, delay: 120 + i * 175, fill: 'backwards' }));
+    labels.forEach(l => l.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: 1500, fill: 'backwards' }));
+    actual.forEach((v, i) => at(120 + i * 175, () => { tick($('top-v'), v); $('top-d').textContent = `C${i + 1}`; }));
+    at(1620, () => { $('top-d').textContent = '+30 lb since C1'; });
+    cells.forEach((c, i) => c.animate([{ transform: 'scaleY(0.2)', opacity: 0 }, { transform: 'scaleY(1)', opacity: 1 }], { duration: 260, easing: EASE, delay: 1300 + Math.floor(i / 4) * 45 + (i % 4) * 18, fill: 'backwards' }));
+  }
+
+  // ── switching ────────────────────────────────────────────────
+  const tabs = [...document.querySelectorAll('.tab')], ety = document.querySelector('.ety'), kanji = [...document.querySelectorAll('.kanji span')];
+  const cap = $('cap'), panel = $('spec'), live = document.createElement('p');
+  live.className = 'sr'; live.setAttribute('aria-live', 'polite'); panel.after(live);
+  const say = t => { live.textContent = t; };
+  const CAP = {
+    forge: '<b lang="ja">鍛</b>tan, in use: logging Lower A in a basement gym with no signal. Sets queue, then sync.',
+    refine: '<b lang="ja">錬</b>ren, in use: eight cycles of Back Squat, plan against actual.',
+  };
+  let view = null;
+  function show(v) {
+    if (v === view) return;
+    view = v; clearAll();
+    tabs.forEach(t => { const on = t.dataset.v === v; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; });
+    kanji.forEach(k => k.classList.toggle('on', k.dataset.v === v));
+    ety.dataset.v = v; panel.setAttribute('aria-labelledby', 't-' + v);
+    $('v-forge').hidden = v !== 'forge'; $('v-refine').hidden = v !== 'refine';
+    cap.innerHTML = CAP[v];
+    (v === 'forge' ? playForge : playRefine)();
+  }
+
+  // ── gentle autoplay: forge → refine once, then rest. Any interaction stops it.
+  let auto = !reduce, autoT = null;
+  const runs = tabs.map(t => t.querySelector('.run'));
+  function stopAuto() { if (!auto) return; auto = false; clearTimeout(autoT); runs.forEach(r => r.classList.remove('go')); }
+  function arm(tab, ms) {
+    const r = tab.querySelector('.run'); r.style.setProperty('--dwell', ms + 'ms');
+    r.classList.remove('go'); r.getBoundingClientRect(); r.classList.add('go');
+  }
+  show('forge');
+  if (auto) {
+    arm(tabs[0], 7000);
+    autoT = setTimeout(() => { if (!auto) return; runs[0].classList.remove('go'); show('refine'); auto = false; }, 7000);
+  }
+
+  const pick = v => { stopAuto(); show(v); };
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => pick(t.dataset.v));
+    t.addEventListener('focus', () => { if (t.matches(':focus-visible')) pick(t.dataset.v); });
+    if (fine) t.addEventListener('pointerenter', () => pick(t.dataset.v));
+    t.addEventListener('keydown', e => {
+      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) return;
+      e.preventDefault(); const n = tabs[e.key === 'Home' ? 0 : e.key === 'End' ? 1 : 1 - i]; n.focus(); pick(n.dataset.v);
+    });
+  });
+  kanji.forEach(k => {
+    k.addEventListener('click', () => pick(k.dataset.v));
+    if (fine) k.addEventListener('pointerenter', () => pick(k.dataset.v));
+  });
+  // reading the specimen, or leaving the tab, should never get yanked away
+  panel.addEventListener('pointerenter', stopAuto);
+  panel.addEventListener('pointerdown', stopAuto);
+  addEventListener('keydown', stopAuto, { once: true });
+  addEventListener('wheel', stopAuto, { once: true, passive: true });
+  addEventListener('touchstart', stopAuto, { once: true, passive: true });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopAuto(); });
+})();
+</script>
+</body>
+</html>

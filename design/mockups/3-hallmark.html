@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tanren — Hallmark</title>
+<meta name="description" content="Mockup 3 of 3: Hallmark. The name itself, 鍛錬, glowing like metal from the fire; touch it to reheat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,500..800&family=Onest:wght@400;500;600&family=Martian+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@800&display=swap" rel="stylesheet">
+<script>
+  try { const t = localStorage.getItem('tanren-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+</script>
+<style>
+  :root {
+    --bg: #0b0a0a;
+    --bg-2: #151312;
+    --line: #262220;
+    --line-2: #393330;
+    --text: #efe8e1;
+    --muted: #a69c93;
+    --faint: #8c8279;
+    --ember: #ff4d1f;
+    --glow: #ffc56b;
+    --on-ember: #160803;
+    --steel: #3b3431;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --display: "Bricolage Grotesque", system-ui, sans-serif;
+    --body: "Onest", system-ui, sans-serif;
+    --mono: "Martian Mono", ui-monospace, monospace;
+    --kanji: "Shippori Mincho B1", serif;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #e6e4e1;
+    --bg-2: #dbd8d4;
+    --line: #c9c4be;
+    --line-2: #b2aba4;
+    --text: #141110;
+    --muted: #514a45;
+    --faint: #655d57;
+    --ember: #c9350b;
+    --on-ember: #fff4ee;
+    --steel: #2b2624;
+    color-scheme: light;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.65 var(--body); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--ember); color: var(--on-ember); }
+  :focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; }
+  a { color: inherit; text-underline-offset: 4px; }
+  ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--line-2); border: 3px solid var(--bg); border-radius: 10px; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 720px) { .wrap { padding: 0 36px; } }
+  .mono { font: 400 12px/1.5 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+
+  header { position: absolute; inset: 0 0 auto; z-index: 10; }
+  .nav { display: flex; align-items: center; gap: 18px; height: 68px; }
+  .brand { display: flex; align-items: baseline; gap: 10px; text-decoration: none; font: 700 22px/1 var(--display); font-stretch: 85%; letter-spacing: -.01em; }
+  .brand span { font: 800 18px/1 var(--kanji); color: var(--ember); }
+  .nav-links { display: none; gap: 26px; margin-left: auto; }
+  .nav-links a { text-decoration: none; color: var(--muted); transition: color .15s ease; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  @media (min-width: 900px) { .nav-links { display: flex; } .nav-right { margin-left: 18px; } }
+  .switch { all: unset; cursor: pointer; position: relative; width: 58px; height: 30px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--bg-2); }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--ember); transition: transform .22s var(--ease-out); }
+  :root[data-theme="light"] .switch::after { transform: translateX(28px); background: var(--text); }
+  .switch svg { position: absolute; top: 7px; width: 14px; height: 14px; color: var(--faint); }
+  .switch .m { right: 7px; } .switch .s { left: 8px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; font: 600 15px var(--body); text-decoration: none; color: var(--text); border: 1px solid var(--line-2); background: transparent; border-radius: 6px; cursor: pointer; transition: transform .16s var(--ease-out), background-color .15s ease, border-color .15s ease; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--ember); border-color: var(--ember); color: var(--on-ember); }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { border-color: var(--text); } .btn.primary:hover { background: color-mix(in oklab, var(--ember) 85%, white); } }
+  .nav .btn { height: 38px; padding: 0 14px; font-size: 14px; display: none; } @media (min-width: 520px) { .nav .btn { display: inline-flex; } }
+
+  /* hero */
+  .hero { position: relative; min-height: 100svh; display: grid; align-items: end; overflow: hidden; padding: 84px 0 40px; }
+  #embers { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .hero-grid { position: relative; display: grid; gap: 8px; width: 100%; }
+  @media (min-width: 980px) { .hero-grid { grid-template-columns: 1fr auto; align-items: end; gap: 40px; } }
+  .kanji { --mx: 50%; --my: 50%; --heat: 1; margin: 0; justify-self: center; order: -1;
+    font: 800 clamp(150px, 46vw, 300px)/1 var(--kanji); letter-spacing: -.02em; touch-action: pan-y; cursor: crosshair; user-select: none; -webkit-user-select: none;
+    color: transparent; -webkit-background-clip: text; background-clip: text;
+    background-image: radial-gradient(circle at var(--mx) var(--my),
+      rgba(255,248,226, calc(var(--heat))) 0,
+      rgba(255,197,107, calc(var(--heat))) calc(var(--heat) * 9%),
+      rgba(255,77,31, calc(var(--heat) * .95)) calc(var(--heat) * 22%),
+      rgba(122,22,6, calc(.35 + var(--heat) * .5)) calc(var(--heat) * 38% + 4%),
+      var(--steel) calc(var(--heat) * 55% + 12%));
+    background-color: var(--steel);
+    filter: drop-shadow(0 0 calc(var(--heat) * 28px) rgba(255,90,30, calc(var(--heat) * .45)));
+  }
+  @media (min-width: 980px) { .kanji { order: 0; writing-mode: vertical-rl; font-size: clamp(220px, 34vh, 400px); justify-self: end; line-height: .95; } }
+  :root[data-theme="light"] .kanji { filter: none; }
+  .def { display: flex; gap: 14px; align-items: baseline; color: var(--muted); margin-bottom: 18px; flex-wrap: wrap; }
+  .def b { color: var(--text); font: 500 13px var(--mono); text-transform: none; letter-spacing: 0; }
+  h1 { margin: 0; font: 800 clamp(52px, 13.5vw, 150px)/.9 var(--display); font-stretch: 84%; letter-spacing: -.02em; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--ember); }
+  .lede { max-width: 46ch; color: var(--muted); font-size: 18px; margin: 22px 0 26px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .hint { color: var(--faint); margin-left: 6px; }
+  @media (max-width: 979px) { .hint .d { display: none; } } @media (min-width: 980px) { .hint .m { display: none; } }
+
+  /* chapters */
+  section { padding: 104px 0; border-top: 1px solid var(--line); }
+  h2 { margin: 0; font: 800 clamp(40px, 7.5vw, 88px)/.92 var(--display); font-stretch: 80%; letter-spacing: -.03em; text-wrap: balance; }
+  h2 em { font-style: normal; color: var(--ember); }
+  .intro { display: grid; gap: 16px; margin-bottom: 56px; }
+  @media (min-width: 980px) { .intro { grid-template-columns: 1fr 1fr; align-items: end; gap: 60px; } }
+  .intro p { color: var(--muted); font-size: 17px; max-width: 52ch; margin: 0; }
+
+  .chapter { display: grid; gap: 22px; padding: 40px 0; border-top: 1px solid var(--line); }
+  @media (min-width: 980px) { .chapter { grid-template-columns: 140px 1fr 1fr; gap: 48px; align-items: start; padding: 56px 0; } }
+  .mark { font: 800 76px/1 var(--kanji); color: var(--ember); }
+  .mark small { display: block; margin-top: 10px; font: 400 11px var(--mono); color: var(--faint); letter-spacing: .04em; text-transform: uppercase; }
+  .chapter h3 { font: 700 32px/1.05 var(--display); font-stretch: 85%; letter-spacing: -.02em; margin: 0 0 12px; }
+  .chapter p { color: var(--muted); margin: 0; max-width: 50ch; }
+  .pro { font: 500 10px var(--mono); color: var(--ember); border: 1px solid var(--ember); padding: 2px 6px; border-radius: 3px; vertical-align: 6px; margin-left: 6px; }
+
+  /* phone */
+  .phone { width: min(100%, 320px); justify-self: center; border-radius: 40px; padding: 10px; background: #050404; border: 1px solid var(--line-2); box-shadow: 0 30px 60px -30px rgba(0,0,0,.7); }
+  .screen { border-radius: 31px; background: #0f0d0c; color: #efe8e1; padding: 18px 16px 16px; font-size: 14px; }
+  .screen .top { display: flex; justify-content: space-between; color: #8c8279; font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+  .screen h4 { margin: 14px 0 2px; font: 700 26px/1.05 var(--display); font-stretch: 85%; }
+  .screen .last { color: #a69c93; font-size: 12.5px; margin-bottom: 14px; }
+  .srow { display: grid; grid-template-columns: 28px 1fr 1fr 34px; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid #262220; font-variant-numeric: tabular-nums; }
+  .srow .i { color: #8c8279; font: 400 11px var(--mono); }
+  .srow .f { background: #1b1817; border-radius: 6px; padding: 7px 10px; font-weight: 600; }
+  .srow .f small { color: #8c8279; font-weight: 400; margin-left: 3px; }
+  .srow .c { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid #393330; display: grid; place-items: center; }
+  .srow.done .c { background: #ff4d1f; border-color: #ff4d1f; color: #160803; }
+  .srow.done .f { color: #efe8e1; }
+  .srow.next .f { outline: 1.5px solid #ff4d1f; }
+  .srow .c svg { width: 14px; height: 14px; }
+  .screen .log { margin-top: 14px; width: 100%; height: 50px; border: 0; border-radius: 12px; background: #ff4d1f; color: #160803; font: 700 16px var(--body); }
+  .screen .q { display: flex; align-items: center; gap: 8px; margin-top: 12px; color: #a69c93; font-size: 12px; }
+  .screen .q i { width: 7px; height: 7px; border-radius: 50%; background: #ffc56b; }
+
+  .cyc { border: 1px solid var(--line); border-radius: 8px; padding: 18px; background: var(--bg-2); }
+  .cyc-row { display: grid; grid-template-columns: 34px 1fr 64px; gap: 10px; align-items: center; font: 400 12px var(--mono); color: var(--muted); padding: 5px 0; font-variant-numeric: tabular-nums; }
+  .cyc-row .track { height: 10px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .cyc-row .fill { height: 100%; background: linear-gradient(90deg, #7a1606, var(--ember) 70%, var(--glow)); border-radius: 2px; }
+  .cyc-row b { color: var(--text); font-weight: 500; text-align: right; }
+
+  .tree { border: 1px solid var(--line); border-radius: 8px; background: var(--bg-2); font: 400 12.5px/1.5 var(--mono); }
+  .tree div { display: flex; justify-content: space-between; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--line); }
+  .tree div:last-child { border-bottom: 0; }
+  .tree span:last-child { color: var(--muted); }
+  .tree .l2 { padding-left: 32px; } .tree .l3 { padding-left: 48px; color: var(--ember); }
+
+  .who { display: grid; gap: 40px; }
+  @media (min-width: 980px) { .who { grid-template-columns: repeat(3, 1fr); gap: 48px; } }
+  .who h3 { font: 700 30px/1.05 var(--display); font-stretch: 85%; margin: 0 0 12px; letter-spacing: -.02em; }
+  .who p { color: var(--muted); margin: 0; }
+  .who .k { font: 800 32px/1 var(--kanji); color: var(--faint); margin-bottom: 16px; }
+
+  .ai { display: grid; gap: 28px; }
+  @media (min-width: 980px) { .ai { grid-template-columns: 1fr 1.1fr; gap: 60px; align-items: center; } }
+  .convo { display: grid; gap: 12px; }
+  .bubble { max-width: 88%; padding: 14px 16px; border-radius: 14px; font-size: 15px; }
+  .bubble.me { justify-self: end; background: var(--ember); color: var(--on-ember); border-bottom-right-radius: 4px; font-weight: 500; }
+  .bubble.it { background: var(--bg-2); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .bubble.it b { color: var(--ember); font-weight: 600; }
+  .calls { font: 400 11.5px/1.7 var(--mono); color: var(--faint); padding-left: 4px; }
+
+  .tiers { display: grid; gap: 14px; }
+  @media (min-width: 820px) { .tiers { grid-template-columns: 1fr 1fr; } }
+  .tier { border: 1px solid var(--line); border-radius: 10px; padding: 28px 24px; background: var(--bg-2); display: flex; flex-direction: column; }
+  .tier.pro-t { border-color: color-mix(in oklab, var(--ember) 60%, var(--line)); background: color-mix(in oklab, var(--ember) 6%, var(--bg-2)); }
+  .tier h3 { margin: 0; font: 700 22px var(--display); }
+  .tier .price { font: 800 56px/1 var(--display); font-stretch: 80%; margin: 14px 0 4px; letter-spacing: -.03em; }
+  .tier .price small { font: 400 11px var(--mono); color: var(--faint); letter-spacing: .04em; }
+  .tier ul { list-style: none; padding: 0; margin: 20px 0 28px; display: grid; gap: 10px; color: var(--muted); }
+  .tier li { display: flex; gap: 10px; } .tier li::before { content: ""; flex: none; width: 6px; height: 6px; margin-top: 10px; background: var(--ember); border-radius: 1px; transform: rotate(45deg); }
+  .tier .btn { margin-top: auto; }
+
+  .close { text-align: center; padding: 130px 0 120px; }
+  .close .k { font: 800 clamp(90px, 22vw, 200px)/1 var(--kanji); color: var(--ember); margin-bottom: 10px; }
+  .close h2 { margin-bottom: 30px; }
+  footer { border-top: 1px solid var(--line); padding: 22px 0 calc(22px + env(safe-area-inset-bottom)); color: var(--faint); }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: 0ms !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#" aria-label="Tanren home">Tanren <span>鍛錬</span></a>
+    <nav class="nav-links" aria-label="Primary"><a href="#how">How it works</a><a href="#who">Who it's for</a><a href="#ai">Your AI</a><a href="#pricing">Pricing</a></nav>
+    <div class="nav-right">
+      <button class="switch" id="theme" type="button" role="switch" aria-checked="false" aria-label="Light theme">
+        <svg class="s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+        <svg class="m" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/></svg>
+      </button>
+      <a class="btn primary" href="#pricing">Start free</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <canvas id="embers" aria-hidden="true"></canvas>
+    <div class="wrap hero-grid">
+      <div>
+        <div class="def mono"><b>鍛錬 · tan·ren</b><span>1. to forge and temper metal &nbsp; 2. to harden body and mind through training</span></div>
+        <h1>Strength is forged, <em>not found.</em></h1>
+        <p class="lede">A workout log for lifters who run a program. Plan the block, log every set in seconds, even with no signal. Then watch the numbers harden, week after week.</p>
+        <div class="cta">
+          <a class="btn primary" href="#pricing">Start free</a>
+          <a class="btn" href="#how">How it works</a>
+          <span class="hint mono"><span class="d">Move over the mark to reheat it</span><span class="m">Touch the mark to reheat it</span></span>
+        </div>
+      </div>
+      <p class="kanji" id="kanji" aria-label="鍛錬, tanren">鍛錬</p>
+    </div>
+  </div>
+
+  <section id="how">
+    <div class="wrap">
+      <div class="intro">
+        <h2>Three marks. <em>One discipline.</em></h2>
+        <p>No feed, no streak guilt, no social anything. Just the program, the work, and the proof.</p>
+      </div>
+      <div class="chapter">
+        <div class="mark">型<small>kata · form</small></div>
+        <div><h3>Build the program</h3><p>Programs, cycles, workouts, sets. Build week one and Tanren copies it forward. Change week six without touching week five.</p></div>
+        <div class="tree" aria-hidden="true">
+          <div><span>Strength Block</span><span>8 cycles</span></div>
+          <div class="l2"><span>Cycle 3</span><span>4 workouts</span></div>
+          <div class="l2"><span>Lower A</span><span>5 exercises</span></div>
+          <div class="l3"><span>Back Squat</span><span>5 × 5 @ 225</span></div>
+        </div>
+      </div>
+      <div class="chapter">
+        <div class="mark">打<small>da · strike</small></div>
+        <div><h3>Log the work</h3><p>One tap per set, last session's numbers right there. No signal in the basement? It doesn't matter. Sets queue in order and sync when you surface. Swap an exercise and the plan stays the plan.</p></div>
+        <div class="phone" aria-label="App screen preview: logging Back Squat">
+          <div class="screen">
+            <div class="top"><span>Lower A · 18:42</span><span>3 / 5</span></div>
+            <h4>Back Squat</h4>
+            <div class="last">Last time: 215 lb × 5 × 5</div>
+            <div class="srow done"><span class="i">1</span><span class="f">225<small>lb</small></span><span class="f">5<small>reps</small></span><span class="c"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m3 8.5 3 3 7-7"/></svg></span></div>
+            <div class="srow done"><span class="i">2</span><span class="f">225<small>lb</small></span><span class="f">5<small>reps</small></span><span class="c"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m3 8.5 3 3 7-7"/></svg></span></div>
+            <div class="srow next"><span class="i">3</span><span class="f">225<small>lb</small></span><span class="f">5<small>reps</small></span><span class="c"></span></div>
+            <div class="srow"><span class="i">4</span><span class="f">225<small>lb</small></span><span class="f">5<small>reps</small></span><span class="c"></span></div>
+            <button class="log" type="button" tabindex="-1">Log set 3</button>
+            <div class="q"><i></i>Offline · 2 sets will sync</div>
+          </div>
+        </div>
+      </div>
+      <div class="chapter">
+        <div class="mark">鋼<small>hagane · steel</small></div>
+        <div><h3>See it harden <span class="pro">PRO</span></h3><p>Cycle-over-cycle progression and plan-vs-actual adherence. Warmups and drop sets never pad the numbers, so what you see is what you lifted.</p></div>
+        <div class="cyc" aria-label="Back Squat top set by cycle, demo data">
+          <div class="mono" style="color:var(--faint);margin-bottom:10px;display:flex;justify-content:space-between"><span>Back Squat · top set</span><span>Demo data</span></div>
+          <div class="cyc-row"><span>C1</span><div class="track"><div class="fill" style="width:52%"></div></div><b>205</b></div>
+          <div class="cyc-row"><span>C2</span><div class="track"><div class="fill" style="width:58%"></div></div><b>215</b></div>
+          <div class="cyc-row"><span>C3</span><div class="track"><div class="fill" style="width:64%"></div></div><b>225</b></div>
+          <div class="cyc-row"><span>C4</span><div class="track"><div class="fill" style="width:61%"></div></div><b>220</b></div>
+          <div class="cyc-row"><span>C5</span><div class="track"><div class="fill" style="width:72%"></div></div><b>235</b></div>
+          <div class="cyc-row"><span>C6</span><div class="track"><div class="fill" style="width:80%"></div></div><b>245</b></div>
+          <div class="cyc-row"><span>C7</span><div class="track"><div class="fill" style="width:88%"></div></div><b>255</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="who">
+    <div class="wrap">
+      <div class="intro"><h2>For the ones who <em>keep showing up.</em></h2><p>You don't need motivation. You need a tool that stays out of the way and keeps the record straight.</p></div>
+      <div class="who">
+        <div><div class="k">一</div><h3>You run a program</h3><p>5/3/1, a PPL split, your coach's spreadsheet. Tanren holds the plan and puts the right numbers in front of you.</p></div>
+        <div><div class="k">二</div><h3>You train off-grid</h3><p>Garage racks, concrete basements, hotel gyms. Logging never waits on a network.</p></div>
+        <div><div class="k">三</div><h3>You keep your record</h3><p>Years of training shouldn't be locked inside someone else's app. Export whenever you like.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ai">
+    <div class="wrap ai">
+      <div>
+        <h2>Your AI reads <em>your iron.</em></h2>
+        <p style="color:var(--muted);font-size:17px;max-width:50ch;margin:20px 0 0">Connect the assistant you already pay for. It sees your real history and writes the next block straight into Tanren. We never pay for inference, so we never charge you for it. No AI? Programs import and export as plain JSON.</p>
+      </div>
+      <div class="convo" aria-label="Example conversation with a connected AI">
+        <div class="bubble me">Look at my last eight weeks of squat and adjust the next block.</div>
+        <div class="calls">↳ get_progression · Back Squat · 8 cycles<br>↳ get_adherence · Strength Block</div>
+        <div class="bubble it">Your top set rose every cycle except C4, where you missed two sessions. Next block starts at <b>235 × 5</b>, adds 5 lb a cycle, and deloads at C4. Saved as <b>Strength Block II</b>.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="wrap">
+      <div class="intro"><h2>Log free. <em>Go Pro</em> to read the steel.</h2><p>Logging and program building are free, for good. Pro unlocks analytics and your AI connection.</p></div>
+      <div class="tiers">
+        <div class="tier"><h3>Free</h3><div class="price">$0</div><ul><li>Unlimited logging, offline</li><li>Build and copy programs</li><li>Import and export</li></ul><a class="btn" href="#">Create account</a></div>
+        <div class="tier pro-t"><h3>Pro</h3><div class="price">$— <small>/ MO · PRICE TBD</small></div><ul><li>Everything in Free</li><li>Progression and adherence analytics</li><li>Connect your own AI</li></ul><a class="btn primary" href="#">Start free trial</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="close">
+    <div class="wrap"><div class="k">鍛</div><h2>Back to the <em>anvil.</em></h2><a class="btn primary" href="#pricing">Start free</a></div>
+  </section>
+</main>
+<footer><div class="wrap mono"><span>Tanren · 鍛錬 — to forge, to discipline</span><span>Mockup 3 / 3 · Hallmark</span></div></footer>
+
+<script>
+  (() => {
+    const root = document.documentElement, t = document.getElementById('theme');
+    const sync = () => t.setAttribute('aria-checked', String(root.dataset.theme === 'light'));
+    t.addEventListener('click', () => { root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light'; try { localStorage.setItem('tanren-theme', root.dataset.theme); } catch {} sync(); });
+    sync();
+  })();
+
+  (() => {
+    const k = document.getElementById('kanji'), reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let heat = 1, target = .4, mx = 50, my = 50, idle = 0, t0 = performance.now();
+    const set = () => { k.style.setProperty('--heat', heat.toFixed(3)); k.style.setProperty('--mx', mx + '%'); k.style.setProperty('--my', my + '%'); };
+    function reheat(e) {
+      idle = performance.now();
+      const r = k.getBoundingClientRect();
+      mx = ((e.clientX - r.left) / r.width * 100).toFixed(1); my = ((e.clientY - r.top) / r.height * 100).toFixed(1);
+      heat = Math.min(1, heat + (e.type === 'pointerdown' ? .6 : .05));
+      if (e.type === 'pointerdown') burst(e.clientX, e.clientY);
+    }
+    k.addEventListener('pointermove', reheat); k.addEventListener('pointerdown', reheat);
+    if (reduce) { heat = .55; set(); }
+
+    // embers
+    const cv = document.getElementById('embers'), ctx = cv.getContext('2d'), ps = [];
+    let W, H, dpr;
+    const size = () => { dpr = Math.min(devicePixelRatio || 1, 2); W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+    new ResizeObserver(size).observe(cv); size();
+    function spawn(x, y, burstMode) {
+      ps.push({ x, y, vx: (Math.random() - .5) * (burstMode ? 6 : .6), vy: burstMode ? -2 - Math.random() * 5 : -.4 - Math.random() * 1.1, life: 1, r: .8 + Math.random() * 1.8, w: Math.random() * 6.28 });
+    }
+    function burst(cx, cy) { const r = cv.getBoundingClientRect(); for (let i = 0; i < (reduce ? 6 : 36); i++) spawn(cx - r.left, cy - r.top, true); }
+    function frame() {
+      // untouched, the hot spot wanders through the strokes like metal sitting in the fire
+      if (!reduce && performance.now() - idle > 2500) { const t = (performance.now() - t0) / 1000; mx = (50 + Math.sin(t * .35) * 28).toFixed(1); my = (50 + Math.sin(t * .23 + 1) * 32).toFixed(1); }
+      heat += (target - heat) * .012; set();
+      ctx.clearRect(0, 0, W, H);
+      const light = document.documentElement.dataset.theme === 'light';
+      const kr = k.getBoundingClientRect(), cr = cv.getBoundingClientRect();
+      if (!reduce && Math.random() < .25 + heat * .5) spawn(kr.left - cr.left + Math.random() * kr.width, kr.top - cr.top + kr.height * (.3 + Math.random() * .7), false);
+      ctx.globalCompositeOperation = light ? 'source-over' : 'lighter';
+      for (let i = ps.length - 1; i >= 0; i--) {
+        const p = ps[i]; p.w += .05; p.x += p.vx + Math.sin(p.w) * .3; p.y += p.vy; p.vy += p.vy < -1.4 ? .04 : -.002; p.vx *= .98; p.life -= .006;
+        if (p.life <= 0 || p.y < -10) { ps.splice(i, 1); continue; }
+        const a = Math.min(1, p.life * 1.3);
+        ctx.fillStyle = light ? `rgba(201,53,11,${a * .7})` : `rgba(255,${120 + p.life * 100 | 0},${40 + p.life * 60 | 0},${a})`;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+</script>
+</body>
+</html>

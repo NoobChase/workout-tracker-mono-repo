@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tanren — Stroke Order</title>
+<meta name="description" content="Mockup 7: the Lexicon entry for 鍛錬 Tanren, opened by its 33-stroke stroke-order diagram drawing itself.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&family=Shippori+Mincho+B1:wght@700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  try { const t = localStorage.getItem('tanren-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+  // decide before first paint: draw the strokes, or show the finished entry
+  (() => {
+    let seen = false;
+    try { seen = sessionStorage.getItem('tanren-drawn') === '1'; } catch {}
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.documentElement.dataset.intro = (seen || still) ? 'done' : 'ready';
+  })();
+</script>
+<style>
+  :root {
+    --bg: #131210; --card: #1b1916; --line: #2d2924; --line-2: #3e3832;
+    --text: #f1ebe4; --muted: #a79e95; --faint: #91877e;
+    --copper: #d07b4b; --copper-btn: #ab5428; --on-copper: #fff7f1;
+    --ghost: #2a2622;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --sans: "Albert Sans", system-ui, sans-serif; --jp: "Shippori Mincho B1", serif; --mono: "Geist Mono", ui-monospace, monospace;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f1ec; --card: #ebe6df; --line: #d9d1c7; --line-2: #c4b9ad;
+    --text: #1a1613; --muted: #574f48; --faint: #6a6159;
+    --copper: #a04a1d; --copper-btn: #a04a1d; --on-copper: #fff7f1;
+    --ghost: #e2dcd3;
+    color-scheme: light;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scrollbar-color: var(--line-2) var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--copper); color: var(--on-copper); }
+  :focus-visible { outline: 2px solid var(--copper); outline-offset: 3px; border-radius: 3px; }
+  a { color: inherit; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 720px) { .wrap { padding: 0 36px; } }
+  .sc { font: 600 12px/1.4 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--copper); }
+  .mono { font: 400 13px/1.5 var(--mono); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  .nav { display: flex; align-items: center; gap: 16px; height: 64px; border-bottom: 1px solid var(--line); }
+  .lock { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .lock .jp { font: 800 20px/1 var(--jp); }
+  .lock .en { font: 700 13px/1 var(--sans); letter-spacing: .22em; }
+  .nav-links { display: none; gap: 24px; margin-left: auto; font-size: 14px; }
+  .nav-links a { text-decoration: none; color: var(--muted); transition: color .15s ease; } .nav-links a:hover { color: var(--text); }
+  .nav-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  @media (min-width: 860px) { .nav-links { display: flex; } .nav-right { margin-left: 20px; } }
+  .tt { all: unset; cursor: pointer; height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line-2); border-radius: 8px; font: 500 13px var(--sans); color: var(--muted); transition: color .15s ease, border-color .15s ease, transform .16s var(--ease-out); }
+  .tt:hover { color: var(--text); border-color: var(--muted); } .tt:active { transform: scale(.96); }
+  .tt svg { width: 15px; height: 15px; }
+  .tt .l, :root[data-theme="light"] .tt .d { display: none; } :root[data-theme="light"] .tt .l { display: inline; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 8px; border: 1px solid var(--line-2); color: var(--text); text-decoration: none; font: 600 15px var(--sans); background: transparent; transition: transform .16s var(--ease-out), background-color .15s ease, border-color .15s ease; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--copper-btn); border-color: var(--copper-btn); color: var(--on-copper); }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { border-color: var(--muted); } .btn.primary:hover { background: color-mix(in oklab, var(--copper-btn) 86%, black); } }
+  .nav .btn { height: 36px; padding: 0 14px; font-size: 14px; display: none; } @media (min-width: 480px) { .nav .btn { display: inline-flex; } }
+
+  /* ── the entry, opened by its stroke-order diagram ───────────────── */
+  .entry { padding-top: 20px; }
+  @media (min-width: 720px) { .entry { padding-top: clamp(24px, 4.4vh, 48px); } }
+  @media (max-width: 519px) { .long { display: none; } .logged .opt { display: none; } }
+  .headword { display: grid; gap: 14px; }
+  @media (min-width: 980px) { .headword { grid-template-columns: auto 1fr; gap: 56px; align-items: start; } }
+
+  .diagram { --cell: min(calc((100vw - 32px) / 2), 250px); width: calc(var(--cell) * 2); }
+  @media (min-width: 720px) and (max-width: 979px) { .diagram { --cell: 220px; } }
+  @media (min-width: 980px) and (max-height: 820px) { .diagram { --cell: 220px; } }
+  .cells { display: flex; border: 1px solid var(--line-2); }
+  .cell { all: unset; cursor: help; position: relative; width: var(--cell); aspect-ratio: 1; display: block; color: var(--text); transition: color .2s ease; }
+  .cell + .cell { border-left: 1px solid var(--line-2); }
+  .cell:focus-visible { outline: 2px solid var(--copper); outline-offset: -2px; border-radius: 0; }
+  .cell[aria-expanded="true"] { color: var(--copper); }
+  @media (hover: hover) and (pointer: fine) { .cell:hover { color: var(--copper); } }
+  .cell svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .guide { stroke: var(--line); stroke-width: .5; stroke-dasharray: 2 2; fill: none; }
+  .glyph { font: 800 96px var(--jp); fill: currentColor; }
+  .glyph.ghost { fill: var(--ghost); }
+  .glyph.hot { fill: var(--copper); }
+  /* the glyph itself is the ink: stroke centrelines (fitted to Shippori) only drive the masks that reveal it */
+  mask path { fill: none; stroke: #fff; stroke-width: 17; stroke-linecap: round; stroke-linejoin: round; }
+  mask path.cool { stroke-opacity: 0; transition: stroke-opacity .32s ease; }
+  /* the brush is wider than a centreline can say; the last slivers fill in as the drawing lands */
+  mask .all { opacity: 0; transition: opacity .36s ease; }
+  [data-intro="done"] mask .all { opacity: 1; }
+
+  .meter { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 40px; white-space: nowrap; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .count b { color: var(--copper); font-weight: 500; }
+  .count .of { color: var(--muted); }
+  .again { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 10px; margin-right: -10px; border-radius: 6px; font: 500 13px var(--sans); color: var(--muted); transition: color .15s ease, transform .16s var(--ease-out); }
+  .again svg { width: 14px; height: 14px; }
+  .again:hover { color: var(--text); } .again:active { transform: scale(.96); }
+
+  .romaji { display: grid; gap: clamp(6px, 1.2vw, 12px); min-width: 0; }
+  .romaji .say { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 16px; }
+  .romaji b { font: 800 clamp(34px, 8.8vw, 104px)/.9 var(--sans); letter-spacing: .12em; }
+  .romaji span { font: 400 clamp(13px, 1.6vw, 18px)/1 var(--mono); color: var(--muted); }
+  .chars { margin-top: clamp(4px, 1.4vw, 18px); display: flex; gap: 4px 10px; flex-wrap: wrap; color: var(--faint); font-size: 14px; }
+  .chars span { transition: color .2s ease; }
+  .chars span.on { color: var(--text); }
+  .chars span b { font-family: var(--jp); color: var(--copper); margin-right: 6px; }
+  @media (max-width: 519px) { .chars .dot { display: none; } .chars { display: grid; gap: 2px; } }
+
+  /* the definition sits in the entry itself, under the glosses */
+  .defn { margin: clamp(14px, 2.4vh, 24px) 0 0; padding-top: clamp(14px, 2.4vh, 22px); border-top: 1px solid var(--line-2); font: 500 clamp(22px, 2.3vw, 32px)/1.2 var(--sans); letter-spacing: -.02em; max-width: 28ch; text-wrap: pretty; }
+  .defn i { font-style: italic; font-weight: 500; font-size: .7em; color: var(--copper); margin-right: .35em; letter-spacing: 0; }
+  .defn em { font-style: normal; color: var(--copper); }
+
+  /* what it actually is, and the way in: the last lines of the entry */
+  .entry::after { content: ""; display: block; margin-top: clamp(20px, 3.4vh, 28px); border-bottom: 1px solid var(--line); }
+  .act { display: grid; gap: 16px; margin-top: clamp(20px, 3.4vh, 32px); padding-top: clamp(20px, 3.4vh, 28px); border-top: 1px solid var(--line-2); }
+  @media (min-width: 980px) { .act { grid-template-columns: 1fr auto; gap: 40px; align-items: center; } }
+  .act p { margin: 0; color: var(--muted); font-size: 17px; max-width: 54ch; }
+  .act p b { color: var(--text); font-weight: 600; }
+  .logged { display: flex; align-items: center; gap: 8px; margin-top: 12px; color: var(--faint); font: 400 13px/1.4 var(--mono); font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+  .logged .k { color: var(--text); }
+  .logged b { color: var(--copper); font-weight: 500; }
+  .logged svg { width: 14px; height: 14px; color: var(--copper); flex: none; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; }
+  @media (max-width: 519px) { .cta .btn { flex: 1; padding: 0 16px; } }
+  /* usage notes */
+  .note { display: grid; gap: 16px; padding: 72px 0; border-bottom: 1px solid var(--line); }
+  @media (min-width: 980px) { .note { grid-template-columns: 220px 1fr; gap: 40px; padding: 96px 0; } }
+  .note h2 { margin: 0 0 14px; font: 700 clamp(30px, 5vw, 52px)/1.06 var(--sans); letter-spacing: -.025em; text-wrap: balance; }
+  .note h2 em { font-style: normal; color: var(--copper); }
+  .note .lead { color: var(--muted); font-size: 17px; max-width: 58ch; margin: 0; }
+
+  .senses { margin: 36px 0 0; padding: 0; list-style: none; display: grid; gap: 0; counter-reset: s; }
+  .senses li { display: grid; gap: 14px; padding: 24px 0; border-top: 1px solid var(--line); counter-increment: s; }
+  @media (min-width: 900px) { .senses li { grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; } }
+  .senses h3 { margin: 0 0 6px; font: 700 22px/1.2 var(--sans); }
+  .senses h3::before { content: counter(s, lower-alpha) ". "; color: var(--copper); font-weight: 600; }
+  .senses p { margin: 0; color: var(--muted); }
+  .senses .pro { font: 600 11px var(--sans); letter-spacing: .12em; color: var(--copper); border: 1px solid currentColor; border-radius: 4px; padding: 2px 6px; margin-left: 8px; vertical-align: 3px; }
+  .ex { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font: 400 13px/1.55 var(--mono); font-variant-numeric: tabular-nums; }
+  .ex .r { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .ex .r:last-child { border-bottom: 0; }
+  .ex .r span:last-child { color: var(--muted); }
+  .ex .hi { color: var(--copper) !important; }
+  .ex .bars { display: flex; align-items: flex-end; gap: 5px; height: 84px; padding-top: 8px; }
+  .ex .bars span { flex: 1; background: var(--line-2); border-radius: 3px 3px 0 0; } .ex .bars span:last-child { background: var(--copper); }
+
+  .usage { display: grid; gap: 22px; margin-top: 32px; }
+  @media (min-width: 900px) { .usage { grid-template-columns: repeat(3, 1fr); gap: 32px; } }
+  .usage div { border-top: 2px solid var(--copper); padding-top: 16px; }
+  .usage b { display: block; font-size: 19px; margin-bottom: 6px; }
+  .usage p { margin: 0; color: var(--muted); }
+
+  .chat { margin-top: 32px; display: grid; gap: 10px; max-width: 760px; }
+  .msg { padding: 13px 15px; border-radius: 12px; font-size: 15.5px; max-width: 92%; }
+  .msg.me { justify-self: end; background: var(--copper-btn); color: var(--on-copper); }
+  .msg.it { background: var(--card); border: 1px solid var(--line); }
+  .msg.it b { color: var(--copper); }
+  .calls { color: var(--faint); font: 400 12px var(--mono); }
+
+  .tiers { display: grid; margin-top: 32px; border: 1px solid var(--line-2); border-radius: 14px; overflow: hidden; }
+  @media (min-width: 820px) { .tiers { grid-template-columns: 1fr 1fr; } .tiers > div + div { border-left: 1px solid var(--line-2); } }
+  .tiers > div { padding: 26px 22px; display: flex; flex-direction: column; } .tiers > div + div { border-top: 1px solid var(--line-2); }
+  @media (min-width: 820px) { .tiers > div + div { border-top: 0; } }
+  .tiers .pro-t { background: var(--card); }
+  .tiers .price { font: 800 44px/1 var(--sans); letter-spacing: -.02em; margin: 10px 0 0; }
+  .tiers .price small { font: 400 12px var(--mono); color: var(--faint); }
+  .tiers ul { list-style: none; padding: 0; margin: 20px 0 24px; display: grid; gap: 9px; color: var(--muted); }
+  .tiers li::before { content: "—"; color: var(--copper); margin-right: 10px; }
+  .tiers .btn { margin-top: auto; align-self: flex-start; }
+
+  .close { padding: 110px 0 100px; }
+  .close .headword { justify-content: flex-start; }
+  .close .kanji { font-size: clamp(56px, 12vw, 120px); }
+  .close .romaji b { font-size: clamp(24px, 5vw, 52px); }
+  .close p { color: var(--muted); font-size: 18px; margin: 22px 0 26px; }
+  footer { border-top: 1px solid var(--line); padding: 22px 0 calc(22px + env(safe-area-inset-bottom)); color: var(--faint); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
+  .close .headword { display: flex; align-items: center; gap: clamp(12px, 3vw, 40px); }
+  .close .kanji { display: flex; font: 800 clamp(56px, 12vw, 120px)/.95 var(--jp); }
+  footer a { text-underline-offset: 3px; text-decoration-color: var(--line-2); }
+  .snap * { transition: none !important; }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: 0ms !important; } }
+</style>
+</head>
+<body>
+<header class="wrap nav">
+  <a class="lock" href="#" aria-label="Tanren home"><span class="jp">鍛錬</span><span class="en">TANREN</span></a>
+  <nav class="nav-links" aria-label="Primary"><a href="#usage">Features</a><a href="#ai">Your AI</a><a href="#pricing">Pricing</a><a href="#">Log in</a></nav>
+  <div class="nav-right">
+    <button class="tt" id="theme" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg>
+      <span class="d">Dark</span><span class="l">Light</span>
+    </button>
+    <a class="btn primary" href="#pricing">Get started</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap entry">
+    <div class="headword">
+      <figure class="diagram" style="margin:0">
+        <div class="cells" lang="ja">
+          <button class="cell" type="button" data-c="0" aria-expanded="false" aria-label="鍛, tan: to forge"><svg viewBox="0 0 109 109" aria-hidden="true"><path class="guide" d="M54.5 0V109M0 54.5H109"/><defs><mask id="done0" maskUnits="userSpaceOnUse" x="-10" y="-10" width="129" height="129"><g class="set" transform="matrix(.97 0 0 1.07 1.72 1)"></g><rect class="all" x="-10" y="-10" width="129" height="129" fill="#fff"/></mask><mask id="hot0" maskUnits="userSpaceOnUse" x="-10" y="-10" width="129" height="129"><g class="wet" transform="matrix(.97 0 0 1.07 1.72 1)"></g></mask></defs><text class="glyph ghost" x="54.5" y="54.5" text-anchor="middle" dominant-baseline="central">鍛</text><text class="glyph" x="54.5" y="54.5" text-anchor="middle" dominant-baseline="central" mask="url(#done0)">鍛</text><text class="glyph hot" x="54.5" y="54.5" text-anchor="middle" dominant-baseline="central" mask="url(#hot0)">鍛</text></svg></button><button class="cell" type="button" data-c="1" aria-expanded="false" aria-label="錬, ren: to refine"><svg viewBox="0 0 109 109" aria-hidden="true"><path class="guide" d="M54.5 0V109M0 54.5H109"/><defs><mask id="done1" maskUnits="userSpaceOnUse" x="-10" y="-10" width="129" height="129"><g class="set" transform="matrix(.995 0 0 .968 1.68 5.98)"></g><rect class="all" x="-10" y="-10" width="129" height="129" fill="#fff"/></mask><mask id="hot1" maskUnits="userSpaceOnUse" x="-10" y="-10" width="129" height="129"><g class="wet" transform="matrix(.995 0 0 .968 1.68 5.98)"></g></mask></defs><text class="glyph ghost" x="54.5" y="54.5" text-anchor="middle" dominant-baseline="central">錬</text><text class="glyph" x="54.5" y="54.5" text-anchor="middle" dominant-baseline="central" mask="url(#done1)">錬</text><text class="glyph hot" x="54.5" y="54.5" text-anchor="middle" dominant-baseline="central" mask="url(#hot1)">錬</text></svg></button>
+        </div>
+        <figcaption class="meter mono">
+          <span class="count" id="count" aria-hidden="true"><span class="of">33 strokes</span>,<span class="long"> each one</span> in order</span>
+          <span class="sr">鍛錬 is written in 33 strokes: 17 for 鍛, 16 for 錬.</span>
+          <button class="again" id="again" type="button">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.75 8a5.25 5.25 0 1 0 1.6-3.77"/><path d="M2.5 2.25v2.5H5"/></svg>
+            <span id="again-label">Replay<span class="long"> strokes</span></span>
+          </button>
+        </figcaption>
+      </figure>
+      <div>
+        <div class="romaji"><div class="say"><b>TANREN</b><span>/tahn·ren/<span class="long"> &nbsp;·&nbsp; Japanese</span></span></div></div>
+        <div class="chars" aria-live="polite"><span id="c0"><b>鍛</b>tan — to forge, to temper</span><span class="dot">·</span><span id="c1"><b>錬</b>ren — to refine, to train</span></div>
+        <p class="defn"><i>noun</i> The hardening of <em>body and mind</em> through deliberate, repeated training.</p>
+      </div>
+    </div>
+
+    <div class="act">
+      <div>
+        <p><b>The training log for lifters who run a program.</b> Write the plan once. Log each set in a tap, signal or not. Watch the work add up.</p>
+        <div class="logged" aria-label="Example: back squat, set 3 of 5, 225 pounds for 5 reps, logged">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>
+          <span>set <b>3</b> / 5</span><span aria-hidden="true">·</span><span class="k">Back Squat 225 × 5</span><span class="opt" aria-hidden="true">·</span><span class="opt">logged, no signal</span>
+        </div>
+      </div>
+      <div class="cta"><a class="btn primary" href="#pricing">Start training</a><a class="btn" href="#usage">How it works</a></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="note" id="usage">
+      <span class="sc">In practice</span>
+      <div>
+        <h2>Three things, <em>done properly.</em></h2>
+        <p class="lead">No feed, no streak guilt, no social anything. A program, a log, and the proof.</p>
+        <ol class="senses">
+          <li><div><h3>Plan the work</h3><p>Programs, cycles, workouts, sets. Build week one and Tanren copies it forward. Change week six without touching week five.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Strength Block</span><span>8 cycles</span></div><div class="r"><span>&nbsp;&nbsp;Cycle 3 · Lower A</span><span>5 exercises</span></div><div class="r"><span class="hi">&nbsp;&nbsp;&nbsp;&nbsp;Back Squat</span><span>5 × 5 @ 225</span></div></div></li>
+          <li><div><h3>Repeat the work</h3><p>One tap per set with last session's numbers inline. No signal? Sets queue in order and sync later. Swap an exercise and the plan stays the plan.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Set 2 · 225 × 5</span><span>logged</span></div><div class="r"><span>Set 3 · 225 × 5</span><span>logged</span></div><div class="r"><span>2 sets waiting</span><span class="hi">syncs when online</span></div></div></li>
+          <li><div><h3>See it harden <span class="pro">PRO</span></h3><p>Cycle-over-cycle progression and plan-versus-actual adherence. Warmups and drop sets never pad the numbers.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Back Squat · top set</span><span>demo data</span></div><div class="bars"><span style="height:44%"></span><span style="height:52%"></span><span style="height:58%"></span><span style="height:55%"></span><span style="height:67%"></span><span style="height:75%"></span><span style="height:84%"></span><span style="height:92%"></span></div></div></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="sc">Who uses it</span>
+      <div>
+        <h2>Lifters who already <em>show up.</em></h2>
+        <div class="usage">
+          <div><b>You run a program</b><p>5/3/1, a PPL split, your coach's spreadsheet. Tanren holds the plan and puts the right numbers in front of you.</p></div>
+          <div><b>You train anywhere</b><p>Garage racks, concrete basements, hotel gyms. Logging never waits on a network.</p></div>
+          <div><b>You keep your record</b><p>Years of training shouldn't be locked in someone else's app. Export whenever you like.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" id="ai">
+      <span class="sc">See also: your AI</span>
+      <div>
+        <h2>Your assistant, reading <em>your real training.</em></h2>
+        <p class="lead">Connect the AI you already use. It reads your history and writes the next block straight into Tanren. We never pay for inference, so we never charge you for it. No AI? Programs import and export as plain JSON.</p>
+        <div class="chat" aria-label="Example conversation">
+          <div class="msg me">Look at my last eight weeks of squat and adjust the next block.</div>
+          <div class="calls">read progression · Back Squat · 8 cycles &nbsp;/&nbsp; read adherence · Strength Block</div>
+          <div class="msg it">Your top set rose every cycle except C4, where you missed two sessions. Next block starts at <b>235 × 5</b>, adds 5 lb a cycle, deloads at C4. Saved as <b>Strength Block II</b>.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" id="pricing" style="border-bottom:0">
+      <span class="sc">Pricing</span>
+      <div>
+        <h2>Log for free. <em>Go Pro</em> to see the trend.</h2>
+        <div class="tiers">
+          <div><span class="sc" style="color:var(--muted)">Free</span><div class="price">$0</div><ul><li>Unlimited logging, offline</li><li>Build and copy programs</li><li>Import and export</li></ul><a class="btn" href="#">Create account</a></div>
+          <div class="pro-t"><span class="sc">Pro</span><div class="price">$— <small>/ mo · price TBD</small></div><ul><li>Everything in Free</li><li>Progression and adherence analytics</li><li>Connect your own AI</li></ul><a class="btn primary" href="#">Start free trial</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="close" style="border-top:1px solid var(--line)"><div class="wrap">
+    <div class="headword"><div class="kanji" lang="ja">鍛錬</div><div class="romaji"><b>TANREN</b><span>/tahn·ren/</span></div></div>
+    <p>Deliberate. Repeated. Recorded.</p>
+    <a class="btn primary" href="#pricing">Start training</a>
+  </div></div>
+</main>
+<footer><div class="wrap"><span>鍛錬 Tanren · US only</span><span>Stroke data: <a href="https://kanjivg.tagaini.net/">KanjiVG</a>, CC BY-SA 3.0</span><span>Mockup 7 · Stroke Order</span></div></footer>
+
+<script>
+  (() => {
+    const root = document.documentElement;
+    document.getElementById('theme').addEventListener('click', () => { root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light'; try { localStorage.setItem('tanren-theme', root.dataset.theme); } catch {} });
+
+    // Stroke centrelines from KanjiVG (CC BY-SA 3.0), 109 × 109 grid.
+    const K = [
+      { p: ['M29.5,15.99c0,0.73,0.05,1.32-0.14,2.2c-0.97,4.59-10.22,19.89-18.14,26.68', 'M31.12,22.5c3.3,1.7,7.52,6.22,9.12,10.5', 'M19.25,40.5c1.5,0,2.18,0.13,2.67,0.06c4.58-0.68,8.46-1.18,13.69-2c0.73-0.11,1.52-0.05,2.4-0.05', 'M13.84,54.31c2.04,0.31,3.79,0.39,5.27,0.19c5.3-0.72,11.85-2.39,16.93-3.42c0.73-0.15,2.38-0.38,3.49-0.1', 'M26.7,42.94c0.99,0.99,1.24,1.81,1.24,3.14c0,4.35,0.06,28.17,0.06,36.23', 'M14.62,65c3.5,4.86,5.2,10.12,5.92,12.95', 'M39.04,58.55c0.23,0.71,0.27,1.8,0.01,2.35c-1.18,2.48-2.05,4.36-4.63,8.88', 'M14.75,90.44c1.12,0.81,2.83,0.71,3.72,0.03c4.66-3.6,8.51-6.31,19.78-14.97', 'M61.06,15.5c0.09,0.85,0.09,1.45-0.39,2.14c-2.17,3.11-5.29,6.48-10.55,10.36', 'M47.03,28.5c0.86,0.86,1.1,2,1.1,3.5c0,0.63,0.08,38.31,0.1,54.62c0,4.28,0.01,7.1,0,7.38', 'M49.52,42.47c4.66-0.67,9.74-2.06,10.6-2.16c0.97-0.12,1.98,0,2.84,0.22', 'M49.25,57c4.38-0.5,9.66-1.54,10.46-1.62c0.91-0.09,1.62,0,2.43,0.17', 'M41.25,79.37c0.66,0.93,1.81,0.99,3.02,0.35c0.71-0.37,13.4-6.7,16.42-8.49', 'M70.37,22.37c0.69,0.69,0.89,1.89,0.82,2.81C70.38,35.38,69.5,42,65.2,48.21', 'M71.95,23.09c1.95-0.22,6.54-1.23,9.21-1.8c2.27-0.48,3.21,0.13,2.98,2.56c-0.29,3.21-0.8,8.4-0.8,11.61c0,5.74,1.1,7.16,6.27,7.16c4.09,0,5.17-1,5.17-6.17', 'M66.81,53.74c1.97,0.54,3.64,0.19,5.61-0.31c2.66-0.67,9.36-2.16,11.95-2.83c2.2-0.58,4.23,0.76,3.28,3.32c-5.9,15.96-16.4,29.71-30.05,38.5', 'M66.29,60.03C68.94,60.7,79.12,73.5,89.6,85.79c1.83,2.15,4.4,4.34,7.55,5.87'] },
+      { p: ['M29,13.99c0.25,1.01-0.02,1.99-0.39,2.89c-2.24,5.62-9.24,19.87-17.64,28.74', 'M30.89,19.46c4.98,2.41,9.48,5.91,13.11,11.04', 'M19.5,39.75c1.37,0,2.64,0.08,4.01-0.07c3.74-0.41,8.39-1.41,12.61-2.27c1.11-0.23,2.5-0.16,3.63-0.16', 'M12.59,55.06c2.29,0.69,4.59,0.6,6.55,0.39c5.98-0.65,15.03-2.09,20.15-2.88c0.74-0.11,2.38-0.38,3.49-0.1', 'M28.45,41.19c1.06,1.06,0.99,2.18,0.99,3.89c0,4.35,0.06,31.42,0.06,36.98', 'M15.38,67.5c3.35,4.2,4.98,8.75,5.67,11.2', 'M41.23,61.8c0.28,0.71,0.34,1.8,0.07,2.35C40,66.75,38.75,69,35.67,73.03', 'M13.5,88.25c1.38,1.12,2.7,0.98,3.75,0.5c7.12-3.25,11.88-5.25,24.25-11', 'M48.46,26.17c2.54,0.46,5.06,0.03,7.19-0.2c7.07-0.76,16.42-2.18,24.6-2.82c2.29-0.18,4.67-0.48,6.92,0.15', 'M47.66,38.64c1.04,1.04,1.33,2.22,1.51,3.62c0.4,3.12,1.54,10.85,2.27,16.01c0.37,2.64,0.76,5.11,0.87,5.97', 'M49.4,39.39c5.44-0.57,27.93-3.12,34.22-3.76c2.66-0.27,4.54,1.17,4.19,4.02c-0.7,5.53-1.32,10.31-2.57,17.64c-0.22,1.3-0.46,2.7-0.73,4.22', 'M51.61,50.59c5.99-0.71,24.64-2.84,33.94-3.2', 'M53.52,61.57c6.46-0.46,22.4-2.15,30.45-2.55', 'M65.69,12c1.09,1.09,1.47,2.5,1.47,4.25c0,3.88,0.01,56.88,0.01,74.5c0,4.24-0.01,6.96-0.04,8', 'M65.19,61.5c0,1.25-0.45,2.4-1.72,4.48C57.5,75.69,47.77,86.54,39.5,91.5', 'M68.19,61.5c5.97,7.11,14.09,16.83,19.57,22.12c2,1.93,4.37,4.38,6.99,5.88'] }
+    ];
+    const TOTAL = K[0].p.length + K[1].p.length; // 33
+    const NS = 'http://www.w3.org/2000/svg';
+    const mk = (tag, attrs) => { const el = document.createElementNS(NS, tag); for (const k in attrs) el.setAttribute(k, attrs[k]); return el; };
+
+    const cells = [...document.querySelectorAll('.cell')];
+    // each stroke draws in the copper ("wet") mask, then lands in the set mask and its copper fades out
+    const strokes = []; // { wet, set, len, cell }
+    cells.forEach((cell, ci) => {
+      K[ci].p.forEach(d => {
+        const wet = mk('path', { d, pathLength: 1, 'stroke-dasharray': '1 2', 'stroke-dashoffset': 1 });
+        strokes.push({ wet, set: mk('path', { d }), len: wet.getTotalLength(), cell: ci, wetG: cell.querySelector('.wet'), setG: cell.querySelector('.set') });
+      });
+    });
+
+    // Timeline: ~2.8s of drawing, length-weighted, each stroke starting just before the last one lifts.
+    const DRAW = 2500, LIFT = 0.82, CHAR_GAP = 200, MIN = 50, LEAD = 220;
+    const sumLen = strokes.reduce((a, s) => a + s.len, 0);
+    let t = LEAD;
+    strokes.forEach((s, i) => {
+      if (i > 0 && s.cell !== strokes[i - 1].cell) t += CHAR_GAP;
+      s.at = t; s.dur = Math.max(MIN, DRAW * s.len / sumLen);
+      t += s.dur * LIFT;
+    });
+    const END = strokes[TOTAL - 1].at + strokes[TOTAL - 1].dur;
+
+    const count = document.getElementById('count');
+    const againLabel = document.getElementById('again-label');
+    const pad = n => String(n).padStart(2, ' '); // figure space keeps the counter from jittering
+    const idle = () => { count.innerHTML = '<span class="of">33 strokes</span>,<span class="long"> each one</span> in order'; againLabel.innerHTML = 'Replay<span class="long"> strokes</span>'; };
+    let anims = [], timers = [], raf = 0, running = false;
+
+    const finish = (instant) => {
+      running = false; cancelAnimationFrame(raf); timers.forEach(clearTimeout); timers = [];
+      anims.forEach(a => a.cancel()); anims = [];
+      strokes.forEach(s => { s.wet.remove(); s.setG.append(s.set); });
+      if (instant) { root.classList.add('snap'); requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('snap'))); }
+      root.dataset.intro = 'done';
+      idle();
+      try { sessionStorage.setItem('tanren-drawn', '1'); } catch {}
+    };
+
+    const play = () => {
+      running = false; cancelAnimationFrame(raf); timers.forEach(clearTimeout); timers = [];
+      anims.forEach(a => a.cancel()); anims = [];
+      strokes.forEach(s => { s.set.remove(); s.wet.classList.remove('cool'); s.wet.setAttribute('stroke-dashoffset', 1); s.wetG.append(s.wet); });
+      root.dataset.intro = 'drawing'; running = true;
+      againLabel.textContent = 'Skip';
+      const t0 = performance.now();
+      strokes.forEach(s => {
+        const a = s.wet.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: s.dur, delay: s.at, fill: 'forwards', easing: 'cubic-bezier(0.45, 0, 0.2, 1)' });
+        anims.push(a);
+        a.finished.then(() => { s.wet.setAttribute('stroke-dashoffset', 0); s.setG.append(s.set); s.wet.classList.add('cool'); }).catch(() => {});
+      });
+      const tick = () => {
+        const el = performance.now() - t0;
+        let n = 0; for (const s of strokes) if (s.at <= el) n++;
+        count.innerHTML = 'stroke <b>' + pad(n) + '</b> <span class="of">/ ' + TOTAL + '</span>';
+        if (el < END + 260) raf = requestAnimationFrame(tick);
+        else if (running) finish(false);
+      };
+      raf = requestAnimationFrame(tick);
+    };
+
+    document.getElementById('again').addEventListener('click', () => running ? finish(false) : play());
+
+    if (root.dataset.intro === 'ready') {
+      // wait (briefly) for the brush font so the settle lands on Shippori, not a fallback
+      const go = () => { if (root.dataset.intro === 'ready') play(); };
+      Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 600))]).then(go);
+    } else {
+      finish(true);
+    }
+
+    // tap or hover a character to read its half of the word (also skips the drawing)
+    const show = i => { cells.forEach((b, j) => b.setAttribute('aria-expanded', String(j === i))); [0, 1].forEach(j => document.getElementById('c' + j).classList.toggle('on', j === i)); };
+    cells.forEach((b, i) => {
+      b.addEventListener('pointerenter', () => show(i)); b.addEventListener('focus', () => show(i));
+      b.addEventListener('click', () => { if (running) finish(false); show(i); });
+      b.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') show(-1); });
+    });
+  })();
+</script>
+</body>
+</html>
