@@ -89,7 +89,7 @@ Spec-driven, with the specs kept deliberately light:
 
 **Step 0 — Account and guardrails.** New AWS account on the Paid Plan, billing alerts, root locked down. No application code.
 
-**Step 1 — Infrastructure skeleton.** CDK stack that stands up the whole pipe end to end with nothing meaningful in it: CloudFront serving a static page from its default `*.cloudfront.net` name, a Lambda behind a Function URL, an empty Neon database. No custom domain, no certificate. Small, because the expensive networking decisions have been designed out rather than solved.
+**Step 1 — Infrastructure skeleton.** CDK stack that stands up the whole pipe end to end with nothing meaningful in it: CloudFront serving a static page from its default `*.cloudfront.net` name, a Lambda behind a Function URL, an empty Neon database. No custom domain, no certificate (both landed in step 2). Small, because the expensive networking decisions have been designed out rather than solved.
 
 **Step 2 — Auth and core schema.** Clerk wired into both the frontend and the API. The plan-side tables from `data-model.md`, plus the seeded exercise catalog. Nothing beyond that.
 
@@ -132,9 +132,9 @@ The reason for this order: steps 0 through 3 are about de-risking, not features.
 
 **Watch out for:**
 
-- **No custom domain in step 1 — decided.** The distribution's default `*.cloudfront.net` hostname already serves HTTPS with a CloudFront-managed certificate, which is everything a hello-world pipe needs. Skip the ACM certificate, the hosted zone, and the alias for now. Adding a domain later is an alias plus a certificate on an existing distribution, not a restructuring, so there is no reason to block step 1 on a DNS decision.
-- **When the custom domain does land** — before launch, since Clerk's production instance requires one — **its ACM certificate must live in `us-east-1`** even though everything else is `us-east-2`. CloudFront reads certificates only from `us-east-1`; one requested in Ohio is simply invisible to it and the failure mode is confusing. That means a second stack pinned to `us-east-1` holding just the certificate, referenced with `crossRegionReferences: true` — the only resource in the account outside `us-east-2`, so leave a comment in the CDK saying why.
-- **Your domain.** If it is registered in Route 53 in the old account, sort out the transfer or decide to leave the hosted zone there and point records at the new account. Do this before closing anything.
+- **No custom domain in step 1 — decided, then superseded in step 2**, which landed `tanrenstrength.com` because Clerk's production instance needs it (`specs/shipped/step-2-auth-and-core-schema/overview.md`, decision 5). The original reasoning: the distribution's default `*.cloudfront.net` hostname already serves HTTPS with a CloudFront-managed certificate, which is everything a hello-world pipe needs. Skip the ACM certificate, the hosted zone, and the alias for now. Adding a domain later is an alias plus a certificate on an existing distribution, not a restructuring, so there is no reason to block step 1 on a DNS decision.
+- **The custom domain's ACM certificate lives in `us-east-1`** even though everything else is `us-east-2`. CloudFront reads certificates only from `us-east-1`; one requested in Ohio is simply invisible to it and the failure mode is confusing. That means a second stack pinned to `us-east-1` holding just the certificate, referenced with `crossRegionReferences: true` — the only resource in the account outside `us-east-2`, so leave a comment in the CDK saying why.
+- **The domain** was registered fresh through Route 53 in this account on 2026-10-01, which created its hosted zone; nothing was transferred from the old account.
 - **Orphaned resources bill silently.** Unattached EBS volumes, unassociated Elastic IPs, and snapshots survive the deletion of the thing they belonged to. Check the billing console after any teardown.
 - **The legacy RDS instance.** `legacy-overview.md` §0 lists live credentials committed to git history. If that instance is still running, rotate or destroy it now — this is independent of the rewrite and it is the only genuinely urgent item in this document.
 
@@ -216,7 +216,7 @@ theirs. That is the trade, made deliberately.
 - **Key on the token's `sub`, never the email.** Emails change and are not guaranteed unique across identity providers.
 - **Lazy-create the user row on first authenticated request** rather than wiring up Clerk's `user.created` webhook. Fewer moving parts, no ordering problems if the webhook is slow, and one less endpoint to secure. The one webhook worth wiring is `user.deleted`, and it soft-deletes (`data-model.md` §4).
 - **Write entitlement checks from day one** against `users.sub_status`, with everyone hardcoded to an entitled value until step 5. The shape is two middlewares: `requireAuth` on everything, `requirePro` (`sub_status IN ('TRIALING','ACTIVE')`) on exactly the Pro route groups — progression analytics and, later, MCP tools. The Free/Pro boundary itself is `data-model.md` §3.8. Retrofitting entitlement across forty endpoints later is genuinely miserable, and this is the single cheapest thing in this document.
-- **Migrations run from CI or from a script**, against a connection string. No tunnel, no bastion, no migration Lambda. Decide which one and make it the only way — ad-hoc migrations from a laptop are how environments drift.
+- **Migrations run from CI or from a script**, against a connection string. No tunnel, no bastion, no migration Lambda. Decide which one and make it the only way — ad-hoc migrations from a laptop are how environments drift. **Decided in step 2: CI**, on merge to `main`, migrating `dev` then `production` and seeding the catalog after each (`.github/workflows/ci.yml`).
 
 ---
 

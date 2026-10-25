@@ -7,8 +7,13 @@
 > so nothing here is an instruction — where this file and the code disagree,
 > **the code is right and this file is stale**. It is kept only for the
 > decisions and the one non-obvious failure recorded below, none of which are
-> derivable from reading the CDK. Delete it once step 2 lands and the CDK has
-> been read by a human at least once more.
+> derivable from reading the CDK. Kept as an archived record after step 2
+> landed (decided 2026-10-25); no deletion is planned.
+>
+> **Step 2 has landed and changed two things below:** the custom domain now
+> exists, and the Function URL is no longer behind OAC — it is `AuthType: NONE`
+> with a CloudFront secret header (step 2 spec, decision 14), so the OAC
+> failure recorded here is history, not a live trap.
 
 **Goal (met):** hello-world flowing browser → CloudFront → Lambda Function URL →
 Neon → back, defined entirely in CDK.
@@ -117,7 +122,10 @@ whether CDK started emitting both grants before deleting it.**
 
 ## Deliberately not done
 
-- **No custom domain and no ACM certificate.** Decided mid-build and reflected
+- **No custom domain and no ACM certificate.** *Superseded in step 2*, which
+  landed `tanrenstrength.com`, the `us-east-1` certificate stack and
+  `crossRegionReferences` (`specs/shipped/step-2-auth-and-core-schema/`,
+  decision 5). Originally: decided mid-build and reflected
   in `docs/workout-tracker-build-plan.md` step 1: the distribution's default
   `*.cloudfront.net` name already serves HTTPS. There is therefore **no
   `us-east-1` stack and no `crossRegionReferences`** yet. When the domain lands
