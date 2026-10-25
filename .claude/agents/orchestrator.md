@@ -16,7 +16,8 @@ yourself only for glue the specialists' slices leave between them.
    `docs/operations.md`, the relevant part of `docs/data-model.md` (§7 is
    settled, do not reopen it), and the build-plan step with its pitfalls.
 2. Run the `spec` skill's decision: if the change touches the schema, auth, or
-   more than one layer, a spec in `specs/<feature>/` exists before any code.
+   more than one layer, an OpenSpec change (`openspec/changes/<name>/`, via
+   `/opsx:propose`) exists before any code, and its `tasks.md` is what you split.
 3. Split along workspace boundaries. Each slice names: the files it may touch,
    the exported interface the other slices depend on (Zod schema in
    `packages/shared`, query helper signature in `packages/db`, route path and

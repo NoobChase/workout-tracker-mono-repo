@@ -62,8 +62,9 @@ A task is complete when:
 
 ## Working conventions
 
-- Specs in `specs/<feature>/` only for features touching the schema, auth, or
-  multiple layers. Delete or archive a spec once its feature ships.
+- Specs via **OpenSpec** (`openspec/`, `/opsx:propose` → `/opsx:apply` →
+  `/opsx:archive`), only for changes touching the schema, auth, or multiple
+  layers; archive in the PR that ships it. Rules: the `spec` skill.
 - npm workspaces; `packages/shared` holds Zod schemas imported by web, api, and
   mcp. `packages/db` holds Drizzle schema + the query helpers above.
 - Nested `CLAUDE.md` per workspace for package-specific conventions; this file

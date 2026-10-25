@@ -1,0 +1,31 @@
+schema: spec-driven
+
+# Project context: the rules from the `spec` skill (.claude/skills/spec),
+# restated here so OpenSpec applies them while writing artifacts.
+context: |
+  Workout tracker monorepo. The design lives in docs/ and governs: link
+  docs/data-model.md, docs/operations.md and docs/workout-tracker-build-plan.md
+  by section instead of restating them. docs/data-model.md section 7 is
+  settled; a change does not re-decide it. Root CLAUDE.md defines "done" and
+  the non-negotiable rules; do not restate them. Steps 1-2 predate OpenSpec and
+  are archived in specs/shipped/; do not migrate them.
+
+rules:
+  proposal:
+    - State what is out of scope or deliberately not done, each with its reason
+  design:
+    - Record only decisions not derivable from docs/, each with the alternative rejected
+  tasks:
+    - End with verification tasks naming the commands to run, including integration tests against a real Neon branch wherever root CLAUDE.md requires them
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
