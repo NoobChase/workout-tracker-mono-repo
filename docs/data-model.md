@@ -685,8 +685,10 @@ exercise. Expressing these in the database means composite foreign keys carrying
 `user_id` down every level, which widens five tables to protect against a bug
 rather than against user input. It stays an application invariant — but it is
 the one invariant whose failure is a cross-tenant data leak rather than a glitch,
-so it belongs in the scoped-query helper (`workout-tracker-build-plan.md` step 3)
-and in a test, not in a code review checklist.
+so it belongs in the scoped-query helper and in a test, not in a code review
+checklist. That is `packages/db/src/scope.ts` (`assertOwned`,
+`assertExercisesUsable`), tested against a real database in
+`packages/db/test/scope.test.ts`.
 
 *Nothing prevents two `IN_PROGRESS` sessions.* A partial unique index would
 express "one workout at a time" neatly, and it is left out on purpose: with the

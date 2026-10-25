@@ -1,9 +1,15 @@
-import { isPro, type ResolvedUser, type SubStatus } from "@workout-tracker/db";
+import {
+  isPro,
+  type ResolvedUser,
+  type SubStatus,
+  type UserId,
+} from "@workout-tracker/db";
 import type { MiddlewareHandler } from "hono";
 
 /** The resolved internal user, set by `requireAuth` for everything after it. */
 export interface AuthedUser {
-  id: string;
+  /** `users.id` -- pass it to `userScope`; never the Clerk id. */
+  id: UserId;
   subStatus: SubStatus;
 }
 

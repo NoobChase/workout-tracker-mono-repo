@@ -5,11 +5,12 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Db } from "./client";
 import { users } from "./schema";
+import type { UserId } from "./scope";
 
 export type SubStatus = (typeof users.subStatus.enumValues)[number];
 
 export interface ResolvedUser {
-  id: string;
+  id: UserId;
   subStatus: SubStatus;
   deletedAt: Date | null;
 }
@@ -47,7 +48,7 @@ export async function resolveUser(
     .select(resolvedColumns)
     .from(users)
     .where(eq(users.clerkUserId, clerkUserId));
-  if (existing) return existing;
+  if (existing) return { ...existing, id: existing.id as UserId };
 
   const [created] = await db
     .insert(users)
@@ -60,7 +61,7 @@ export async function resolveUser(
   if (!created) {
     throw new Error("users upsert returned no row");
   }
-  return created;
+  return { ...created, id: created.id as UserId };
 }
 
 /**
