@@ -515,18 +515,27 @@ default, so the client can mint a whole session subtree offline.
 
 **Provisioning.** Create the local row **just-in-time on the first authenticated
 request**, in middleware, rather than relying on Clerk's `user.created` webhook
-as the critical path:
+as the critical path. Every request reads first; the upsert runs only on a miss:
 
 ```sql
+SELECT id, sub_status, deleted_at FROM users WHERE clerk_user_id = $1;
+
+-- only when that returns no row
 INSERT INTO users (id, clerk_user_id) VALUES ($new_uuid, $clerk_id)
 ON CONFLICT (clerk_user_id) DO UPDATE SET clerk_user_id = EXCLUDED.clerk_user_id
-RETURNING id;
+RETURNING id, sub_status, deleted_at;
 ```
 
 A webhook can be delayed, retried, or dropped, which produces a race where the
-user's first request arrives before their row exists. JIT upsert has no such
-window, and the `ON CONFLICT DO UPDATE … RETURNING` form returns the id on both
-the insert and the hit. Use webhooks for deletion (below), not for creation.
+user's first request arrives before their row exists. JIT provisioning has no
+such window. The read comes first because running the upsert on every request
+would make each one a real `UPDATE` — `DO UPDATE` writes a new row version even
+when nothing changes — on the hottest small table, for nothing. The `DO UPDATE`
+stays on the insert for the race: two concurrent first requests both miss, the
+loser's insert conflicts, and `DO UPDATE … RETURNING` hands it the winner's row
+where `DO NOTHING` would return none. The read also returns `sub_status`, so
+entitlement costs no second query. Use webhooks for deletion (below), not for
+creation.
 
 **Authorization is still yours.** Clerk tells you *which* user is making the
 request. It does not tell you that this user owns program 47. Every query still
@@ -828,8 +837,9 @@ returns; a scheduled job hard-deletes afterwards and lets the cascade do its
 work:
 
 ```sql
--- webhook handler
-UPDATE users SET deleted_at = now() WHERE clerk_user_id = $1;
+-- webhook handler; a redelivery leaves the first timestamp alone
+UPDATE users SET deleted_at = now()
+WHERE clerk_user_id = $1 AND deleted_at IS NULL;
 
 -- purge job
 DELETE FROM users WHERE deleted_at < now() - INTERVAL '6 months';

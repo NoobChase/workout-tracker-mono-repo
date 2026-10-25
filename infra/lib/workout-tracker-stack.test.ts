@@ -71,32 +71,57 @@ describe("WorkoutTrackerStack", () => {
     }
   });
 
-  it("scopes the Lambda to its single SSM parameter, never a path wildcard", () => {
+  it("scopes the Lambda to exactly its own SSM parameters, never a path wildcard", () => {
     const policies = template.findResources("AWS::IAM::Policy");
-    const ssmResources = Object.values(policies)
+    const ssmStatements = Object.values(policies)
       .flatMap(
         (policy) =>
           policy.Properties.PolicyDocument.Statement as Array<
             Record<string, unknown>
           >,
       )
-      .filter((statement) => JSON.stringify(statement.Action).includes("ssm:"))
-      // The ARN renders as an Fn::Join unless the partition-literal feature
-      // flag is on, so compare the serialised form rather than a literal.
-      .map((statement) => JSON.stringify(statement.Resource));
+      .filter((statement) => JSON.stringify(statement.Action).includes("ssm:"));
 
-    assert.equal(ssmResources.length, 1, "expected exactly one ssm statement");
-    const [resource] = ssmResources;
-    assert.ok(
-      resource?.includes(
-        ":parameter/workout-tracker/production/database-url-pooled",
-      ),
-      `unexpected ssm resource: ${resource}`,
-    );
-    assert.ok(
-      !resource?.includes("*"),
-      `ssm resource must not be a wildcard: ${resource}`,
-    );
+    assert.equal(ssmStatements.length, 1, "expected exactly one ssm statement");
+    // Each ARN renders as an Fn::Join unless the partition-literal feature
+    // flag is on, so compare the serialised form rather than literals.
+    const resources = [ssmStatements[0]!.Resource]
+      .flat()
+      .map((resource) => JSON.stringify(resource));
+    const expected = [
+      "database-url-pooled",
+      "clerk-secret-key",
+      "clerk-webhook-signing-secret",
+    ];
+    assert.equal(resources.length, expected.length, resources.join("\n"));
+    for (const name of expected) {
+      assert.ok(
+        resources.some((r) =>
+          r.includes(`:parameter/workout-tracker/production/${name}"`),
+        ),
+        `missing ssm resource for ${name}: ${resources.join("\n")}`,
+      );
+    }
+    for (const resource of resources) {
+      assert.ok(
+        !resource.includes("*"),
+        `ssm resource must not be a wildcard: ${resource}`,
+      );
+    }
+  });
+
+  it("hands the Lambda the Clerk parameter names and the azp allowlist from the domain", () => {
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          CLERK_SECRET_KEY_PARAMETER_NAME:
+            "/workout-tracker/production/clerk-secret-key",
+          CLERK_WEBHOOK_SIGNING_SECRET_PARAMETER_NAME:
+            "/workout-tracker/production/clerk-webhook-signing-secret",
+          CLERK_AUTHORIZED_PARTIES: `https://${DOMAIN},http://localhost:5173`,
+        }),
+      },
+    });
   });
 
   it("puts no VPC configuration on the API function", () => {

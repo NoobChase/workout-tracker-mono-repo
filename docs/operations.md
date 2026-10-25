@@ -88,24 +88,28 @@ next?" returns, and that is a read they cannot do offline anyway.
 
 ### 1.1 First sign-in
 
-Clerk authenticates; middleware provisions the local anchor row on **every**
-authenticated request, not just the first.
+Clerk authenticates; middleware resolves the local anchor row on **every**
+authenticated request, and provisions it on the first.
 
 **Writes:** `users` (on first request only)
 
 ```sql
+SELECT id, sub_status, deleted_at FROM users WHERE clerk_user_id = $clerk_id;
+
+-- only when that returns no row
 INSERT INTO users (id, clerk_user_id) VALUES ($new_uuid, $clerk_id)
 ON CONFLICT (clerk_user_id) DO UPDATE SET clerk_user_id = EXCLUDED.clerk_user_id
-RETURNING id;
+RETURNING id, sub_status, deleted_at;
 ```
 
 The `$new_uuid` is generated in application code (UUIDv7) and thrown away on the
 conflict path — ids are never database-generated in this schema (§2.11 of the
 data model).
 
-The `DO UPDATE` is a deliberate no-op write: `DO NOTHING` returns zero rows on
-conflict, so you would need a second `SELECT`. This form returns the id on both
-paths in one round trip.
+Read first, so a returning user's request writes nothing. The `DO UPDATE` on the
+insert is for concurrent first requests: both miss, the loser conflicts, and
+`DO UPDATE … RETURNING` returns the winner's row where `DO NOTHING` would return
+none. A row with `deleted_at` set is refused with a 401.
 
 ### 1.2 Change the default weight unit
 
@@ -141,10 +145,14 @@ Clerk's `user.deleted` webhook fires.
 **Writes:** `users.deleted_at`
 
 ```sql
-UPDATE users SET deleted_at = now() WHERE clerk_user_id = $clerk_id;
+UPDATE users SET deleted_at = now()
+WHERE clerk_user_id = $clerk_id AND deleted_at IS NULL;
 ```
 
-Nothing else changes. Six months later the purge job hard-deletes the row and
+Idempotent: Clerk redelivers, and the `deleted_at IS NULL` guard means a
+redelivery writes nothing, so the first timestamp — and the purge date it sets —
+stands. A user who never made an authenticated request has no row; that is a
+no-op, not an error. Nothing else changes. Six months later the purge job hard-deletes the row and
 the `CASCADE` takes every program, plan, workout, session, and set with it.
 
 ---
