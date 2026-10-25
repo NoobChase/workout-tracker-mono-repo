@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { describe, it } from "node:test";
-import type { ResolvedUser, SubStatus } from "@workout-tracker/db";
+import type { ResolvedUser, SubStatus, UserId } from "@workout-tracker/db";
 import { Hono } from "hono";
 import { createApp, type AppDeps } from "../src/app";
 import { requireAuth, requirePro, type AuthEnv } from "../src/auth";
@@ -33,7 +33,11 @@ function fakes(): Fakes {
     resolveUser(clerkUserId) {
       let user = users.get(clerkUserId);
       if (!user) {
-        user = { id: randomUUID(), subStatus: "NONE", deletedAt: null };
+        user = {
+          id: randomUUID() as UserId,
+          subStatus: "NONE",
+          deletedAt: null,
+        };
         users.set(clerkUserId, user);
       }
       return Promise.resolve(user);
@@ -134,7 +138,7 @@ describe("requireAuth", () => {
   it("refuses a soft-deleted user even with a valid token", async () => {
     const { deps, users } = fakes();
     users.set("user_gone", {
-      id: randomUUID(),
+      id: randomUUID() as UserId,
       subStatus: "ACTIVE",
       deletedAt: new Date(),
     });
@@ -174,7 +178,11 @@ describe("requireAuth", () => {
 describe("requirePro", () => {
   function gated(subStatus: SubStatus, options?: { bypass?: boolean }) {
     const { deps, users } = fakes();
-    users.set("user_p", { id: randomUUID(), subStatus, deletedAt: null });
+    users.set("user_p", {
+      id: randomUUID() as UserId,
+      subStatus,
+      deletedAt: null,
+    });
     const app = new Hono<AuthEnv>();
     app.use(requireAuth(deps), requirePro(options));
     app.get("/pro", (c) => c.text("in"));
