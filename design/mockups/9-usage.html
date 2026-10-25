@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tanren — Usage</title>
+<meta name="description" content="Mockup 9: the Lexicon entry with its usage example made interactive — scrub twelve weeks of a squat program and watch the bar load.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=Shippori+Mincho+B1:wght@700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>try { const t = localStorage.getItem('tanren-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+<style>
+  :root {
+    --bg: #131210; --card: #1b1916; --line: #2d2924; --line-2: #3e3832;
+    --text: #f1ebe4; --muted: #a79e95; --faint: #91877e;
+    --copper: #d07b4b; --copper-btn: #ab5428; --on-copper: #fff7f1;
+    /* the rig: iron and steel, drawn from the neutral ramp */
+    --plate: #4d463f; --plate-face: #3a342e; --plate-edge: #786e64;
+    --steel: #8f867d; --steel-dim: #5e564e;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-spring: cubic-bezier(0.34, 1.32, 0.64, 1);
+    --sans: "Albert Sans", system-ui, sans-serif; --jp: "Shippori Mincho B1", serif; --mono: "Geist Mono", ui-monospace, monospace;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f1ec; --card: #ebe6df; --line: #d9d1c7; --line-2: #c4b9ad;
+    --text: #1a1613; --muted: #574f48; --faint: #6a6159;
+    --copper: #a04a1d; --copper-btn: #a04a1d; --on-copper: #fff7f1;
+    --plate: #3b3430; --plate-face: #2b2521; --plate-edge: #1e1a17;
+    --steel: #8a8077; --steel-dim: #b1a69a;
+    color-scheme: light;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { overflow-x: clip; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--copper); color: var(--on-copper); }
+  :focus-visible { outline: 2px solid var(--copper); outline-offset: 3px; border-radius: 3px; }
+  a { color: inherit; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 720px) { .wrap { padding: 0 36px; } }
+  .sc { font: 600 12px/1.4 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--copper); }
+  .mono { font: 400 13px/1.5 var(--mono); }
+
+  .nav { display: flex; align-items: center; gap: 16px; height: 64px; border-bottom: 1px solid var(--line); }
+  .lock { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .lock .jp { font: 800 20px/1 var(--jp); }
+  .lock .en { font: 700 13px/1 var(--sans); letter-spacing: .22em; }
+  .nav-links { display: none; gap: 24px; margin-left: auto; font-size: 14px; }
+  .nav-links a { text-decoration: none; color: var(--muted); transition: color .15s ease; } .nav-links a:hover { color: var(--text); }
+  .nav-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  @media (min-width: 860px) { .nav-links { display: flex; } .nav-right { margin-left: 20px; } }
+  .tt { all: unset; cursor: pointer; height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line-2); border-radius: 8px; font: 500 13px var(--sans); color: var(--muted); transition: color .15s ease, border-color .15s ease, transform .16s var(--ease-out); }
+  .tt:hover { color: var(--text); border-color: var(--muted); } .tt:active { transform: scale(.96); }
+  .tt svg { width: 15px; height: 15px; }
+  .tt .l, :root[data-theme="light"] .tt .d { display: none; } :root[data-theme="light"] .tt .l { display: inline; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 8px; border: 1px solid var(--line-2); color: var(--text); text-decoration: none; font: 600 15px var(--sans); background: transparent; transition: transform .16s var(--ease-out), background-color .15s ease, border-color .15s ease; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--copper-btn); border-color: var(--copper-btn); color: var(--on-copper); }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { border-color: var(--muted); } .btn.primary:hover { background: color-mix(in oklab, var(--copper-btn) 86%, black); } }
+  .nav .btn { height: 36px; padding: 0 14px; font-size: 14px; display: none; } @media (min-width: 480px) { .nav .btn { display: inline-flex; } }
+
+  /* ───────── the entry, compact ───────── */
+  .entry { padding-top: clamp(18px, 3vw, 34px); }
+  .headword { display: flex; align-items: center; gap: clamp(12px, 2.4vw, 28px); flex-wrap: wrap; }
+  .entry > .headword .chars { flex-basis: 100%; margin-top: -4px; }
+  @media (min-width: 980px) { .headword { flex-wrap: nowrap; } .entry > .headword .chars { flex-basis: auto; } }
+  .kanji { display: flex; font: 800 clamp(50px, 7.6vw, 104px)/.95 var(--jp); }
+  .kanji button { all: unset; cursor: help; position: relative; transition: color .2s ease; }
+  .kanji button:hover, .kanji button[aria-expanded="true"] { color: var(--copper); }
+  .romaji { display: grid; gap: clamp(4px, .9vw, 10px); min-width: 0; }
+  .romaji b { font: 800 clamp(26px, 4.4vw, 58px)/.9 var(--sans); letter-spacing: .12em; }
+  .romaji span { font: 400 clamp(12px, 1.3vw, 15px)/1 var(--mono); color: var(--muted); }
+  .chars { display: flex; gap: 4px 10px; flex-wrap: wrap; color: var(--faint); font-size: 13px; line-height: 1.5; margin-top: 10px; }
+  .chars span { transition: color .2s ease; }
+  .chars span.on { color: var(--text); }
+  .chars span b { font-family: var(--jp); color: var(--copper); margin-right: 6px; }
+  @media (max-width: 979px) {
+    .chars .long { display: none; }
+  }
+  @media (min-width: 980px) {
+    .headword { align-items: flex-end; }
+    .chars { margin: 0 0 6px auto; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
+    .chars .dot { display: none; }
+  }
+
+  .defrow { display: grid; gap: 6px; margin-top: clamp(14px, 2vw, 22px); padding-top: clamp(14px, 2vw, 22px); border-top: 1px solid var(--line-2); }
+  @media (min-width: 980px) { .defrow { grid-template-columns: 220px 1fr; gap: 40px; } }
+  .pos { display: flex; gap: 14px; align-items: baseline; }
+  .pos i { font-style: italic; font-size: 18px; color: var(--copper); font-weight: 500; }
+  @media (min-width: 980px) { .pos i { font-size: 20px; } }
+  .defn { margin: 0; font: 500 clamp(25px, 3.4vw, 46px)/1.12 var(--sans); letter-spacing: -.025em; max-width: 26ch; text-wrap: balance; }
+  .defn em { font-style: normal; color: var(--copper); }
+
+  /* ───────── usage, illustrated ───────── */
+  .use { display: grid; gap: 10px; margin-top: clamp(16px, 2.2vw, 26px); padding-top: clamp(14px, 2vw, 22px); border-top: 1px solid var(--line); }
+  @media (min-width: 980px) { .use { grid-template-columns: 220px 1fr; gap: 40px; } }
+  .use-label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  @media (min-width: 980px) { .use-label { flex-direction: column; justify-content: flex-start; gap: 10px; } }
+  .hint { display: inline-flex; align-items: center; gap: 7px; font: 400 12px/1.4 var(--mono); color: var(--faint); opacity: 0; transform: translateX(-4px); transition: opacity .4s ease, transform .5s var(--ease-out); }
+  .hint svg { width: 22px; height: 10px; flex: none; }
+  .hint.on { opacity: 1; transform: none; }
+  .hint.gone { opacity: 0; transition-duration: .2s; }
+  .hint .kb { display: none; }
+  @media (hover: hover) and (pointer: fine) { .hint .kb { display: inline; } }
+
+  .quote { margin: 0; font: italic 400 clamp(21px, 2.3vw, 30px)/1.3 var(--sans); letter-spacing: -.01em; color: var(--text); }
+  .quote .wk { font-style: normal; font-weight: 600; color: var(--copper); font-variant-numeric: tabular-nums; }
+  .quote .tail { display: inline-block; transition: opacity .18s ease, filter .18s ease; }
+  .quote .tail.swap { opacity: 0; filter: blur(3px); }
+  .quote .open, .quote .close-q { color: var(--faint); font-style: normal; }
+  @media (min-width: 980px) { .quote .br { display: none; } }
+
+  .stage { display: grid; grid-template-areas: "rig" "read" "scrub"; gap: 6px 40px; margin-top: 10px; }
+  @media (min-width: 980px) { .stage { grid-template-columns: minmax(0, 1fr) 320px; grid-template-areas: "rig read" "scrub read"; margin-top: 14px; } }
+  .rig { grid-area: rig; display: block; width: 100%; height: auto; max-height: 220px; overflow: visible; }
+  .rig .floor { stroke: var(--line-2); stroke-width: 1; }
+  .rig .shaft { fill: var(--steel-dim); }
+  .rig .knurl line { stroke: var(--steel); stroke-width: .8; opacity: .55; }
+  .rig .sleeve { fill: var(--steel); }
+  .rig .flange { fill: var(--steel); }
+  .rig .collar { fill: var(--steel); transition: transform .26s var(--ease-out); }
+  .rig .plate .rim { fill: var(--plate); stroke: var(--plate-edge); stroke-width: 1; }
+  .rig .plate .face { fill: var(--plate-face); }
+  .rig .plate .hub { fill: var(--plate); stroke: var(--plate-edge); stroke-width: 1; }
+  .rig .plate { will-change: transform, opacity; }
+
+  .read { grid-area: read; display: grid; align-content: center; gap: 4px; font-variant-numeric: tabular-nums; }
+  .read .what { font: 400 12px/1.4 var(--mono); color: var(--faint); }
+  .read .big { display: flex; align-items: baseline; gap: 10px; }
+  .read .lb { font: 500 clamp(46px, 5.4vw, 76px)/1 var(--mono); letter-spacing: -.04em; color: var(--copper); min-width: 3ch; }
+  .read .x { font: 400 clamp(15px, 1.4vw, 18px)/1 var(--mono); color: var(--muted); }
+  .read .side { font: 400 12.5px/1.5 var(--mono); color: var(--muted); }
+  .read .side b { font-weight: 500; color: var(--text); }
+  .log { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); font: 400 12px/1.4 var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; }
+  .log svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
+  .log .wkn { color: var(--text); }
+  .log .tag { margin-left: auto; color: var(--faint); }
+  .log .tag.dl { color: var(--text); }
+  @media (max-width: 979px) {
+    .read { grid-template-columns: auto 1fr; align-items: end; gap: 2px 16px; }
+    .read .what { display: none; }
+    .read .big { grid-row: 2; }
+    .read .side { grid-row: 2; align-self: end; padding-bottom: 4px; text-align: right; }
+    .log { grid-column: 1 / -1; grid-row: 3; margin-top: 6px; }
+  }
+
+  /* the scrubber: twelve weeks, each tick as tall as its top set */
+  .scrub { grid-area: scrub; position: relative; height: 60px; margin-top: 4px; cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; border-radius: 6px; }
+  .scrub:active { cursor: grabbing; }
+  .scrub:focus-visible { outline-offset: 4px; }
+  .scrub .ticks { position: absolute; left: 0; right: 0; top: 0; height: 30px; border-bottom: 1px solid var(--line-2); }
+  .scrub .t { position: absolute; bottom: 0; width: 3px; margin-left: -1.5px; border-radius: 2px 2px 0 0; background: var(--line-2); transition: background-color .15s ease; }
+  .scrub .t.done { background: var(--muted); }
+  .scrub .t.now { background: var(--copper); }
+  .scrub .nums { position: absolute; left: 0; right: 0; top: 42px; height: 16px; font: 400 11px/16px var(--mono); color: var(--faint); }
+  .scrub .nums span { position: absolute; transform: translateX(-50%); transition: color .15s ease; }
+  .scrub .nums span.now { color: var(--copper); font-weight: 500; }
+  .scrub .thumb { position: absolute; top: -5px; left: 0; width: 22px; height: 40px; margin-left: -11px; pointer-events: none; }
+  .scrub .thumb::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--copper); opacity: .5; }
+  .scrub .thumb::after { content: ""; position: absolute; left: 50%; top: 31px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--bg); border: 2px solid var(--copper); transition: transform .16s var(--ease-out); }
+  .scrub.dragging .thumb::after { transform: scale(1.25); }
+  .scrub .thumb.snap { transition: transform .22s var(--ease-out); }
+
+  .act { display: grid; gap: 14px; margin-top: clamp(18px, 2.4vw, 28px); padding: clamp(16px, 2vw, 22px) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  @media (min-width: 980px) { .act { grid-template-columns: 220px 1fr auto; gap: 40px; align-items: center; } }
+  .act p { margin: 0; color: var(--muted); font-size: 17px; max-width: 54ch; }
+  .act p b { color: var(--text); font-weight: 600; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; }
+  @media (max-width: 979px) {
+    .act .sc { display: none; }
+    .act .cta { order: -1; }
+    .act .cta .btn { flex: 1 1 0; padding: 0 14px; }
+    .act p { font-size: 16px; }
+  }
+
+  /* usage notes */
+  .note { display: grid; gap: 16px; padding: 72px 0; border-bottom: 1px solid var(--line); }
+  @media (min-width: 980px) { .note { grid-template-columns: 220px 1fr; gap: 40px; padding: 96px 0; } }
+  .note h2 { margin: 0 0 14px; font: 700 clamp(30px, 5vw, 52px)/1.06 var(--sans); letter-spacing: -.025em; text-wrap: balance; }
+  .note h2 em { font-style: normal; color: var(--copper); }
+  .note .lead { color: var(--muted); font-size: 17px; max-width: 58ch; margin: 0; }
+
+  .senses { margin: 36px 0 0; padding: 0; list-style: none; display: grid; gap: 0; counter-reset: s; }
+  .senses li { display: grid; gap: 14px; padding: 24px 0; border-top: 1px solid var(--line); counter-increment: s; }
+  @media (min-width: 900px) { .senses li { grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; } }
+  .senses h3 { margin: 0 0 6px; font: 700 22px/1.2 var(--sans); }
+  .senses h3::before { content: counter(s, lower-alpha) ". "; color: var(--copper); font-weight: 600; }
+  .senses p { margin: 0; color: var(--muted); }
+  .senses .pro { font: 600 11px var(--sans); letter-spacing: .12em; color: var(--copper); border: 1px solid currentColor; border-radius: 4px; padding: 2px 6px; margin-left: 8px; vertical-align: 3px; }
+  .ex { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font: 400 13px/1.55 var(--mono); font-variant-numeric: tabular-nums; }
+  .ex .r { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .ex .r:last-child { border-bottom: 0; }
+  .ex .r span:last-child { color: var(--muted); }
+  .ex .hi { color: var(--copper) !important; }
+  .ex .bars { display: flex; align-items: flex-end; gap: 5px; height: 84px; padding-top: 8px; }
+  .ex .bars span { flex: 1; background: var(--line-2); border-radius: 3px 3px 0 0; } .ex .bars span:last-child { background: var(--copper); }
+
+  .usage { display: grid; gap: 22px; margin-top: 32px; }
+  @media (min-width: 900px) { .usage { grid-template-columns: repeat(3, 1fr); gap: 32px; } }
+  .usage div { border-top: 2px solid var(--copper); padding-top: 16px; }
+  .usage b { display: block; font-size: 19px; margin-bottom: 6px; }
+  .usage p { margin: 0; color: var(--muted); }
+
+  .chat { margin-top: 32px; display: grid; gap: 10px; max-width: 760px; }
+  .msg { padding: 13px 15px; border-radius: 12px; font-size: 15.5px; max-width: 92%; }
+  .msg.me { justify-self: end; background: var(--copper-btn); color: var(--on-copper); }
+  .msg.it { background: var(--card); border: 1px solid var(--line); }
+  .msg.it b { color: var(--copper); }
+  .calls { color: var(--faint); font: 400 12px var(--mono); }
+
+  .tiers { display: grid; margin-top: 32px; border: 1px solid var(--line-2); border-radius: 14px; overflow: hidden; }
+  @media (min-width: 820px) { .tiers { grid-template-columns: 1fr 1fr; } .tiers > div + div { border-left: 1px solid var(--line-2); } }
+  .tiers > div { padding: 26px 22px; display: flex; flex-direction: column; } .tiers > div + div { border-top: 1px solid var(--line-2); }
+  @media (min-width: 820px) { .tiers > div + div { border-top: 0; } }
+  .tiers .pro-t { background: var(--card); }
+  .tiers .price { font: 800 44px/1 var(--sans); letter-spacing: -.02em; margin: 10px 0 0; }
+  .tiers .price small { font: 400 12px var(--mono); color: var(--faint); }
+  .tiers ul { list-style: none; padding: 0; margin: 20px 0 24px; display: grid; gap: 9px; color: var(--muted); }
+  .tiers li::before { content: "—"; color: var(--copper); margin-right: 10px; }
+  .tiers .btn { margin-top: auto; align-self: flex-start; }
+
+  .close { padding: 110px 0 100px; }
+  .close .headword { justify-content: flex-start; }
+  .close .kanji { font-size: clamp(56px, 12vw, 120px); }
+  .close .romaji b { font-size: clamp(24px, 5vw, 52px); }
+  .close p { color: var(--muted); font-size: 18px; margin: 22px 0 26px; }
+  footer { border-top: 1px solid var(--line); padding: 22px 0 calc(22px + env(safe-area-inset-bottom)); color: var(--faint); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: 0ms !important; } }
+</style>
+</head>
+<body>
+<header class="wrap nav">
+  <a class="lock" href="#" aria-label="Tanren home"><span class="jp">鍛錬</span><span class="en">TANREN</span></a>
+  <nav class="nav-links" aria-label="Primary"><a href="#usage">Features</a><a href="#ai">Your AI</a><a href="#pricing">Pricing</a><a href="#">Log in</a></nav>
+  <div class="nav-right">
+    <button class="tt" id="theme" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg>
+      <span class="d">Dark</span><span class="l">Light</span>
+    </button>
+    <a class="btn primary" href="#pricing">Get started</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap entry">
+    <div class="headword">
+      <div class="kanji" lang="ja">
+        <button type="button" data-c="0" aria-expanded="false" aria-label="鍛, tan: to forge">鍛</button><button type="button" data-c="1" aria-expanded="false" aria-label="錬, ren: to refine">錬</button>
+      </div>
+      <div class="romaji"><b>TANREN</b><span>/tahn·ren/ &nbsp;·&nbsp; Japanese</span></div>
+      <div class="chars" aria-live="polite"><span id="c0"><b>鍛</b>tan — to forge<span class="long">, to temper</span></span><span class="dot">·</span><span id="c1"><b>錬</b>ren — to refine<span class="long">, to train</span></span></div>
+    </div>
+
+    <div class="defrow">
+      <div class="pos"><i>noun</i></div>
+      <p class="defn">The hardening of <em>body and mind</em> through deliberate, repeated training.</p>
+    </div>
+
+    <section class="use" aria-labelledby="use-q">
+      <div class="use-label">
+        <span class="sc">Usage</span>
+        <span class="hint" id="hint" aria-hidden="true"><svg viewBox="0 0 22 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 1 1 5l4 4M17 1l4 4-4 4M1 5h20"/></svg><span>drag the weeks<span class="kb"> · or ← →</span></span></span>
+      </div>
+      <div>
+        <p class="quote" id="use-q"><span class="open">“</span><span class="wk" id="wkword">Twelve</span> <span id="wkunit">weeks</span> of tanren,<br class="br"> <span class="tail" id="tail">and the bar finally moved.</span><span class="close-q">”</span></p>
+
+        <div class="stage">
+          <svg class="rig" id="rig" viewBox="0 0 640 206" role="img" aria-labelledby="rig-t">
+            <title id="rig-t">Barbell loaded to 235 pounds: per side a 45, a 45 and a 5.</title>
+            <line class="floor" x1="0" y1="200.5" x2="640" y2="200.5"/>
+            <rect class="shaft" x="130" y="106" width="380" height="11" rx="1"/>
+            <g class="knurl" aria-hidden="true" id="knurl"></g>
+            <rect class="sleeve" x="12" y="101.5" width="112" height="20" rx="3"/>
+            <rect class="sleeve" x="516" y="101.5" width="112" height="20" rx="3"/>
+            <rect class="flange" x="122" y="96.5" width="8" height="30" rx="1.5"/>
+            <rect class="flange" x="510" y="96.5" width="8" height="30" rx="1.5"/>
+            <g id="plates"></g>
+            <rect class="collar" id="collarL" x="0" y="98.5" width="7" height="26" rx="1.5"/>
+            <rect class="collar" id="collarR" x="0" y="98.5" width="7" height="26" rx="1.5"/>
+          </svg>
+
+          <div class="read">
+            <span class="what">Back Squat · top set</span>
+            <div class="big"><span class="lb" id="lb">235</span><span class="x">lb × 5</span></div>
+            <span class="side" id="side">per side <b>45 · 45 · 5</b></span>
+            <div class="log" id="log"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7"/></svg><span><span class="wkn" id="logwk">Wk 12</span> · Back Squat · <span id="logset">235 × 5</span></span><span class="tag" id="logtag">logged</span></div>
+          </div>
+
+          <div class="scrub" id="scrub" role="slider" tabindex="0" aria-label="Training week" aria-valuemin="1" aria-valuemax="12" aria-valuenow="12" aria-valuetext="Week 12: back squat top set 235 pounds for 5">
+            <div class="ticks" id="ticks" aria-hidden="true"></div>
+            <div class="nums" id="nums" aria-hidden="true"></div>
+            <div class="thumb" id="thumb" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="act">
+      <span class="sc">Also</span>
+      <p><b>A workout log for lifters who run a program.</b> Plan it, log every set in seconds even with no signal, and see the progress add up.</p>
+      <div class="cta"><a class="btn primary" href="#pricing">Start training</a><a class="btn" href="#usage">How it works</a></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="note" id="usage">
+      <span class="sc">In practice</span>
+      <div>
+        <h2>Three things, <em>done properly.</em></h2>
+        <p class="lead">No feed, no streak guilt, no social anything. A program, a log, and the proof.</p>
+        <ol class="senses">
+          <li><div><h3>Plan the work</h3><p>Programs, cycles, workouts, sets. Build week one and Tanren copies it forward. Change week six without touching week five.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Strength Block</span><span>8 cycles</span></div><div class="r"><span>&nbsp;&nbsp;Cycle 3 · Lower A</span><span>5 exercises</span></div><div class="r"><span class="hi">&nbsp;&nbsp;&nbsp;&nbsp;Back Squat</span><span>5 × 5 @ 225</span></div></div></li>
+          <li><div><h3>Repeat the work</h3><p>One tap per set with last session's numbers inline. No signal? Sets queue in order and sync later. Swap an exercise and the plan stays the plan.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Set 2 · 225 × 5</span><span>logged</span></div><div class="r"><span>Set 3 · 225 × 5</span><span>logged</span></div><div class="r"><span>2 sets waiting</span><span class="hi">syncs when online</span></div></div></li>
+          <li><div><h3>See it harden <span class="pro">PRO</span></h3><p>Cycle-over-cycle progression and plan-versus-actual adherence. Warmups and drop sets never pad the numbers.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Back Squat · top set</span><span>demo data</span></div><div class="bars"><span style="height:44%"></span><span style="height:52%"></span><span style="height:58%"></span><span style="height:55%"></span><span style="height:67%"></span><span style="height:75%"></span><span style="height:84%"></span><span style="height:92%"></span></div></div></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="sc">Who uses it</span>
+      <div>
+        <h2>Lifters who already <em>show up.</em></h2>
+        <div class="usage">
+          <div><b>You run a program</b><p>5/3/1, a PPL split, your coach's spreadsheet. Tanren holds the plan and puts the right numbers in front of you.</p></div>
+          <div><b>You train anywhere</b><p>Garage racks, concrete basements, hotel gyms. Logging never waits on a network.</p></div>
+          <div><b>You keep your record</b><p>Years of training shouldn't be locked in someone else's app. Export whenever you like.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" id="ai">
+      <span class="sc">See also: your AI</span>
+      <div>
+        <h2>Your assistant, reading <em>your real training.</em></h2>
+        <p class="lead">Connect the AI you already use. It reads your history and writes the next block straight into Tanren. We never pay for inference, so we never charge you for it. No AI? Programs import and export as plain JSON.</p>
+        <div class="chat" aria-label="Example conversation">
+          <div class="msg me">Look at my last eight weeks of squat and adjust the next block.</div>
+          <div class="calls">read progression · Back Squat · 8 cycles &nbsp;/&nbsp; read adherence · Strength Block</div>
+          <div class="msg it">Your top set rose every cycle except C4, where you missed two sessions. Next block starts at <b>235 × 5</b>, adds 5 lb a cycle, deloads at C4. Saved as <b>Strength Block II</b>.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" id="pricing" style="border-bottom:0">
+      <span class="sc">Pricing</span>
+      <div>
+        <h2>Log for free. <em>Go Pro</em> to see the trend.</h2>
+        <div class="tiers">
+          <div><span class="sc" style="color:var(--muted)">Free</span><div class="price">$0</div><ul><li>Unlimited logging, offline</li><li>Build and copy programs</li><li>Import and export</li></ul><a class="btn" href="#">Create account</a></div>
+          <div class="pro-t"><span class="sc">Pro</span><div class="price">$— <small>/ mo · price TBD</small></div><ul><li>Everything in Free</li><li>Progression and adherence analytics</li><li>Connect your own AI</li></ul><a class="btn primary" href="#">Start free trial</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="close" style="border-top:1px solid var(--line)"><div class="wrap">
+    <div class="headword"><div class="kanji" lang="ja">鍛錬</div><div class="romaji"><b>TANREN</b><span>/tahn·ren/</span></div></div>
+    <p>Deliberate. Repeated. Recorded.</p>
+    <a class="btn primary" href="#pricing">Start training</a>
+  </div></div>
+</main>
+</main>
+<footer><div class="wrap"><span>鍛錬 Tanren · US only</span><span>Mockup 9 · Usage</span></div></footer>
+
+<script>
+  (() => {
+    const root = document.documentElement;
+    document.getElementById('theme').addEventListener('click', () => { root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light'; try { localStorage.setItem('tanren-theme', root.dataset.theme); } catch {} });
+    // tap or hover a character to read its half of the word
+    const btns = document.querySelectorAll('.kanji button');
+    const show = i => { btns.forEach((b, j) => b.setAttribute('aria-expanded', String(j === i))); [0, 1].forEach(j => document.getElementById('c' + j).classList.toggle('on', j === i)); };
+    btns.forEach((b, i) => { b.addEventListener('pointerenter', () => show(i)); b.addEventListener('focus', () => show(i)); b.addEventListener('click', () => show(i)); b.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') show(-1); }); });
+  })();
+
+  // ───────── Usage, illustrated ─────────
+  (() => {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const BAR = 45, MIN = 1, MAX = 12;
+    // twelve weeks of a linear squat block: +5 a week, a planned deload in week 8
+    const WEEKS = [185, 190, 195, 200, 205, 210, 215, 175, 220, 225, 230, 235];
+    const DELOAD = 8;
+    const WORDS = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
+    const tailFor = w => w === MAX ? 'and the bar finally moved.' : w === DELOAD ? 'and a deload, on purpose.' : w <= 2 ? 'and the bar starts to move.' : 'and the bar keeps moving.';
+    // iron plates, side-on. d = diameter, t = drawn thickness (viewBox units ≈ 0.1 in; thickness nudged up ~1.3× so 2.5s read at phone width)
+    const PLATE = { 45: { d: 177, t: 21 }, 25: { d: 134, t: 16 }, 10: { d: 104, t: 12 }, 5: { d: 85, t: 9 }, 2.5: { d: 65, t: 7 } };
+    const DENOMS = [45, 25, 10, 5, 2.5];
+    const AXIS = 111.5, GAP = 1, L_FACE = 122, R_FACE = 518; // inner collar faces (flange outer edges)
+
+    const perSide = total => { let r = (total - BAR) / 2; const out = []; for (const p of DENOMS) while (r >= p - 1e-9) { out.push(p); r -= p; } return out; };
+
+    const $ = id => document.getElementById(id);
+    const platesG = $('plates'), scrub = $('scrub'), thumb = $('thumb'), ticks = $('ticks'), nums = $('nums'), hint = $('hint');
+    const fmt = n => String(n).replace('.5', '½');
+
+    // knurl marks on the shaft — two grip zones, centre smooth
+    const kn = $('knurl');
+    for (let x = 160; x < 480; x += 4) { if (x > 296 && x < 344) continue; const l = document.createElementNS(SVGNS, 'line'); l.setAttribute('x1', x); l.setAttribute('x2', x + 3); l.setAttribute('y1', 107.5); l.setAttribute('y2', 115.5); kn.appendChild(l); }
+
+    // ticks + week numbers: each tick as tall as that week's top set
+    const lo = Math.min(...WEEKS), hi = Math.max(...WEEKS);
+    const pct = w => ((w - MIN) / (MAX - MIN)) * 100;
+    const tickEls = [], numEls = [];
+    WEEKS.forEach((lb, i) => {
+      const t = document.createElement('span'); t.className = 't'; t.style.left = pct(i + 1) + '%'; t.style.height = (8 + ((lb - lo) / (hi - lo)) * 20).toFixed(1) + 'px'; ticks.appendChild(t); tickEls.push(t);
+      const n = document.createElement('span'); n.textContent = i + 1; n.style.left = pct(i + 1) + '%'; nums.appendChild(n); numEls.push(n);
+    });
+
+    function plateEl(p, side) {
+      const { d, t } = PLATE[p];
+      // outer <g> holds the seat on the sleeve (SVG attribute); inner <g> takes the CSS motion, so the two never fight
+      const g = document.createElementNS(SVGNS, 'g'), inner = document.createElementNS(SVGNS, 'g');
+      inner.setAttribute('class', 'plate'); g.appendChild(inner); g._in = inner;
+      const rect = (cls, x, y, w, h, rx) => { const r = document.createElementNS(SVGNS, 'rect'); r.setAttribute('class', cls); r.setAttribute('x', x); r.setAttribute('y', y); r.setAttribute('width', w); r.setAttribute('height', h); r.setAttribute('rx', rx); inner.appendChild(r); };
+      rect('rim', 0, AXIS - d / 2, t, d, 2);
+      // recessed face between the rim and the hub
+      const inset = Math.min(10, d * .08), fw = Math.max(t - 6, 2);
+      rect('face', (t - fw) / 2, AXIS - d / 2 + inset, fw, d - inset * 2, 1);
+      // raised hub, proud of the face on the outboard side
+      const hw = t + 2, hx = side < 0 ? -2 : 0;
+      rect('hub', hx, AXIS - 15, hw, 30, 1.5);
+      g._p = p; g._t = t; g._side = side;
+      return g;
+    }
+
+    let cur = { L: [], R: [] }; // live plate elements per side
+    const place = (g, x) => { g._x = x; g.setAttribute('transform', `translate(${x} 0)`); };
+
+    function load(total, animate) {
+      const want = perSide(total);
+      for (const side of ['L', 'R']) {
+        const s = side === 'L' ? -1 : 1, have = cur[side];
+        let k = 0; while (k < have.length && k < want.length && have[k]._p === want[k]) k++;
+        // strip from the outside in, everything past the first plate that differs
+        const off = have.slice(k).reverse();
+        off.forEach((g, j) => {
+          if (!animate) { g.remove(); return; }
+          const a = g._in.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: `translateX(${s * 46}px)`, opacity: 0 }], { duration: 150, delay: j * 18, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+          a.onfinish = () => g.remove(); a.oncancel = () => g.remove();
+        });
+        const kept = have.slice(0, k);
+        let edge = s < 0 ? L_FACE : R_FACE;
+        kept.forEach(g => { edge += s * (g._t + GAP); });
+        const added = [];
+        for (let i = k; i < want.length; i++) {
+          const g = plateEl(want[i], s);
+          const t = g._t;
+          place(g, s < 0 ? edge - t - GAP : edge + GAP);
+          edge += s * (t + GAP);
+          platesG.appendChild(g);
+          if (animate) g._in.animate([{ transform: `translateX(${s * 54}px)`, opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }], { duration: 300, delay: (off.length ? 90 : 20) + (i - k) * 34, easing: 'cubic-bezier(.34,1.32,.64,1)', fill: 'backwards' });
+          added.push(g);
+        }
+        cur[side] = kept.concat(added);
+        const collar = $(side === 'L' ? 'collarL' : 'collarR');
+        const cx = s < 0 ? edge - 7 - 1 : edge + 1;
+        collar.style.transition = animate ? '' : 'none';
+        collar.style.transform = `translateX(${cx}px)`;
+      }
+      return want;
+    }
+
+    // number ticks between values, like a counter rolling over
+    let lbShown = WEEKS[MAX - 1], lbRaf = 0;
+    function rollTo(n, animate) {
+      cancelAnimationFrame(lbRaf);
+      const el = $('lb'), from = lbShown;
+      if (!animate || from === n) { lbShown = n; el.textContent = n; return; }
+      const t0 = performance.now(), dur = 220;
+      const step = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); const v = Math.round((from + (n - from) * e) / 5) * 5; el.textContent = k < 1 ? v : n; lbShown = n; if (k < 1) lbRaf = requestAnimationFrame(step); };
+      lbRaf = requestAnimationFrame(step);
+    }
+
+    let week = 0, tailTimer = 0;
+    function setWeek(w, { animate = !reduce } = {}) {
+      w = Math.max(MIN, Math.min(MAX, w));
+      if (w === week) return;
+      week = w;
+      const lb = WEEKS[w - 1];
+      const side = load(lb, animate);
+      rollTo(lb, animate);
+      $('wkword').textContent = WORDS[w - 1];
+      $('wkunit').textContent = w === 1 ? 'week' : 'weeks';
+      const tail = $('tail'), next = tailFor(w);
+      if (tail.dataset.text !== next) {
+        clearTimeout(tailTimer); tail.dataset.text = next;
+        if (animate) { tail.classList.add('swap'); tailTimer = setTimeout(() => { tail.textContent = next; tail.classList.remove('swap'); }, 160); }
+        else { tail.classList.remove('swap'); tail.textContent = next; }
+      }
+      $('side').innerHTML = 'per side <b>' + side.map(fmt).join(' · ') + '</b>';
+      $('logwk').textContent = 'Wk ' + w;
+      $('logset').textContent = lb + ' × 5';
+      const tag = $('logtag'); tag.textContent = w === DELOAD ? 'deload' : 'logged'; tag.classList.toggle('dl', w === DELOAD);
+      $('rig-t').textContent = `Barbell loaded to ${lb} pounds: per side ${side.map(fmt).join(', ')}.`;
+      tickEls.forEach((t, i) => { t.classList.toggle('done', i + 1 < w); t.classList.toggle('now', i + 1 === w); });
+      numEls.forEach((n, i) => n.classList.toggle('now', i + 1 === w));
+      scrub.setAttribute('aria-valuenow', w);
+      scrub.setAttribute('aria-valuetext', `Week ${w}: back squat top set ${lb} pounds for 5${w === DELOAD ? ', deload week' : ''}`);
+      if (!dragging) moveThumb(pct(w) / 100, true);
+    }
+
+    function moveThumb(frac, snap) {
+      thumb.classList.toggle('snap', !!snap && !reduce);
+      thumb.style.transform = `translateX(${(frac * scrub.clientWidth).toFixed(1)}px)`;
+    }
+
+    // pointer: press anywhere on the track, drag freely, settle on the nearest week
+    let dragging = false, pid = null;
+    const fracAt = e => { const r = scrub.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
+    const weekAt = f => Math.round(MIN + f * (MAX - MIN));
+    scrub.addEventListener('pointerdown', e => {
+      if (dragging || (e.pointerType === 'mouse' && e.button !== 0)) return; // ignore a second finger
+      takeOver(); dragging = true; pid = e.pointerId;
+      scrub.setPointerCapture(pid); scrub.classList.add('dragging');
+      const f = fracAt(e); moveThumb(f, true); setWeek(weekAt(f));
+    });
+    scrub.addEventListener('pointermove', e => { if (!dragging || e.pointerId !== pid) return; const f = fracAt(e); moveThumb(f, false); setWeek(weekAt(f)); });
+    const end = e => { if (!dragging || e.pointerId !== pid) return; dragging = false; pid = null; scrub.classList.remove('dragging'); moveThumb(pct(week) / 100, true); };
+    scrub.addEventListener('pointerup', end); scrub.addEventListener('pointercancel', end); scrub.addEventListener('lostpointercapture', end);
+
+    // keyboard: standard slider keys. Values change instantly; the plates still slide, but nothing waits on them
+    scrub.addEventListener('keydown', e => {
+      const map = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 3, PageDown: -3 };
+      let w = null;
+      if (e.key in map) w = week + map[e.key]; else if (e.key === 'Home') w = MIN; else if (e.key === 'End') w = MAX;
+      if (w === null) return;
+      e.preventDefault(); takeOver(); setWeek(w);
+    });
+    addEventListener('resize', () => moveThumb(pct(week) / 100, false));
+
+    // first visit: play the block once, then hand over
+    let auto = 0, touched = false;
+    // the visitor found the control: stop the demo, retire the hint
+    function takeOver() { clearTimeout(auto); auto = 0; if (!touched) { touched = true; hint.classList.add('gone'); } }
+    function handOver() { if (!touched) hint.classList.add('on'); }
+
+    if (reduce) { setWeek(MAX, { animate: false }); handOver(); return; }
+
+    setWeek(1, { animate: false });
+    const STEP = 165;
+    const play = () => {
+      if (week >= MAX) { auto = 0; setTimeout(handOver, 260); return; }
+      setWeek(week + 1);
+      auto = setTimeout(play, week === DELOAD || week === DELOAD + 1 ? STEP + 90 : STEP);
+    };
+    const start = () => { if (!touched) auto = setTimeout(play, 420); };
+    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(start);
+  })();
+</script>
+</body>
+</html>

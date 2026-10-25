@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tanren — Lexicon</title>
+<meta name="description" content="Mockup 6: a full-width dictionary entry for 鍛錬 Tanren, with the rest of the page written as its usage notes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&family=Shippori+Mincho+B1:wght@700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>try { const t = localStorage.getItem('tanren-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+<style>
+  :root {
+    --bg: #131210; --card: #1b1916; --line: #2d2924; --line-2: #3e3832;
+    --text: #f1ebe4; --muted: #a79e95; --faint: #91877e;
+    --copper: #d07b4b; --copper-btn: #ab5428; --on-copper: #fff7f1;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --sans: "Albert Sans", system-ui, sans-serif; --jp: "Shippori Mincho B1", serif; --mono: "Geist Mono", ui-monospace, monospace;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f1ec; --card: #ebe6df; --line: #d9d1c7; --line-2: #c4b9ad;
+    --text: #1a1613; --muted: #574f48; --faint: #6a6159;
+    --copper: #a04a1d; --copper-btn: #a04a1d; --on-copper: #fff7f1;
+    color-scheme: light;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--copper); color: var(--on-copper); }
+  :focus-visible { outline: 2px solid var(--copper); outline-offset: 3px; border-radius: 3px; }
+  a { color: inherit; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 720px) { .wrap { padding: 0 36px; } }
+  .sc { font: 600 12px/1.4 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--copper); }
+  .mono { font: 400 13px/1.5 var(--mono); }
+
+  .nav { display: flex; align-items: center; gap: 16px; height: 64px; border-bottom: 1px solid var(--line); }
+  .lock { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .lock .jp { font: 800 20px/1 var(--jp); }
+  .lock .en { font: 700 13px/1 var(--sans); letter-spacing: .22em; }
+  .nav-links { display: none; gap: 24px; margin-left: auto; font-size: 14px; }
+  .nav-links a { text-decoration: none; color: var(--muted); transition: color .15s ease; } .nav-links a:hover { color: var(--text); }
+  .nav-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  @media (min-width: 860px) { .nav-links { display: flex; } .nav-right { margin-left: 20px; } }
+  .tt { all: unset; cursor: pointer; height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line-2); border-radius: 8px; font: 500 13px var(--sans); color: var(--muted); transition: color .15s ease, border-color .15s ease, transform .16s var(--ease-out); }
+  .tt:hover { color: var(--text); border-color: var(--muted); } .tt:active { transform: scale(.96); }
+  .tt svg { width: 15px; height: 15px; }
+  .tt .l, :root[data-theme="light"] .tt .d { display: none; } :root[data-theme="light"] .tt .l { display: inline; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 8px; border: 1px solid var(--line-2); color: var(--text); text-decoration: none; font: 600 15px var(--sans); background: transparent; transition: transform .16s var(--ease-out), background-color .15s ease, border-color .15s ease; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--copper-btn); border-color: var(--copper-btn); color: var(--on-copper); }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { border-color: var(--muted); } .btn.primary:hover { background: color-mix(in oklab, var(--copper-btn) 86%, black); } }
+  .nav .btn { height: 36px; padding: 0 14px; font-size: 14px; display: none; } @media (min-width: 480px) { .nav .btn { display: inline-flex; } }
+
+  /* the entry */
+  .entry { padding-top: clamp(40px, 9vw, 96px); }
+  .headword { display: flex; align-items: center; gap: clamp(12px, 3vw, 40px); flex-wrap: nowrap; }
+  .kanji { display: flex; font: 800 clamp(76px, 22vw, 260px)/.95 var(--jp); }
+  .kanji button { all: unset; cursor: help; position: relative; transition: color .2s ease; }
+  .kanji button:hover, .kanji button[aria-expanded="true"] { color: var(--copper); }
+  .romaji { display: grid; gap: clamp(6px, 1.4vw, 14px); min-width: 0; }
+  .romaji b { font: 800 clamp(30px, 8.8vw, 112px)/.9 var(--sans); letter-spacing: .12em; }
+  .romaji span { font: 400 clamp(13px, 1.8vw, 20px)/1 var(--mono); color: var(--muted); }
+  .chars { min-height: 44px; margin-top: clamp(16px, 2.4vw, 28px); display: flex; gap: 10px; flex-wrap: wrap; color: var(--faint); font-size: 14px; }
+  .chars span { transition: color .2s ease, opacity .2s ease; }
+  .chars span.on { color: var(--text); }
+  .chars span b { font-family: var(--jp); color: var(--copper); margin-right: 6px; }
+
+  .defrow { display: grid; gap: 18px; margin-top: clamp(20px, 4vw, 40px); padding-top: clamp(22px, 4vw, 36px); border-top: 1px solid var(--line-2); }
+  @media (min-width: 980px) { .defrow { grid-template-columns: 220px 1fr; gap: 40px; } }
+  .pos { display: flex; gap: 14px; align-items: baseline; }
+  .pos i { font-style: italic; font-size: 20px; color: var(--copper); font-weight: 500; }
+  .defn { margin: 0; font: 500 clamp(28px, 5.4vw, 64px)/1.12 var(--sans); letter-spacing: -.025em; max-width: 20ch; text-wrap: balance; }
+  .defn em { font-style: normal; color: var(--copper); }
+  .example { margin: 20px 0 0; color: var(--muted); font-size: 17px; }
+  .example q { font-style: italic; color: var(--text); }
+
+  .act { display: grid; gap: 16px; margin-top: 52px; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  @media (min-width: 980px) { .act { grid-template-columns: 220px 1fr auto; gap: 40px; align-items: center; } }
+  .act p { margin: 0; color: var(--muted); font-size: 17px; max-width: 54ch; }
+  .act p b { color: var(--text); font-weight: 600; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  /* usage notes */
+  .note { display: grid; gap: 16px; padding: 72px 0; border-bottom: 1px solid var(--line); }
+  @media (min-width: 980px) { .note { grid-template-columns: 220px 1fr; gap: 40px; padding: 96px 0; } }
+  .note h2 { margin: 0 0 14px; font: 700 clamp(30px, 5vw, 52px)/1.06 var(--sans); letter-spacing: -.025em; text-wrap: balance; }
+  .note h2 em { font-style: normal; color: var(--copper); }
+  .note .lead { color: var(--muted); font-size: 17px; max-width: 58ch; margin: 0; }
+
+  .senses { margin: 36px 0 0; padding: 0; list-style: none; display: grid; gap: 0; counter-reset: s; }
+  .senses li { display: grid; gap: 14px; padding: 24px 0; border-top: 1px solid var(--line); counter-increment: s; }
+  @media (min-width: 900px) { .senses li { grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; } }
+  .senses h3 { margin: 0 0 6px; font: 700 22px/1.2 var(--sans); }
+  .senses h3::before { content: counter(s, lower-alpha) ". "; color: var(--copper); font-weight: 600; }
+  .senses p { margin: 0; color: var(--muted); }
+  .senses .pro { font: 600 11px var(--sans); letter-spacing: .12em; color: var(--copper); border: 1px solid currentColor; border-radius: 4px; padding: 2px 6px; margin-left: 8px; vertical-align: 3px; }
+  .ex { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font: 400 13px/1.55 var(--mono); font-variant-numeric: tabular-nums; }
+  .ex .r { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .ex .r:last-child { border-bottom: 0; }
+  .ex .r span:last-child { color: var(--muted); }
+  .ex .hi { color: var(--copper) !important; }
+  .ex .bars { display: flex; align-items: flex-end; gap: 5px; height: 84px; padding-top: 8px; }
+  .ex .bars span { flex: 1; background: var(--line-2); border-radius: 3px 3px 0 0; } .ex .bars span:last-child { background: var(--copper); }
+
+  .usage { display: grid; gap: 22px; margin-top: 32px; }
+  @media (min-width: 900px) { .usage { grid-template-columns: repeat(3, 1fr); gap: 32px; } }
+  .usage div { border-top: 2px solid var(--copper); padding-top: 16px; }
+  .usage b { display: block; font-size: 19px; margin-bottom: 6px; }
+  .usage p { margin: 0; color: var(--muted); }
+
+  .chat { margin-top: 32px; display: grid; gap: 10px; max-width: 760px; }
+  .msg { padding: 13px 15px; border-radius: 12px; font-size: 15.5px; max-width: 92%; }
+  .msg.me { justify-self: end; background: var(--copper-btn); color: var(--on-copper); }
+  .msg.it { background: var(--card); border: 1px solid var(--line); }
+  .msg.it b { color: var(--copper); }
+  .calls { color: var(--faint); font: 400 12px var(--mono); }
+
+  .tiers { display: grid; margin-top: 32px; border: 1px solid var(--line-2); border-radius: 14px; overflow: hidden; }
+  @media (min-width: 820px) { .tiers { grid-template-columns: 1fr 1fr; } .tiers > div + div { border-left: 1px solid var(--line-2); } }
+  .tiers > div { padding: 26px 22px; display: flex; flex-direction: column; } .tiers > div + div { border-top: 1px solid var(--line-2); }
+  @media (min-width: 820px) { .tiers > div + div { border-top: 0; } }
+  .tiers .pro-t { background: var(--card); }
+  .tiers .price { font: 800 44px/1 var(--sans); letter-spacing: -.02em; margin: 10px 0 0; }
+  .tiers .price small { font: 400 12px var(--mono); color: var(--faint); }
+  .tiers ul { list-style: none; padding: 0; margin: 20px 0 24px; display: grid; gap: 9px; color: var(--muted); }
+  .tiers li::before { content: "—"; color: var(--copper); margin-right: 10px; }
+  .tiers .btn { margin-top: auto; align-self: flex-start; }
+
+  .close { padding: 110px 0 100px; }
+  .close .headword { justify-content: flex-start; }
+  .close .kanji { font-size: clamp(56px, 12vw, 120px); }
+  .close .romaji b { font-size: clamp(24px, 5vw, 52px); }
+  .close p { color: var(--muted); font-size: 18px; margin: 22px 0 26px; }
+  footer { border-top: 1px solid var(--line); padding: 22px 0 calc(22px + env(safe-area-inset-bottom)); color: var(--faint); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: 0ms !important; } }
+</style>
+</head>
+<body>
+<header class="wrap nav">
+  <a class="lock" href="#" aria-label="Tanren home"><span class="jp">鍛錬</span><span class="en">TANREN</span></a>
+  <nav class="nav-links" aria-label="Primary"><a href="#usage">Features</a><a href="#ai">Your AI</a><a href="#pricing">Pricing</a><a href="#">Log in</a></nav>
+  <div class="nav-right">
+    <button class="tt" id="theme" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg>
+      <span class="d">Dark</span><span class="l">Light</span>
+    </button>
+    <a class="btn primary" href="#pricing">Get started</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap entry">
+    <div class="headword">
+      <div class="kanji" lang="ja">
+        <button type="button" data-c="0" aria-expanded="false" aria-label="鍛, tan: to forge">鍛</button><button type="button" data-c="1" aria-expanded="false" aria-label="錬, ren: to refine">錬</button>
+      </div>
+      <div class="romaji"><b>TANREN</b><span>/tahn·ren/ &nbsp;·&nbsp; Japanese</span></div>
+    </div>
+    <div class="chars" aria-live="polite"><span id="c0"><b>鍛</b>tan — to forge, to temper</span><span>·</span><span id="c1"><b>錬</b>ren — to refine, to train</span></div>
+
+    <div class="defrow">
+      <div class="pos"><i>noun</i></div>
+      <div>
+        <p class="defn">The hardening of <em>body and mind</em> through deliberate, repeated training.</p>
+        <p class="example">Usage: <q>Twelve weeks of tanren, and the bar finally moved.</q></p>
+      </div>
+    </div>
+
+    <div class="act">
+      <span class="sc">Also</span>
+      <p><b>A workout log for lifters who run a program.</b> Plan it, log every set in seconds even with no signal, and see the progress add up.</p>
+      <div class="cta"><a class="btn primary" href="#pricing">Start training</a><a class="btn" href="#usage">How it works</a></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="note" id="usage">
+      <span class="sc">In practice</span>
+      <div>
+        <h2>Three things, <em>done properly.</em></h2>
+        <p class="lead">No feed, no streak guilt, no social anything. A program, a log, and the proof.</p>
+        <ol class="senses">
+          <li><div><h3>Plan the work</h3><p>Programs, cycles, workouts, sets. Build week one and Tanren copies it forward. Change week six without touching week five.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Strength Block</span><span>8 cycles</span></div><div class="r"><span>&nbsp;&nbsp;Cycle 3 · Lower A</span><span>5 exercises</span></div><div class="r"><span class="hi">&nbsp;&nbsp;&nbsp;&nbsp;Back Squat</span><span>5 × 5 @ 225</span></div></div></li>
+          <li><div><h3>Repeat the work</h3><p>One tap per set with last session's numbers inline. No signal? Sets queue in order and sync later. Swap an exercise and the plan stays the plan.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Set 2 · 225 × 5</span><span>logged</span></div><div class="r"><span>Set 3 · 225 × 5</span><span>logged</span></div><div class="r"><span>2 sets waiting</span><span class="hi">syncs when online</span></div></div></li>
+          <li><div><h3>See it harden <span class="pro">PRO</span></h3><p>Cycle-over-cycle progression and plan-versus-actual adherence. Warmups and drop sets never pad the numbers.</p></div>
+            <div class="ex" aria-hidden="true"><div class="r"><span>Back Squat · top set</span><span>demo data</span></div><div class="bars"><span style="height:44%"></span><span style="height:52%"></span><span style="height:58%"></span><span style="height:55%"></span><span style="height:67%"></span><span style="height:75%"></span><span style="height:84%"></span><span style="height:92%"></span></div></div></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="sc">Who uses it</span>
+      <div>
+        <h2>Lifters who already <em>show up.</em></h2>
+        <div class="usage">
+          <div><b>You run a program</b><p>5/3/1, a PPL split, your coach's spreadsheet. Tanren holds the plan and puts the right numbers in front of you.</p></div>
+          <div><b>You train anywhere</b><p>Garage racks, concrete basements, hotel gyms. Logging never waits on a network.</p></div>
+          <div><b>You keep your record</b><p>Years of training shouldn't be locked in someone else's app. Export whenever you like.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" id="ai">
+      <span class="sc">See also: your AI</span>
+      <div>
+        <h2>Your assistant, reading <em>your real training.</em></h2>
+        <p class="lead">Connect the AI you already use. It reads your history and writes the next block straight into Tanren. We never pay for inference, so we never charge you for it. No AI? Programs import and export as plain JSON.</p>
+        <div class="chat" aria-label="Example conversation">
+          <div class="msg me">Look at my last eight weeks of squat and adjust the next block.</div>
+          <div class="calls">read progression · Back Squat · 8 cycles &nbsp;/&nbsp; read adherence · Strength Block</div>
+          <div class="msg it">Your top set rose every cycle except C4, where you missed two sessions. Next block starts at <b>235 × 5</b>, adds 5 lb a cycle, deloads at C4. Saved as <b>Strength Block II</b>.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" id="pricing" style="border-bottom:0">
+      <span class="sc">Pricing</span>
+      <div>
+        <h2>Log for free. <em>Go Pro</em> to see the trend.</h2>
+        <div class="tiers">
+          <div><span class="sc" style="color:var(--muted)">Free</span><div class="price">$0</div><ul><li>Unlimited logging, offline</li><li>Build and copy programs</li><li>Import and export</li></ul><a class="btn" href="#">Create account</a></div>
+          <div class="pro-t"><span class="sc">Pro</span><div class="price">$— <small>/ mo · price TBD</small></div><ul><li>Everything in Free</li><li>Progression and adherence analytics</li><li>Connect your own AI</li></ul><a class="btn primary" href="#">Start free trial</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="close" style="border-top:1px solid var(--line)"><div class="wrap">
+    <div class="headword"><div class="kanji" lang="ja">鍛錬</div><div class="romaji"><b>TANREN</b><span>/tahn·ren/</span></div></div>
+    <p>Deliberate. Repeated. Recorded.</p>
+    <a class="btn primary" href="#pricing">Start training</a>
+  </div></div>
+</main>
+<footer><div class="wrap"><span>鍛錬 Tanren · US only</span><span>Mockup 6 · Lexicon</span></div></footer>
+
+<script>
+  (() => {
+    const root = document.documentElement;
+    document.getElementById('theme').addEventListener('click', () => { root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light'; try { localStorage.setItem('tanren-theme', root.dataset.theme); } catch {} });
+    // tap or hover a character to read its half of the word
+    const btns = document.querySelectorAll('.kanji button');
+    const show = i => { btns.forEach((b, j) => b.setAttribute('aria-expanded', String(j === i))); [0, 1].forEach(j => document.getElementById('c' + j).classList.toggle('on', j === i)); };
+    btns.forEach((b, i) => { b.addEventListener('pointerenter', () => show(i)); b.addEventListener('focus', () => show(i)); b.addEventListener('click', () => show(i)); b.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') show(-1); }); });
+  })();
+</script>
+</body>
+</html>

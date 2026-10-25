@@ -75,3 +75,6 @@ A task is complete when:
   `schema-change`, `neon-branch`, `implement-operation`, `deploy`,
   `verify-done`. Read the one that matches the task before starting it; fix it
   in the same commit that invalidates it (`.claude/skills/README.md`).
+- **Roles live in `.claude/agents/<name>.md`**: `orchestrator` (Opus, xhigh) plans
+  and delegates to `frontend`, `backend`, `db`, `infra`, `reviewer`, picking Opus
+  or Sonnet at high effort per slice (`.claude/agents/README.md`).

@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tanren — Strike</title>
+<meta name="description" content="Mockup 1 of 3: Strike. Every logged set is a hammer strike on a hot billet.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  try { const t = localStorage.getItem('tanren-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+</script>
+<style>
+  :root {
+    --bg: #131211;
+    --bg-2: #1a1817;
+    --line: #2b2826;
+    --line-2: #3a3633;
+    --text: #efe9e2;
+    --muted: #a39a91;
+    --faint: #8c847b;
+    --molten: #ff6a1f;
+    --hot: #ffb04a;
+    --on-molten: #1a0c03;
+    --ok: #8fd18a;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --display: "Archivo", system-ui, sans-serif;
+    --body: "Geist", system-ui, sans-serif;
+    --mono: "Geist Mono", ui-monospace, monospace;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #f2eee8;
+    --bg-2: #e9e4dc;
+    --line: #d6cfc5;
+    --line-2: #c4bcb1;
+    --text: #181512;
+    --muted: #5e5750;
+    --faint: #6b635b;
+    --molten: #d5480c;
+    --hot: #b8640c;
+    --on-molten: #fff6ee;
+    --ok: #2f7a2a;
+    color-scheme: light;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 400 16px/1.6 var(--body);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--molten); color: var(--on-molten); }
+  :focus-visible { outline: 2px solid var(--molten); outline-offset: 3px; border-radius: 2px; }
+  a { color: inherit; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+  ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--line-2); border: 3px solid var(--bg); border-radius: 10px; }
+
+  .wrap { max-width: 1360px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 720px) { .wrap { padding: 0 32px; } }
+  .rule { border-top: 1px solid var(--line); }
+  .mono { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+
+  /* nav */
+  header { position: sticky; top: 0; z-index: 20; background: color-mix(in oklab, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .nav { display: flex; align-items: center; gap: 16px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font: 800 20px/1 var(--display); font-stretch: 112%; letter-spacing: -.02em; text-decoration: none; }
+  .brand svg { width: 28px; height: 28px; color: var(--molten); }
+  .nav-links { display: none; gap: 28px; margin-left: auto; }
+  .nav-links a { text-decoration: none; color: var(--muted); transition: color .15s ease; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  @media (min-width: 900px) { .nav-links { display: flex; } .nav-right { margin-left: 24px; } }
+  .theme { display: inline-flex; border: 1px solid var(--line-2); height: 36px; }
+  .theme button { all: unset; cursor: pointer; padding: 0 10px; display: grid; place-items: center; color: var(--faint); font: 500 11px var(--mono); letter-spacing: .1em; }
+  .theme button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 44px; padding: 0 20px; font: 600 15px var(--body); text-decoration: none; border: 1px solid var(--line-2); color: var(--text); background: transparent; cursor: pointer; transition: transform .16s var(--ease-out), background-color .15s ease, border-color .15s ease; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--molten); border-color: var(--molten); color: var(--on-molten); }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { border-color: var(--text); } .btn.primary:hover { background: var(--hot); border-color: var(--hot); } }
+  .btn.sm { height: 36px; padding: 0 14px; font-size: 14px; }
+  .nav .btn.sm { display: none; } @media (min-width: 520px) { .nav .btn.sm { display: inline-flex; } }
+
+  /* hero */
+  .hero { padding-top: 40px; }
+  h1 { font: 900 clamp(52px, 14.5vw, 168px)/.86 var(--display); font-stretch: 100%; letter-spacing: -.045em; margin: 0; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--molten); }
+  .hero-grid { display: grid; gap: 28px; margin-top: 28px; }
+  @media (min-width: 980px) { .hero-grid { grid-template-columns: 5fr 7fr; gap: 48px; align-items: center; margin-top: 32px; } }
+  .lede { font-size: 18px; color: var(--muted); max-width: 46ch; margin: 0 0 24px; }
+  .lede b { color: var(--text); font-weight: 500; }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .fine { margin-top: 16px; color: var(--faint); }
+
+  .stage { position: relative; border: 1px solid var(--line); background:
+      linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 40px 40px,
+      linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 40px 40px, var(--bg-2);
+    background-blend-mode: normal; aspect-ratio: 4 / 3.4; overflow: hidden; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .stage::after { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 100%, transparent 30%, var(--bg-2) 85%); pointer-events: none; }
+  @media (min-width: 720px) { .stage { aspect-ratio: 16 / 10.5; } }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; z-index: 1; }
+  .hud { position: absolute; z-index: 2; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; gap: 12px; padding: 14px 16px; pointer-events: none; }
+  .hud .mono { color: var(--muted); font-size: 11px; }
+  .hud .ex { font: 700 18px/1.1 var(--display); letter-spacing: -.01em; color: var(--text); text-transform: none; margin-top: 6px; }
+  .sets { display: flex; gap: 4px; margin-top: 10px; }
+  .sets i { width: 22px; height: 4px; background: var(--line-2); transition: background-color .2s ease; }
+  .sets i.on { background: var(--molten); }
+  .strike { position: absolute; z-index: 2; left: 16px; right: 16px; bottom: 16px; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+  .strike .readout { font: 500 13px/1.3 var(--mono); color: var(--muted); }
+  .strike .readout b { display: block; color: var(--text); font: 800 26px/1 var(--display); letter-spacing: -.02em; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+  .synthetic { position: absolute; z-index: 2; right: 16px; top: 14px; color: var(--faint); font-size: 10px; }
+
+  /* facts strip */
+  .facts { display: grid; grid-template-columns: 1fr 1fr; margin-top: 56px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .facts div { padding: 18px 16px 20px; border-right: 1px solid var(--line); }
+  .facts div:nth-child(2n) { border-right: 0; }
+  .facts div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .facts b { display: block; font: 800 20px/1.15 var(--display); letter-spacing: -.02em; margin-bottom: 6px; }
+  .facts span { color: var(--muted); font-size: 14px; }
+  @media (min-width: 900px) { .facts { grid-template-columns: repeat(4, 1fr); } .facts div { border-bottom: 0 !important; border-right: 1px solid var(--line) !important; padding: 26px 28px; } .facts div:last-child { border-right: 0 !important; } }
+
+  /* sections */
+  section { padding: 88px 0; }
+  h2 { font: 900 clamp(36px, 7vw, 76px)/.95 var(--display); letter-spacing: -.04em; margin: 0 0 20px; text-wrap: balance; }
+  h2 em { font-style: normal; color: var(--molten); }
+  h3 { font: 800 24px/1.1 var(--display); letter-spacing: -.02em; margin: 0 0 10px; }
+  p { margin: 0; }
+  .sub { color: var(--muted); max-width: 58ch; font-size: 17px; }
+
+  .steps { margin-top: 48px; border-top: 1px solid var(--line); }
+  .step { display: grid; gap: 24px; padding: 36px 0; border-bottom: 1px solid var(--line); }
+  @media (min-width: 900px) { .step { grid-template-columns: 90px 1fr 1fr; gap: 40px; padding: 44px 0; } }
+  .step .n { font: 900 44px/1 var(--display); color: var(--faint); letter-spacing: -.04em; }
+  .step p { color: var(--muted); max-width: 52ch; }
+  .tag { display: inline-block; margin-left: 8px; padding: 2px 6px; vertical-align: middle; background: var(--molten); color: var(--on-molten); font: 500 10px var(--mono); letter-spacing: .1em; }
+
+  .panel { border: 1px solid var(--line); background: var(--bg-2); font: 400 13px/1.5 var(--mono); }
+  .panel .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .panel .row:last-child { border-bottom: 0; }
+  .panel .k { color: var(--muted); }
+  .panel .v { color: var(--text); font-variant-numeric: tabular-nums; }
+  .panel .indent { padding-left: 30px; } .panel .indent2 { padding-left: 46px; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--molten); margin-right: 8px; vertical-align: 1px; }
+  .dot.ok { background: var(--ok); }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; padding: 14px 14px 0; }
+  .bars span { flex: 1; background: var(--line-2); position: relative; }
+  .bars span.hi { background: var(--molten); }
+  .bars-x { display: flex; gap: 6px; padding: 6px 14px 12px; color: var(--faint); font-size: 10px; }
+  .bars-x span { flex: 1; text-align: center; }
+
+  .who { display: grid; gap: 0; margin-top: 40px; border-top: 1px solid var(--line); }
+  .who div { padding: 28px 0; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+  @media (min-width: 900px) { .who div { grid-template-columns: 1fr 1fr; gap: 40px; align-items: baseline; } }
+  .who b { font: 900 clamp(28px, 4.4vw, 48px)/1 var(--display); letter-spacing: -.035em; }
+  .who p { color: var(--muted); max-width: 50ch; }
+
+  .ai { display: grid; gap: 32px; }
+  @media (min-width: 980px) { .ai { grid-template-columns: 1fr 1.15fr; gap: 56px; align-items: start; } }
+  .chat { border: 1px solid var(--line); background: var(--bg-2); }
+  .chat .bar { display: flex; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--faint); }
+  .chat .body { padding: 18px 16px; display: grid; gap: 14px; font: 400 14px/1.55 var(--mono); }
+  .chat .you { color: var(--text); }
+  .chat .you::before { content: "› "; color: var(--molten); }
+  .chat .tool { color: var(--muted); border-left: 1px solid var(--line-2); padding-left: 12px; font-size: 12.5px; }
+  .chat .tool b { color: var(--hot); font-weight: 500; }
+  .chat .reply { color: var(--text); font-family: var(--body); font-size: 15px; }
+  .chat .reply em { color: var(--molten); font-style: normal; font-weight: 600; }
+
+  .tiers { display: grid; gap: 0; margin-top: 40px; border: 1px solid var(--line); }
+  @media (min-width: 820px) { .tiers { grid-template-columns: 1fr 1fr; } .tiers > div + div { border-left: 1px solid var(--line); } }
+  .tiers > div { padding: 28px 22px; }
+  .tiers > div + div { border-top: 1px solid var(--line); }
+  @media (min-width: 820px) { .tiers > div + div { border-top: 0; } }
+  .tiers .pro { background: color-mix(in oklab, var(--molten) 7%, var(--bg)); }
+  .price { font: 900 48px/1 var(--display); letter-spacing: -.04em; margin: 14px 0 6px; }
+  .price small { font: 500 13px var(--mono); color: var(--faint); letter-spacing: .04em; }
+  .tiers ul { list-style: none; padding: 0; margin: 22px 0 26px; display: grid; gap: 10px; }
+  .tiers li { display: flex; gap: 10px; color: var(--muted); }
+  .tiers li svg { flex: none; width: 16px; height: 16px; margin-top: 4px; color: var(--molten); }
+
+  .close { text-align: left; padding: 120px 0 100px; position: relative; overflow: hidden; }
+  .close h2 { font-size: clamp(56px, 13vw, 150px); line-height: .86; margin-bottom: 28px; }
+  footer { border-top: 1px solid var(--line); padding: 22px 0 calc(22px + env(safe-area-inset-bottom)); color: var(--faint); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: 0ms !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#" aria-label="Tanren home">
+      <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M2 9h21c3 0 6-1 7-2v5c-2 1.5-4 2-6 2h-1c-2 0-3 1.5-3 3.5V20h3v3h4v3H5v-3h4v-3h3v-2.5C12 15 10 13 7.5 13 5 13 3 11.5 2 9Z"/></svg>
+      Tanren
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#how">How it works</a><a href="#who">Who it's for</a><a href="#ai">Your AI</a><a href="#pricing">Pricing</a>
+    </nav>
+    <div class="nav-right">
+      <div class="theme" role="group" aria-label="Theme">
+        <button type="button" data-set="dark">Dark</button><button type="button" data-set="light">Light</button>
+      </div>
+      <a class="btn sm primary" href="#pricing">Start free</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <h1>Every set is a <em>strike.</em></h1>
+    <div class="hero-grid">
+      <div>
+        <p class="lede">Tanren is a workout log for people who run a program. Plan the block, log every set in seconds, and <b>watch the steel take shape</b> week over week. Works with no signal. Lives on your home screen.</p>
+        <div class="cta-row">
+          <a class="btn primary" href="#pricing">Start forging — free</a>
+          <a class="btn" href="#how">See how it works</a>
+        </div>
+        <p class="fine mono">iPhone · Android · Desktop &nbsp;—&nbsp; US only</p>
+      </div>
+      <div class="stage" id="stage">
+        <canvas id="forge" aria-label="Interactive demo: tap the billet to log a set"></canvas>
+        <div class="hud">
+          <div>
+            <div class="mono">Today · Lower A</div>
+            <div class="ex mono" id="ex">Back Squat</div>
+            <div class="sets" id="sets"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+        <span class="synthetic mono">Demo data</span>
+        <div class="strike">
+          <div class="readout" aria-live="polite" id="readout"><b>225 lb × 5</b>Set 1 of 5 · tap to strike</div>
+          <button class="btn primary" id="strikeBtn" type="button">Log set</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="facts">
+      <div><b>Logs offline</b><span>Basement gym, no bars. Sets queue and sync later.</span></div>
+      <div><b>No app store</b><span>Install from the browser in two taps.</span></div>
+      <div><b>Your data leaves</b><span>Export any program. Import from anywhere.</span></div>
+      <div><b>Bring your AI</b><span>Connect Claude, ChatGPT, or whatever you use.</span></div>
+    </div>
+  </div>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>Heat. Hammer. <em>Temper.</em></h2>
+      <p class="sub">Three things, done properly. No feed, no streak guilt, no social anything.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="n">01</div>
+          <div><h3>Build the program</h3><p>Programs, cycles, workouts, sets. Build week one and Tanren copies it forward. Change week six without touching week five.</p></div>
+          <div class="panel" aria-hidden="true">
+            <div class="row"><span class="v">Strength Block · 8 wk</span><span class="k">active</span></div>
+            <div class="row indent"><span class="v">Cycle 3</span><span class="k">4 workouts</span></div>
+            <div class="row indent2"><span class="v">Lower A</span><span class="k">5 exercises</span></div>
+            <div class="row indent2"><span class="k">Back Squat</span><span class="v">5 × 5 @ 225</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="n">02</div>
+          <div><h3>Log the session</h3><p>Big targets, last session's numbers inline, one tap per set. Swap an exercise or add a drop set and the plan stays the plan.</p></div>
+          <div class="panel" aria-hidden="true">
+            <div class="row"><span class="v">Back Squat</span><span class="k">last: 215 × 5</span></div>
+            <div class="row"><span class="k">Set 1</span><span class="v">225 × 5</span></div>
+            <div class="row"><span class="k">Set 2</span><span class="v">225 × 5</span></div>
+            <div class="row"><span class="k"><span class="dot"></span>2 sets queued</span><span class="k">syncs when online</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="n">03</div>
+          <div><h3>Read the temper <span class="tag">PRO</span></h3><p>Cycle-over-cycle progression and plan-vs-actual adherence. Warmups and drop sets never pad the numbers.</p></div>
+          <div class="panel" aria-hidden="true">
+            <div class="row"><span class="v">Back Squat · top set</span><span class="k">8 cycles</span></div>
+            <div class="bars"><span style="height:48%"></span><span style="height:54%"></span><span style="height:58%"></span><span style="height:57%"></span><span style="height:66%"></span><span style="height:72%"></span><span style="height:79%"></span><span class="hi" style="height:88%"></span></div>
+            <div class="bars-x"><span>C1</span><span>C2</span><span>C3</span><span>C4</span><span>C5</span><span>C6</span><span>C7</span><span>C8</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="who" class="rule">
+    <div class="wrap">
+      <h2>Built for lifters who <em>show up.</em></h2>
+      <div class="who">
+        <div><b>You run a program.</b><p>5/3/1, a PPL split, your coach's spreadsheet. Tanren holds the plan and puts the right numbers in front of you.</p></div>
+        <div><b>You train where signal dies.</b><p>Concrete walls and a garage rack. Logging never waits on a network.</p></div>
+        <div><b>You want your numbers kept.</b><p>Years of training shouldn't be hostage to an app. Export it whenever you like.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ai" class="rule">
+    <div class="wrap ai">
+      <div>
+        <h2>Your AI. <em>Your data.</em></h2>
+        <p class="sub">Connect the assistant you already pay for. It reads your real training history and writes your next block straight into Tanren. We never pay for inference, so we never pass it on to you.</p>
+        <p class="sub" style="margin-top:16px">No AI? The import/export format is plain JSON. Paste in a program from anywhere.</p>
+      </div>
+      <div class="chat" aria-label="Example conversation with a connected AI">
+        <div class="bar mono"><span>Your assistant · Tanren connected</span><span>Example</span></div>
+        <div class="body">
+          <div class="you">Look at my last eight weeks of squat and adjust the next block.</div>
+          <div class="tool">→ <b>get_progression</b>(exercise: "Back Squat", cycles: 8)<br>→ <b>get_adherence</b>(program: "Strength Block")</div>
+          <div class="reply">Top set climbed every cycle except C4, where you missed two sessions. Next block: start at <em>235 × 5</em>, add 5 lb a cycle, deload at C4. Saved as <em>Strength Block II</em>.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" class="rule">
+    <div class="wrap">
+      <h2>Log free. <em>Go Pro</em> for the heat map.</h2>
+      <div class="tiers">
+        <div>
+          <div class="mono" style="color:var(--muted)">Free</div>
+          <div class="price">$0</div>
+          <ul>
+            <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Unlimited workout logging, offline</li>
+            <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Build and copy programs</li>
+            <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Import and export</li>
+          </ul>
+          <a class="btn" href="#">Create account</a>
+        </div>
+        <div class="pro">
+          <div class="mono" style="color:var(--molten)">Pro</div>
+          <div class="price">$— <small>/ MO · PRICE TBD</small></div>
+          <ul>
+            <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Everything in Free</li>
+            <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Progression and adherence analytics</li>
+            <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Connect your own AI</li>
+          </ul>
+          <a class="btn primary" href="#">Start free trial</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="close rule">
+    <div class="wrap">
+      <h2>Get in the <em>forge.</em></h2>
+      <a class="btn primary" href="#pricing">Start free</a>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap mono"><span>Tanren · 鍛錬 — to forge, to discipline</span><span>Mockup 1 / 3 · Strike</span></div></footer>
+
+<script>
+  // theme
+  (() => {
+    const root = document.documentElement;
+    const sync = () => document.querySelectorAll('.theme button').forEach(b => b.setAttribute('aria-pressed', String((root.dataset.theme || 'dark') === b.dataset.set)));
+    document.querySelectorAll('.theme button').forEach(b => b.addEventListener('click', () => {
+      root.dataset.theme = b.dataset.set; try { localStorage.setItem('tanren-theme', b.dataset.set); } catch {}
+      sync();
+    }));
+    sync();
+  })();
+
+  // forge
+  (() => {
+    const stage = document.getElementById('stage'), cv = document.getElementById('forge'), ctx = cv.getContext('2d');
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const readout = document.getElementById('readout'), dots = [...document.querySelectorAll('#sets i')], ex = document.getElementById('ex');
+    const plan = [
+      { name: 'Back Squat', w: 225, r: 5 },
+      { name: 'Romanian Deadlift', w: 185, r: 8 },
+    ];
+    let exi = 0, set = 0, heat = .55, strikes = 0, shake = 0, flash = 0, W = 0, H = 0, dpr = 1;
+    const sparks = [];
+
+    function size() { dpr = Math.min(devicePixelRatio || 1, 2); const r = stage.getBoundingClientRect(); W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    new ResizeObserver(size).observe(stage); size();
+
+    // black-body-ish ramp: cold steel -> cherry -> orange -> yellow-white
+    const ramp = [[0, [58, 52, 49]], [.3, [120, 22, 8]], [.55, [226, 66, 14]], [.78, [255, 156, 46]], [1, [255, 242, 205]]];
+    function heatColor(t, a = 1) {
+      t = Math.max(0, Math.min(1, t));
+      for (let i = 1; i < ramp.length; i++) if (t <= ramp[i][0]) {
+        const [t0, c0] = ramp[i - 1], [t1, c1] = ramp[i], k = (t - t0) / (t1 - t0);
+        return `rgba(${c0.map((c, j) => Math.round(c + (c1[j] - c) * k)).join(',')},${a})`;
+      }
+    }
+    const isLight = () => document.documentElement.dataset.theme === 'light';
+
+    function anvil(cx, top, s) {
+      ctx.beginPath();
+      ctx.moveTo(cx - 150 * s, top);
+      ctx.quadraticCurveTo(cx - 100 * s, top + 2 * s, cx - 80 * s, top);
+      ctx.lineTo(cx + 120 * s, top); ctx.lineTo(cx + 120 * s, top + 26 * s);
+      ctx.lineTo(cx + 92 * s, top + 26 * s);
+      ctx.quadraticCurveTo(cx + 62 * s, top + 34 * s, cx + 58 * s, top + 64 * s);
+      ctx.lineTo(cx + 70 * s, top + 92 * s); ctx.lineTo(cx + 104 * s, top + 92 * s); ctx.lineTo(cx + 104 * s, top + 110 * s);
+      ctx.lineTo(cx - 92 * s, top + 110 * s); ctx.lineTo(cx - 92 * s, top + 92 * s); ctx.lineTo(cx - 58 * s, top + 92 * s);
+      ctx.lineTo(cx - 46 * s, top + 64 * s);
+      ctx.quadraticCurveTo(cx - 50 * s, top + 36 * s, cx - 80 * s, top + 26 * s);
+      ctx.quadraticCurveTo(cx - 120 * s, top + 18 * s, cx - 150 * s, top);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(0, top, 0, top + 110 * s);
+      if (isLight()) { g.addColorStop(0, '#4a4440'); g.addColorStop(1, '#1f1b19'); }
+      else { g.addColorStop(0, '#34302d'); g.addColorStop(1, '#151312'); }
+      ctx.fillStyle = g; ctx.fill();
+      // face highlight catches the billet's glow
+      ctx.fillStyle = heatColor(heat, .35 * heat); ctx.fillRect(cx - 80 * s, top, 200 * s, 2 * s);
+    }
+
+    function burst(x, y) {
+      const n = reduce ? 10 : 70;
+      for (let i = 0; i < n; i++) {
+        const a = -Math.PI / 2 + (Math.random() - .5) * Math.PI * 1.25, v = 3 + Math.random() * 9;
+        sparks.push({ x, y, px: x, py: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, decay: .012 + Math.random() * .02 });
+      }
+    }
+
+    function frame() {
+      ctx.clearRect(0, 0, W, H);
+      const s = Math.min(W / 520, H / 330) * 1.05, cx = W / 2 + 14 * s, top = H * .58;
+      ctx.save();
+      if (shake > 0) { ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake); shake *= .82; if (shake < .3) shake = 0; }
+
+      // floor glow
+      const fg = ctx.createRadialGradient(cx, top, 0, cx, top, 260 * s);
+      fg.addColorStop(0, heatColor(heat, .28 * heat)); fg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = fg; ctx.fillRect(0, 0, W, H);
+
+      anvil(cx, top, s);
+
+      // billet lengthens and thins with every strike
+      const len = (118 + strikes * 7) * s, th = Math.max(14, 30 - strikes * 1.4) * s, bx = cx - len / 2 + 6 * s, by = top - th;
+      ctx.shadowColor = heatColor(heat, .9); ctx.shadowBlur = 70 * heat * s;
+      const bg = ctx.createLinearGradient(0, by, 0, by + th);
+      bg.addColorStop(0, heatColor(Math.min(1, heat + .12))); bg.addColorStop(1, heatColor(heat - .12));
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.roundRect(bx, by, len, th, 4 * s); ctx.fill();
+      ctx.shadowBlur = 0;
+      // hot core
+      const core = ctx.createRadialGradient(bx + len / 2, by + th / 2, 0, bx + len / 2, by + th / 2, len / 2);
+      core.addColorStop(0, heatColor(Math.min(1, heat + .2), .7)); core.addColorStop(1, heatColor(heat, 0));
+      ctx.fillStyle = core; ctx.beginPath(); ctx.roundRect(bx, by, len, th, 4 * s); ctx.fill();
+
+      // sparks
+      ctx.globalCompositeOperation = isLight() ? 'source-over' : 'lighter';
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const p = sparks[i];
+        p.px = p.x; p.py = p.y; p.vy += .32; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+        if (p.life <= 0 || p.y > H + 20) { sparks.splice(i, 1); continue; }
+        ctx.strokeStyle = heatColor(.55 + p.life * .45, Math.min(1, p.life * 1.4)); ctx.lineWidth = 1.6 * s;
+        ctx.beginPath(); ctx.moveTo(p.px - p.vx * 1.6, p.py - p.vy * 1.6); ctx.lineTo(p.x, p.y); ctx.stroke();
+      }
+      // idle embers drifting off the hot metal
+      if (!reduce && Math.random() < .05 * heat) sparks.push({ x: bx + Math.random() * len, y: by, px: 0, py: 0, vx: (Math.random() - .5), vy: -1.5 - Math.random() * 2, life: .7, decay: .008 });
+      ctx.globalCompositeOperation = 'source-over';
+
+      if (flash > 0) { ctx.fillStyle = `rgba(255,230,190,${flash * .22})`; ctx.fillRect(-20, -20, W + 40, H + 40); flash *= .8; }
+      ctx.restore();
+
+      heat += (.42 - heat) * .006; // cools back toward a forge-held glow
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    function strike() {
+      const e = plan[exi];
+      if (set >= 5) { exi = (exi + 1) % plan.length; set = 0; strikes = 0; dots.forEach(d => d.classList.remove('on')); ex.textContent = plan[exi].name; render(); heat = .6; return; }
+      set++; strikes++; heat = 1; flash = reduce ? 0 : 1; shake = reduce ? 0 : 7;
+      const s = Math.min(W / 520, H / 330) * 1.05; burst(W / 2 + 14 * s, H * .58 - (30 - strikes * 1.4) * s);
+      dots[set - 1].classList.add('on');
+      if (navigator.vibrate) navigator.vibrate(12);
+      render();
+    }
+    function render() {
+      const e = plan[exi];
+      const btn = document.getElementById('strikeBtn');
+      if (set >= 5) { readout.innerHTML = `<b>Forged.</b>5 × ${e.r} @ ${e.w} lb · ${(5 * e.r * e.w).toLocaleString()} lb moved`; btn.textContent = 'Next exercise'; }
+      else { readout.innerHTML = `<b>${e.w} lb × ${e.r}</b>Set ${set + 1} of 5 · tap to strike`; btn.textContent = 'Log set'; }
+    }
+    cv.addEventListener('pointerdown', strike);
+    document.getElementById('strikeBtn').addEventListener('click', strike);
+  })();
+</script>
+</body>
+</html>

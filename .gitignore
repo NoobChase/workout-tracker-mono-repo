@@ -39,3 +39,9 @@ coverage/
 # Its conclusions already live in data-model.md section 6 and the build plan,
 # so nothing tracked depends on these files being present.
 docs/legacy-*
+
+# Impeccable: the per-session hook cache (absolute paths, session ids) and the
+# review screenshots it regenerates. config.json is tracked -- it holds the
+# detector's deliberate ignore rules.
+.impeccable/hook.cache.json
+.impeccable/review/

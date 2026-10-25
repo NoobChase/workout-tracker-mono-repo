@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tanren — Headline</title>
+<meta name="description" content="Mockup 5: the definition is the headline, beside a live app preview you can tap.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@800&display=swap" rel="stylesheet">
+<script>try { const t = localStorage.getItem('tanren-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+<style>
+  :root {
+    --bg: #100f0e; --card: #191715; --card-2: #211e1b; --line: #2b2723; --line-2: #3b3530;
+    --text: #f3eee8; --muted: #a9a198; --faint: #91887f;
+    --copper: #d9834f; --copper-btn: #b0582a; --on-copper: #fff8f2;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --sans: "Manrope", system-ui, sans-serif; --jp: "Noto Sans JP", sans-serif;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f3ef; --card: #ede8e2; --card-2: #e4ddd5; --line: #dad2c9; --line-2: #c6bcb1;
+    --text: #191512; --muted: #574f48; --faint: #6a6159;
+    --copper: #a14a1e; --copper-btn: #a14a1e; --on-copper: #fff8f2;
+    color-scheme: light;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--copper); color: var(--on-copper); }
+  :focus-visible { outline: 2px solid var(--copper); outline-offset: 3px; border-radius: 4px; }
+  a { color: inherit; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 720px) { .wrap { padding: 0 32px; } }
+  .label { font: 600 12px/1.4 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--copper); }
+
+  .nav { display: flex; align-items: center; gap: 16px; height: 64px; }
+  .lock { display: flex; align-items: baseline; gap: 10px; text-decoration: none; }
+  .lock .jp { font: 800 18px/1 var(--jp); }
+  .lock .en { font: 700 14px/1 var(--sans); letter-spacing: .2em; color: var(--muted); }
+  .nav-links { display: none; gap: 24px; margin-left: auto; font-size: 14px; font-weight: 500; }
+  .nav-links a { text-decoration: none; color: var(--muted); transition: color .15s ease; } .nav-links a:hover { color: var(--text); }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  @media (min-width: 860px) { .nav-links { display: flex; } .nav-right { margin-left: 20px; } }
+  .seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); }
+  .seg button { all: unset; cursor: pointer; width: 30px; height: 26px; display: grid; place-items: center; border-radius: 999px; color: var(--faint); transition: background-color .2s var(--ease-out), color .15s ease; }
+  .seg button[aria-pressed="true"] { background: var(--card-2); color: var(--text); }
+  .seg svg { width: 15px; height: 15px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 10px; border: 1px solid var(--line-2); color: var(--text); text-decoration: none; font: 600 15px var(--sans); background: transparent; cursor: pointer; transition: transform .16s var(--ease-out), background-color .15s ease, border-color .15s ease; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--copper-btn); border-color: var(--copper-btn); color: var(--on-copper); }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { border-color: var(--muted); } .btn.primary:hover { background: color-mix(in oklab, var(--copper-btn) 86%, black); } }
+  .nav .btn { height: 38px; padding: 0 16px; font-size: 14px; }
+
+  .hero { display: grid; gap: 40px; padding: 36px 0 72px; align-items: center; }
+  @media (min-width: 1000px) { .hero { grid-template-columns: 1.25fr 1fr; gap: 64px; padding: 64px 0 96px; } }
+  .entry { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .entry .jp { font: 800 clamp(44px, 11vw, 64px)/1 var(--jp); }
+  .entry .en { display: grid; gap: 4px; }
+  .entry .en b { font: 800 clamp(22px, 5vw, 30px)/1 var(--sans); letter-spacing: .2em; }
+  .entry .en span { color: var(--muted); font-size: 14px; }
+  .entry .en i { color: var(--copper); }
+  h1 { margin: 26px 0 0; font: 700 clamp(38px, 8.4vw, 76px)/1.04 var(--sans); letter-spacing: -.035em; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--copper); }
+  .lede { margin: 24px 0 28px; color: var(--muted); font-size: 18px; max-width: 46ch; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; }
+  .meta { margin-top: 18px; color: var(--faint); font-size: 13px; }
+
+  /* live phone */
+  .stage { position: relative; display: grid; place-items: center; }
+  .stage::before { content: ""; position: absolute; width: 80%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in oklab, var(--copper) 22%, transparent), transparent); }
+  .phone { position: relative; width: min(100%, 340px); border-radius: 42px; padding: 10px; background: #0a0908; box-shadow: 0 40px 70px -30px rgba(0,0,0,.6); }
+  .screen { border-radius: 33px; background: #161412; color: #f3eee8; padding: 22px 16px 16px; font-variant-numeric: tabular-nums; }
+  .screen .top { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #a9a198; }
+  .pill { padding: 3px 8px; border-radius: 999px; background: #241f1b; color: #d9834f; font-weight: 600; font-size: 11px; letter-spacing: .06em; }
+  .screen h4 { margin: 14px 0 2px; font: 800 26px/1.1 var(--sans); letter-spacing: -.02em; }
+  .screen .last { color: #a9a198; font-size: 13px; margin-bottom: 10px; }
+  .srow { display: grid; grid-template-columns: 22px 1fr 1fr 34px; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid #2a2622; transition: opacity .2s ease; }
+  .srow .i { color: #91887f; font-size: 12px; font-weight: 600; }
+  .srow .f { background: #221f1c; border-radius: 9px; padding: 8px 10px; font-weight: 700; font-size: 15px; }
+  .srow .f small { color: #91887f; font-weight: 500; margin-left: 3px; font-size: 12px; }
+  .srow .c { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid #3b3530; display: grid; place-items: center; color: #fff; transition: background-color .2s ease, border-color .2s ease, transform .3s var(--ease-out); }
+  .srow .c svg { width: 15px; height: 15px; opacity: 0; transform: scale(.6); transition: opacity .2s ease, transform .3s var(--ease-out); }
+  .srow.done .c { background: #b0582a; border-color: #b0582a; }
+  .srow.done .c svg { opacity: 1; transform: none; }
+  .srow.next .f { box-shadow: inset 0 0 0 1.5px #b0582a; }
+  .rest { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #1d1a17; font-size: 13px; color: #a9a198; }
+  .rest b { color: #f3eee8; font-size: 15px; }
+  .logbtn { all: unset; box-sizing: border-box; cursor: pointer; margin-top: 10px; width: 100%; height: 52px; border-radius: 13px; background: #b0582a; color: #fff8f2; display: grid; place-items: center; font: 700 16px var(--sans); transition: transform .16s var(--ease-out), background-color .15s ease; }
+  .logbtn:active { transform: scale(.97); }
+  .screen .q { margin-top: 10px; text-align: center; font-size: 12px; color: #91887f; }
+  .tap { position: absolute; right: -4px; bottom: 40px; font-size: 12px; color: var(--faint); writing-mode: vertical-rl; letter-spacing: .14em; text-transform: uppercase; }
+  @media (max-width: 999px) { .tap { display: none; } }
+
+  .strip { display: grid; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  @media (min-width: 820px) { .strip { grid-template-columns: repeat(3, 1fr); } .strip > div + div { border-left: 1px solid var(--line); } }
+  .strip > div { padding: 22px 0; } .strip > div + div { border-top: 1px solid var(--line); }
+  @media (min-width: 820px) { .strip > div { padding: 26px 26px; } .strip > div:first-child { padding-left: 0; } .strip > div + div { border-top: 0; } }
+  .strip p { margin: 6px 0 0; color: var(--muted); }
+  .strip b { font-size: 18px; }
+
+  section { padding: 100px 0; }
+  h2 { margin: 10px 0 14px; font: 700 clamp(32px, 5.5vw, 54px)/1.06 var(--sans); letter-spacing: -.03em; text-wrap: balance; }
+  h2 em { font-style: normal; color: var(--copper); }
+  .sub { margin: 0; color: var(--muted); font-size: 17px; max-width: 56ch; }
+
+  .rows { margin-top: 44px; display: grid; gap: 14px; }
+  .row { display: grid; gap: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 24px 20px; }
+  @media (min-width: 900px) { .row { grid-template-columns: 1fr 1fr; gap: 48px; padding: 36px 40px; align-items: center; } }
+  .row h3 { margin: 8px 0 8px; font: 700 26px/1.15 var(--sans); letter-spacing: -.02em; }
+  .row p { margin: 0; color: var(--muted); }
+  .mini { background: var(--card-2); border-radius: 12px; padding: 14px 16px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .mini .r { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  .mini .r:last-child { border-bottom: 0; }
+  .mini .r span:last-child { color: var(--muted); }
+  .mini .ind { padding-left: 16px; } .mini .ind2 { padding-left: 32px; color: var(--copper); }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 110px; }
+  .bars span { flex: 1; border-radius: 4px 4px 0 0; background: var(--line-2); }
+  .bars span:last-child { background: var(--copper); }
+  .bars-x { display: flex; gap: 6px; margin-top: 6px; color: var(--faint); font-size: 11px; } .bars-x span { flex: 1; text-align: center; }
+
+  .who { display: grid; gap: 28px; margin-top: 40px; }
+  @media (min-width: 900px) { .who { grid-template-columns: repeat(3, 1fr); gap: 40px; } }
+  .who b { display: block; font-size: 20px; margin-bottom: 6px; }
+  .who p { margin: 0; color: var(--muted); }
+  .who .n { color: var(--copper); font-weight: 700; margin-bottom: 12px; display: block; }
+
+  .ai { display: grid; gap: 28px; }
+  @media (min-width: 980px) { .ai { grid-template-columns: 1fr 1.1fr; gap: 64px; align-items: center; } }
+  .chat { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 12px; }
+  .msg { padding: 13px 15px; border-radius: 14px; font-size: 15px; max-width: 92%; }
+  .msg.me { justify-self: end; background: var(--copper-btn); color: var(--on-copper); border-bottom-right-radius: 4px; }
+  .msg.it { background: var(--card-2); border-bottom-left-radius: 4px; }
+  .msg.it b { color: var(--copper); }
+  .calls { font-size: 12.5px; color: var(--faint); padding: 0 4px; }
+
+  .tiers { display: grid; gap: 14px; margin-top: 40px; }
+  @media (min-width: 820px) { .tiers { grid-template-columns: 1fr 1fr; } }
+  .tier { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px 24px; display: flex; flex-direction: column; }
+  .tier.pro { border-color: color-mix(in oklab, var(--copper) 55%, var(--line)); }
+  .tier .price { font: 800 46px/1 var(--sans); margin: 12px 0 0; letter-spacing: -.03em; }
+  .tier .price small { font: 600 13px var(--sans); color: var(--faint); letter-spacing: .04em; }
+  .tier ul { list-style: none; padding: 0; margin: 22px 0 26px; display: grid; gap: 10px; color: var(--muted); }
+  .tier li { display: flex; gap: 10px; } .tier li svg { flex: none; width: 16px; height: 16px; margin-top: 4px; color: var(--copper); }
+  .tier .btn { margin-top: auto; }
+
+  .close { padding: 110px 0; border-top: 1px solid var(--line); }
+  .close .entry { margin-bottom: 18px; }
+  .close h2 { max-width: 18ch; margin-bottom: 28px; }
+  footer { border-top: 1px solid var(--line); padding: 22px 0 calc(22px + env(safe-area-inset-bottom)); color: var(--faint); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: 0ms !important; } }
+</style>
+</head>
+<body>
+<header class="wrap nav">
+  <a class="lock" href="#" aria-label="Tanren home"><span class="jp">鍛錬</span><span class="en">TANREN</span></a>
+  <nav class="nav-links" aria-label="Primary"><a href="#features">Features</a><a href="#ai">Your AI</a><a href="#pricing">Pricing</a><a href="#">Log in</a></nav>
+  <div class="nav-right">
+    <div class="seg" role="group" aria-label="Theme">
+      <button type="button" data-set="dark" aria-label="Dark theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/></svg></button>
+      <button type="button" data-set="light" aria-label="Light theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+    </div>
+    <a class="btn primary" href="#pricing">Get started</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <div>
+      <div class="entry"><span class="jp" lang="ja">鍛錬</span><span class="en"><b>TANREN</b><span>/tahn·ren/ · <i>noun</i></span></span></div>
+      <h1>The hardening of <em>body and mind</em> through deliberate, repeated training.</h1>
+      <p class="lede">Tanren is the workout log built for exactly that. Plan your program, log every set in seconds, and see the progress add up.</p>
+      <div class="cta"><a class="btn primary" href="#pricing">Start training</a><a class="btn" href="#features">Explore features</a></div>
+      <div class="meta">iPhone, Android and desktop · Installs from your browser · US only</div>
+    </div>
+    <div class="stage">
+      <div class="phone">
+        <div class="screen">
+          <div class="top"><span>Lower A · Today</span><span class="pill" id="pill">2 / 5</span></div>
+          <h4>Back Squat</h4>
+          <div class="last">Last time: 215 lb × 5 × 5</div>
+          <div id="rows"></div>
+          <div class="rest"><span>Rest</span><b id="rest">—</b></div>
+          <button class="logbtn" id="log" type="button">Log set 3</button>
+          <div class="q">Demo · works offline, syncs later</div>
+        </div>
+      </div>
+      <span class="tap">Try it</span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="strip" id="features">
+      <div><span class="label">Plan</span><p><b>Build it once.</b> Week one copies forward. Week six can still be different.</p></div>
+      <div><span class="label">Log</span><p><b>One tap per set.</b> Last session inline. No signal required.</p></div>
+      <div><span class="label">Progress</span><p><b>See the trend.</b> Cycle over cycle, planned versus done.</p></div>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap">
+      <span class="label">How it works</span>
+      <h2>A program, a log, and <em>the proof.</em></h2>
+      <p class="sub">No feed, no streak guilt, no social anything. Three things done properly.</p>
+      <div class="rows">
+        <div class="row"><div><span class="label">Plan your workouts</span><h3>Programs that copy forward</h3><p>Programs, cycles, workouts, sets. Build the first week and Tanren lays out the rest. Change week six without touching week five.</p></div>
+          <div class="mini" aria-hidden="true"><div class="r"><span>Strength Block</span><span>8 cycles</span></div><div class="r ind"><span>Cycle 3</span><span>4 workouts</span></div><div class="r ind"><span>Lower A</span><span>5 exercises</span></div><div class="r ind2"><span>Back Squat</span><span>5 × 5 @ 225</span></div></div></div>
+        <div class="row"><div><span class="label">Log your sessions</span><h3>Built for the middle of a set</h3><p>Big targets, last time's numbers right there. Swap an exercise or add a drop set and your plan stays untouched. Logged offline, synced in order.</p></div>
+          <div class="mini" aria-hidden="true"><div class="r"><span>Set 1 · 225 × 5</span><span>logged</span></div><div class="r"><span>Set 2 · 225 × 5</span><span>logged</span></div><div class="r"><span>2 sets waiting</span><span style="color:var(--copper)">syncs when online</span></div></div></div>
+        <div class="row"><div><span class="label">Track progress · Pro</span><h3>Know it's working</h3><p>Cycle-over-cycle progression and plan-versus-actual adherence. Warmups and drop sets never pad the numbers.</p></div>
+          <div class="mini" aria-hidden="true"><div class="r" style="border:0;padding-top:0"><span>Back Squat · top set</span><span>Demo data</span></div>
+            <div class="bars"><span style="height:46%"></span><span style="height:52%"></span><span style="height:58%"></span><span style="height:55%"></span><span style="height:66%"></span><span style="height:74%"></span><span style="height:82%"></span><span style="height:90%"></span></div>
+            <div class="bars-x"><span>C1</span><span>C2</span><span>C3</span><span>C4</span><span>C5</span><span>C6</span><span>C7</span><span>C8</span></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap">
+      <span class="label">Who it's for</span>
+      <h2>For lifters who already <em>show up.</em></h2>
+      <div class="who">
+        <div><span class="n">You run a program</span><p>5/3/1, a PPL split, your coach's spreadsheet. Tanren holds the plan and puts the right numbers in front of you.</p></div>
+        <div><span class="n">You train anywhere</span><p>Garage racks, concrete basements, hotel gyms. Logging never waits on a network.</p></div>
+        <div><span class="n">You keep your record</span><p>Years of training shouldn't be locked in someone else's app. Export whenever you like.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ai" style="padding-top:0">
+    <div class="wrap ai">
+      <div><span class="label">Bring your own AI</span><h2>Your assistant, reading <em>your real training.</em></h2><p class="sub">Connect the AI you already use. It reads your history and writes the next block straight into Tanren. We never pay for inference, so we never charge you for it. No AI? Programs import and export as plain JSON.</p></div>
+      <div class="chat" aria-label="Example conversation">
+        <div class="msg me">Look at my last eight weeks of squat and adjust the next block.</div>
+        <div class="calls">Read progression · Back Squat · 8 cycles<br>Read adherence · Strength Block</div>
+        <div class="msg it">Your top set rose every cycle except C4, where you missed two sessions. Next block starts at <b>235 × 5</b>, adds 5 lb a cycle, deloads at C4. Saved as <b>Strength Block II</b>.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" style="padding-top:0">
+    <div class="wrap">
+      <span class="label">Pricing</span>
+      <h2>Log for free. <em>Go Pro</em> to see the trend.</h2>
+      <div class="tiers">
+        <div class="tier"><span class="label" style="color:var(--muted)">Free</span><div class="price">$0</div><ul>
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Unlimited logging, offline</li>
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Build and copy programs</li>
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Import and export</li></ul><a class="btn" href="#">Create account</a></div>
+        <div class="tier pro"><span class="label">Pro</span><div class="price">$— <small>/ MO · PRICE TBD</small></div><ul>
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Everything in Free</li>
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Progression and adherence analytics</li>
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8.5 3 3 7-7"/></svg>Connect your own AI</li></ul><a class="btn primary" href="#">Start free trial</a></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="close"><div class="wrap">
+    <div class="entry"><span class="jp" lang="ja">鍛錬</span><span class="en"><b>TANREN</b><span>/tahn·ren/ · <i>noun</i></span></span></div>
+    <h2>Deliberate. Repeated. <em>Recorded.</em></h2>
+    <a class="btn primary" href="#pricing">Start training</a>
+  </div></div>
+</main>
+<footer><div class="wrap"><span>鍛錬 Tanren · US only</span><span>Mockup 5 · Headline</span></div></footer>
+
+<script>
+  (() => {
+    const root = document.documentElement;
+    const sync = () => document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String((root.dataset.theme || 'dark') === b.dataset.set)));
+    document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { root.dataset.theme = b.dataset.set; try { localStorage.setItem('tanren-theme', b.dataset.set); } catch {} sync(); }));
+    sync();
+  })();
+
+  (() => {
+    const total = 5, rows = document.getElementById('rows'), btn = document.getElementById('log'), pill = document.getElementById('pill'), rest = document.getElementById('rest');
+    const check = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m3 8.5 3 3 7-7"/></svg>';
+    let done = 2, timer, secs = 0;
+    function render() {
+      rows.innerHTML = Array.from({ length: 4 }, (_, k) => {
+        const i = Math.min(Math.max(done - 1, 0), total - 4) + k; // keep the active set in view
+        const cls = i < done ? 'done' : i === done ? 'next' : '';
+        return `<div class="srow ${cls}"><span class="i">${i + 1}</span><span class="f">225<small>lb</small></span><span class="f">5<small>reps</small></span><span class="c">${check}</span></div>`;
+      }).join('');
+      pill.textContent = `${done} / ${total}`;
+      btn.textContent = done >= total ? 'Next: Romanian Deadlift' : `Log set ${done + 1}`;
+    }
+    function tick() { secs++; rest.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`; }
+    btn.addEventListener('click', () => {
+      if (done >= total) { done = 0; clearInterval(timer); rest.textContent = '—'; render(); return; }
+      done++; render(); clearInterval(timer); secs = 0; tick(); timer = setInterval(tick, 1000);
+      if (navigator.vibrate) navigator.vibrate(10);
+    });
+    render();
+  })();
+</script>
+</body>
+</html>

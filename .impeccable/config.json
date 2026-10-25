@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "design/mockups/2-temper.html"
+        ],
+        "createdAt": "2026-10-17T21:30:06.537Z",
+        "reason": "Claude: literal heat glow on the scrubber line of the forged-steel showstopper, domain-appropriate (forging theme pinned by user)"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "design/mockups/3-hallmark.html"
+        ],
+        "createdAt": "2026-10-17T21:31:58.387Z",
+        "reason": "Claude: the kanji fill is a literal heat map of hot metal that follows the pointer; it is the forging showstopper the user asked for"
+      }
+    ]
+  }
+}
