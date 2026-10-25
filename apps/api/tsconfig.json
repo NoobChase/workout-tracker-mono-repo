@@ -4,5 +4,5 @@
     "types": ["node", "aws-lambda"],
     "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src", "test"]
 }

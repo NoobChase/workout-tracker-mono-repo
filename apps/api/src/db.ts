@@ -1,6 +1,7 @@
-import { GetParameterCommand, SSMClient } from "@aws-sdk/client-ssm";
 import { Pool, neonConfig } from "@neondatabase/serverless";
+import { createDb, type Db } from "@workout-tracker/db";
 import ws from "ws";
+import { getSecureParameter, requireEnv } from "./ssm.js";
 
 // The WebSocket driver, not the HTTP one. The HTTP driver cannot do interactive
 // transactions, and the clone primitive (operations.md 0.2), copy-program (3.9),
@@ -9,31 +10,32 @@ import ws from "ws";
 // wall at step 4, not here.
 neonConfig.webSocketConstructor = ws;
 
-const parameterName = requireEnv("DATABASE_URL_PARAMETER_NAME");
-
 /**
- * Memoised at module scope, so the SSM read and the pool construction both
- * happen once per execution environment rather than once per request. The
- * promise -- not the resolved pool -- is what gets cached, so concurrent first
- * requests share a single in-flight SSM call instead of racing to make two.
+ * Memoised at module scope, so the pool is built once per execution
+ * environment rather than once per request. The promise is what gets cached,
+ * so concurrent first requests share one construction.
  */
 let poolPromise: Promise<Pool> | undefined;
+let dbPromise: Promise<Db> | undefined;
 
 export function getPool(): Promise<Pool> {
-  poolPromise ??= createPool();
+  if (!poolPromise) {
+    poolPromise = createPool();
+    // A failed build (SSM throttled, a bad parameter) is retried by the next
+    // request rather than cached for the life of the environment.
+    poolPromise.catch(() => (poolPromise = dbPromise = undefined));
+  }
   return poolPromise;
 }
 
-async function createPool(): Promise<Pool> {
-  const ssm = new SSMClient({});
-  const result = await ssm.send(
-    new GetParameterCommand({ Name: parameterName, WithDecryption: true }),
-  );
+export function getDb(): Promise<Db> {
+  dbPromise ??= getPool().then(createDb);
+  return dbPromise;
+}
 
-  const connectionString = result.Parameter?.Value;
-  if (!connectionString) {
-    throw new Error(`SSM parameter ${parameterName} is empty or missing`);
-  }
+async function createPool(): Promise<Pool> {
+  const parameterName = requireEnv("DATABASE_URL_PARAMETER_NAME");
+  const connectionString = await getSecureParameter(parameterName);
 
   // Pooled (-pooler) endpoint: this is the runtime. The direct endpoint is for
   // CI migrations only, and this role cannot read that parameter.
@@ -46,12 +48,4 @@ async function createPool(): Promise<Pool> {
   // Never `pool.end()` per request -- the point of building it out here is that
   // it survives across invocations of the same execution environment.
   return new Pool({ connectionString });
-}
-
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required environment variable ${name}`);
-  }
-  return value;
 }

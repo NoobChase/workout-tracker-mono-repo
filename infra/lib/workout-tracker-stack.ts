@@ -66,7 +66,28 @@ export class WorkoutTrackerStack extends Stack {
     // buys ordinary internet access to Neon, Clerk and Stripe with no NAT
     // gateway, no interface endpoints and no RDS Proxy.
     // ---------------------------------------------------------------------
+    // SecureStrings, created by hand: CloudFormation cannot create one, and a
+    // plain String would leave the secret readable in the template. Per stage,
+    // like the database URL -- Clerk's development and production instances
+    // sign with different keys, so mixing stages fails verification.
     const databaseUrlParameterName = `/workout-tracker/${stage}/database-url-pooled`;
+    const clerkSecretKeyParameterName = `/workout-tracker/${stage}/clerk-secret-key`;
+    const clerkWebhookSigningSecretParameterName = `/workout-tracker/${stage}/clerk-webhook-signing-secret`;
+    const runtimeParameterNames = [
+      databaseUrlParameterName,
+      clerkSecretKeyParameterName,
+      clerkWebhookSigningSecretParameterName,
+    ];
+
+    // Origins a Clerk session token may be minted for (its `azp` claim),
+    // derived from the one place the domain is written down so the allowlist
+    // cannot drift from the infrastructure. localhost is Vite's dev server,
+    // signed in against Clerk's development instance (spec step 2, decisions
+    // 2 and 5).
+    const clerkAuthorizedParties = [
+      `https://${domainName}`,
+      "http://localhost:5173",
+    ];
 
     const apiLogGroup = new logs.LogGroup(this, "ApiFunctionLogGroup", {
       retention: logs.RetentionDays.ONE_MONTH,
@@ -85,6 +106,10 @@ export class WorkoutTrackerStack extends Stack {
       logGroup: apiLogGroup,
       environment: {
         DATABASE_URL_PARAMETER_NAME: databaseUrlParameterName,
+        CLERK_SECRET_KEY_PARAMETER_NAME: clerkSecretKeyParameterName,
+        CLERK_WEBHOOK_SIGNING_SECRET_PARAMETER_NAME:
+          clerkWebhookSigningSecretParameterName,
+        CLERK_AUTHORIZED_PARTIES: clerkAuthorizedParties.join(","),
         NODE_OPTIONS: "--enable-source-maps",
       },
       bundling: {
@@ -98,22 +123,23 @@ export class WorkoutTrackerStack extends Stack {
       },
     });
 
-    // Its single parameter, never a wildcard over the path: the runtime has no
-    // business reading the direct (migration) string or the other stage's.
+    // Exactly its own parameters, never a wildcard over the path: the runtime
+    // has no business reading the direct (migration) string or the other
+    // stage's.
     apiFunction.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["ssm:GetParameter"],
-        resources: [
+        resources: runtimeParameterNames.map((name) =>
           Stack.of(this).formatArn({
             service: "ssm",
             resource: "parameter",
-            resourceName: databaseUrlParameterName.slice(1),
+            resourceName: name.slice(1),
           }),
-        ],
+        ),
       }),
     );
 
-    // The parameter is a SecureString under the AWS-managed `aws/ssm` key,
+    // The parameters are SecureStrings under the AWS-managed `aws/ssm` key,
     // whose id is not knowable at synth time -- so the resource is `*`, fenced
     // in by a condition that only permits decryption performed by SSM itself
     // on this role's behalf.
