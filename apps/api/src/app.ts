@@ -12,9 +12,10 @@ import {
   type AuthDeps,
   type AuthEnv,
 } from "./auth.js";
+import { requireCloudFront, type OriginDeps } from "./origin.js";
 import { clerkWebhooks, type WebhookDeps } from "./webhooks.js";
 
-export interface AppDeps extends AuthDeps, WebhookDeps {
+export interface AppDeps extends OriginDeps, AuthDeps, WebhookDeps {
   /** `select now(), version()` for the health route. */
   databaseHealth(): Promise<{ now: Date; version: string }>;
 }
@@ -38,6 +39,9 @@ export function createApp(deps: AppDeps): Hono<AuthEnv> {
   // routes are declared with that prefix rather than stripped at the edge.
   const app = new Hono<AuthEnv>().basePath("/api");
 
+  // Order matters: nothing -- not even the public routes -- runs for a
+  // request that did not come through CloudFront.
+  app.use("*", requireCloudFront(deps));
   app.use("*", except(PUBLIC_PATHS, requireAuth(deps)));
 
   app.get("/hello", async (c) => {

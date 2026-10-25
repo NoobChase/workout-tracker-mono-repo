@@ -17,6 +17,7 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 import * as targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import type { Construct } from "constructs";
 
 export interface WorkoutTrackerStackProps extends StackProps {
@@ -89,6 +90,21 @@ export class WorkoutTrackerStack extends Stack {
       "http://localhost:5173",
     ];
 
+    // The shared secret that keeps CloudFront the only way in (see the
+    // Function URL below). Generated here, so it exists in no file and no
+    // human ever handles it. Secrets Manager rather than an SSM SecureString
+    // because CloudFormation can resolve a Secrets Manager reference into
+    // CloudFront's origin headers at deploy time; it cannot resolve a
+    // SecureString there. Rotating it means a new value and a redeploy.
+    const originVerifySecret = new secretsmanager.Secret(
+      this,
+      "OriginVerifySecret",
+      {
+        description: `CloudFront -> API origin header for workout-tracker ${stage}`,
+        generateSecretString: { passwordLength: 48, excludePunctuation: true },
+      },
+    );
+
     const apiLogGroup = new logs.LogGroup(this, "ApiFunctionLogGroup", {
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: RemovalPolicy.DESTROY,
@@ -110,6 +126,7 @@ export class WorkoutTrackerStack extends Stack {
         CLERK_WEBHOOK_SIGNING_SECRET_PARAMETER_NAME:
           clerkWebhookSigningSecretParameterName,
         CLERK_AUTHORIZED_PARTIES: clerkAuthorizedParties.join(","),
+        ORIGIN_VERIFY_SECRET_ARN: originVerifySecret.secretArn,
         NODE_OPTIONS: "--enable-source-maps",
       },
       bundling: {
@@ -155,15 +172,25 @@ export class WorkoutTrackerStack extends Stack {
       }),
     );
 
-    // AWS_IAM, so the bare *.lambda-url hostname rejects anonymous traffic.
-    // Only CloudFront holds a credential that satisfies it.
+    originVerifySecret.grantRead(apiFunction);
+
+    // NONE, not AWS_IAM with CloudFront origin access control. OAC signs the
+    // origin request by writing its own `Authorization` header -- overwriting
+    // the viewer's Clerk `Bearer` token -- and Lambda refuses a signed request
+    // whose body is not hashed in `x-amz-content-sha256`, which neither
+    // Clerk's webhook nor an MCP client will send. So the URL is publicly
+    // addressable, and CloudFront proves itself instead with the origin
+    // secret in `x-origin-verify`, which the app checks before anything else
+    // (apps/api/src/origin.ts). CDK adds the two public invoke permissions a
+    // NONE URL needs, `InvokeFunction` conditioned on arriving via the URL.
     const apiFunctionUrl = apiFunction.addFunctionUrl({
-      authType: lambda.FunctionUrlAuthType.AWS_IAM,
+      authType: lambda.FunctionUrlAuthType.NONE,
     });
 
     // ---------------------------------------------------------------------
-    // CloudFront. Two origins, both reached through Origin Access Control:
-    // the private bucket for the PWA, the Function URL for /api/*.
+    // CloudFront. Two origins: the private bucket for the PWA, reached through
+    // Origin Access Control, and the Function URL for /api/*, reached with the
+    // origin secret header.
     // ---------------------------------------------------------------------
     // Redirects `www` to the apex and rewrites client-side routes to the SPA
     // entry point. Source lives in its own file with its own unit tests
@@ -217,14 +244,22 @@ export class WorkoutTrackerStack extends Stack {
       },
       additionalBehaviors: {
         "/api/*": {
-          origin:
-            origins.FunctionUrlOrigin.withOriginAccessControl(apiFunctionUrl),
+          // CloudFront overwrites a viewer header of the same name, so a
+          // caller cannot supply this one. `unsafeUnwrap` renders a
+          // `{{resolve:secretsmanager:...}}` reference, not the value: the
+          // template never holds the secret, CloudFormation resolves it at
+          // deploy time.
+          origin: new origins.FunctionUrlOrigin(apiFunctionUrl, {
+            customHeaders: {
+              "x-origin-verify": originVerifySecret.secretValue.unsafeUnwrap(),
+            },
+          }),
           viewerProtocolPolicy:
             cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           // Nothing behind /api/* is cacheable, and the origin request policy
-          // forwards every header except Host -- the Function URL has to see
-          // its own hostname for SigV4 to verify.
+          // forwards every header except Host -- the Function URL routes by
+          // its own hostname, so it has to see that rather than the apex.
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy:
             cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
@@ -240,26 +275,6 @@ export class WorkoutTrackerStack extends Stack {
           functionAssociations: viewerRequestAssociation,
         },
       },
-    });
-
-    // CloudFront OAC against a Function URL needs TWO grants to the service
-    // principal, and CDK's `FunctionUrlOrigin.withOriginAccessControl` only
-    // emits the first: `lambda:InvokeFunctionUrl` authorises the URL endpoint,
-    // `lambda:InvokeFunction` authorises the invoke it performs underneath.
-    // With only the former, the edge's signature verifies fine and the request
-    // is then refused -- a bare AccessDeniedException from the URL authorizer,
-    // with the function never invoked and so not one line in CloudWatch.
-    // See the two `aws lambda add-permission` calls in
-    // https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-lambda.html
-    apiFunction.addPermission("AllowCloudFrontInvokeFunction", {
-      principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
-      action: "lambda:InvokeFunction",
-      sourceArn: this.formatArn({
-        service: "cloudfront",
-        region: "",
-        resource: "distribution",
-        resourceName: distribution.distributionId,
-      }),
     });
 
     // ---------------------------------------------------------------------

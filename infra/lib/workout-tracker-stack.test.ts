@@ -35,40 +35,70 @@ function synth(): Template {
   return Template.fromStack(stack);
 }
 
-const CLOUDFRONT = "cloudfront.amazonaws.com";
-
 describe("WorkoutTrackerStack", () => {
   const template = synth();
 
-  it("locks the Function URL to IAM so the bare *.lambda-url host rejects traffic", () => {
-    template.hasResourceProperties("AWS::Lambda::Url", { AuthType: "AWS_IAM" });
-  });
-
-  it("signs Function URL origin requests with a lambda-type OAC", () => {
-    template.hasResourceProperties("AWS::CloudFront::OriginAccessControl", {
-      OriginAccessControlConfig: Match.objectLike({
-        OriginAccessControlOriginType: "lambda",
-        SigningBehavior: "always",
-        SigningProtocol: "sigv4",
+  // The Function URL is public (OAC would overwrite the viewer's Bearer token
+  // and refuse unhashed POST bodies), so CloudFront proves itself with a
+  // generated secret header instead -- apps/api/src/origin.ts checks it.
+  it("exposes the Function URL without IAM auth, so Authorization reaches the app", () => {
+    template.hasResourceProperties("AWS::Lambda::Url", { AuthType: "NONE" });
+    assert.deepEqual(
+      template.findResources("AWS::CloudFront::OriginAccessControl", {
+        Properties: {
+          OriginAccessControlConfig: Match.objectLike({
+            OriginAccessControlOriginType: "lambda",
+          }),
+        },
       }),
-    });
+      {},
+      "a lambda-type OAC would overwrite the viewer's Authorization header",
+    );
   });
 
-  // The regression this suite exists for. CDK's FunctionUrlOrigin only grants
-  // InvokeFunctionUrl; without InvokeFunction alongside it, every request
-  // through CloudFront is a 403 AccessDeniedException and the function is never
-  // invoked, so there is no log line pointing at the cause.
-  it("grants CloudFront both invoke actions the Function URL needs", () => {
-    for (const action of [
-      "lambda:InvokeFunctionUrl",
-      "lambda:InvokeFunction",
-    ]) {
-      template.hasResourceProperties("AWS::Lambda::Permission", {
-        Action: action,
-        Principal: CLOUDFRONT,
-        SourceArn: Match.anyValue(),
-      });
-    }
+  it("sends the origin secret to the API origin by reference, never as a literal", () => {
+    const [distribution] = Object.values(
+      template.findResources("AWS::CloudFront::Distribution"),
+    );
+    const apiOrigins = (
+      distribution!.Properties.DistributionConfig.Origins as Array<{
+        OriginCustomHeaders?: Array<{
+          HeaderName: string;
+          HeaderValue: unknown;
+        }>;
+        S3OriginConfig?: unknown;
+      }>
+    ).filter((origin) => !origin.S3OriginConfig);
+    assert.equal(apiOrigins.length, 1);
+    const header = apiOrigins[0]!.OriginCustomHeaders?.find(
+      (h) => h.HeaderName === "x-origin-verify",
+    );
+    assert.ok(header, "API origin must carry x-origin-verify");
+    assert.match(
+      JSON.stringify(header.HeaderValue),
+      /resolve:secretsmanager:/,
+      "the value must be a Secrets Manager dynamic reference",
+    );
+  });
+
+  it("gives the Lambda the origin secret's ARN and read access to it alone", () => {
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          ORIGIN_VERIFY_SECRET_ARN: Match.anyValue(),
+        }),
+      },
+    });
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: Match.arrayWith(["secretsmanager:GetSecretValue"]),
+            Resource: { Ref: Match.stringLikeRegexp("OriginVerifySecret") },
+          }),
+        ]),
+      },
+    });
   });
 
   it("scopes the Lambda to exactly its own SSM parameters, never a path wildcard", () => {

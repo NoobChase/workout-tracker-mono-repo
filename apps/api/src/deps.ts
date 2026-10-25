@@ -2,7 +2,7 @@ import { verifyToken } from "@clerk/backend";
 import { resolveUser, softDeleteUser } from "@workout-tracker/db";
 import type { AppDeps } from "./app.js";
 import { getDb, getPool } from "./db.js";
-import { getSecureParameter, requireEnv } from "./ssm.js";
+import { getSecret, getSecureParameter, requireEnv } from "./secrets.js";
 
 /**
  * Origins a session token may have been minted for -- Clerk's `azp` claim.
@@ -27,8 +27,11 @@ export function productionDeps(): AppDeps {
   const webhookSecretParameter = requireEnv(
     "CLERK_WEBHOOK_SIGNING_SECRET_PARAMETER_NAME",
   );
+  const originVerifySecretArn = requireEnv("ORIGIN_VERIFY_SECRET_ARN");
 
   return {
+    originVerifySecret: () => getSecret(originVerifySecretArn),
+
     // `verifyToken`, not `authenticateRequest`: the latter is for SSR apps
     // doing handshake redirects (decision 1). With `secretKey` it fetches the
     // JWKS from Clerk and caches it at module scope, refetching on an unknown

@@ -7,7 +7,7 @@
 | Hosting | New AWS account, Paid Plan, region **`us-east-2`** (a future ACM cert for CloudFront will be the sole `us-east-1` exception) |
 | Frontend | Vite + React + TypeScript + Tailwind + shadcn/ui, installable PWA |
 | Frontend hosting | S3 (private) + CloudFront with OAC |
-| API | TypeScript (Hono) on Lambda, **outside any VPC**, behind a Lambda Function URL with CloudFront OAC (no API Gateway — see step 1) |
+| API | TypeScript (Hono) on Lambda, **outside any VPC**, behind a Lambda Function URL reachable only through CloudFront, which proves itself with a secret origin header (no API Gateway — see step 1) |
 | Database | **Neon** serverless PostgreSQL, WebSocket driver |
 | ORM / migrations | Drizzle |
 | Auth | Clerk |
@@ -171,7 +171,7 @@ theirs. That is the trade, made deliberately.
 **What you build:**
 
 - A CDK app in TypeScript. One stack; split into network / data / app stacks later if it gets unwieldy.
-- CloudFront + private S3 with Origin Access Control, and an `/api/*` behavior pointed at the Lambda's Function URL (also locked down with OAC) with `CachingDisabled` and `AllViewerExceptHostHeader`.
+- CloudFront + private S3 with Origin Access Control, and an `/api/*` behavior pointed at the Lambda's Function URL with `CachingDisabled` and `AllViewerExceptHostHeader`.
 - A single Lambda running a Hono app, with a catch-all route, exposed via a **Function URL** — no API Gateway. With CloudFront in front, API Gateway added a resource, a per-request charge, and configuration surface while providing nothing this app uses (no usage plans, no API keys, no request validation — auth is Clerk middleware in Hono). Fewer moving parts wins; this is now decided rather than left open. One function, normal web framework, not one function per endpoint. **No VPC configuration at all** — this is the point of the whole step.
 - **The Neon project exists.** Project id `super-bar-40420599`, AWS `us-east-2`, default branch **`production`**. Still to create: a `dev` branch off it. Branches are cheap and disposable, which is genuinely useful with agents in the loop — a branch per feature branch, thrown away on merge.
 - **AWS access is Identity Center, not IAM users.** Local CLI profile **`workout-tracker`** (SSO session `workout-tracker-sso`, role `AdministratorAccess`, 8-hour sessions, region `us-east-2`). `aws sso login --profile workout-tracker` refreshes an expired session. There are deliberately **no IAM users and no long-lived access keys** — the one IAM user created during setup was deleted. Root is the break-glass path and nothing else. When CI needs AWS credentials it gets a GitHub OIDC role, never a key pair. The account id is intentionally not written down here; CDK resolves it from the profile at deploy time.
@@ -193,7 +193,7 @@ theirs. That is the trade, made deliberately.
 - **Autosuspend.** Neon's free tier suspends compute after inactivity and takes roughly half a second to wake. For an app opened twice a day that is on every first request of the day. Either accept it or budget for the tier that keeps it warm — this is a real user-facing latency decision, not a footnote.
 - **Neon is not in your CDK**, because it is not an AWS resource. **Decided: created and managed by hand, documented here.** One project, two long-lived branches, created once and essentially never changed — a Terraform/Pulumi provider in an otherwise all-CDK repo would be more moving parts than it saves. What exists outside CDK is exactly: the project above, its branches, and the SSM parameters holding its connection strings.
 - **Corollary — there is no third deploy path.** Neon's own project tooling (`neon.ts` config, `neon deploy`) is deliberately **not** adopted. Schema changes go Drizzle → generated migration → CI, and nothing else touches the database structure. Adopting a vendor deploy command alongside CDK and Drizzle would recreate precisely the "which thing owns my schema?" ambiguity these rules exist to prevent.
-- **The Function URL must not be reachable except through CloudFront.** Use OAC on the Function URL (`AuthType: AWS_IAM` with CloudFront signing) so the bare `*.lambda-url` endpoint rejects direct traffic; otherwise you have two front doors and only one has your headers and caching rules.
+- **The Function URL must not be reachable except through CloudFront**; otherwise you have two front doors and only one has your headers and caching rules. **Not with OAC** — that was the step-1 design and step 2 reversed it: OAC signs the origin request by writing its own `Authorization` header, overwriting the viewer's `Bearer` token, and Lambda refuses a signed request whose body is not hashed in `x-amz-content-sha256`, which no webhook sender or MCP client will add. Step 1 only had a `GET` with no auth, so neither showed. Instead the URL is `AuthType: NONE`, CloudFront sends a CDK-generated secret (Secrets Manager) as the `x-origin-verify` origin header, and the app refuses any request without it before doing anything else.
 - **Distribution changes take several minutes to propagate.** Expect a slow iteration loop for one afternoon, then never think about it again.
 
 ---
@@ -314,7 +314,7 @@ Things to keep an eye on:
 
 **Watch out for:**
 
-- **Webhook signature verification needs the raw request body.** The Function URL event hands you a possibly base64-encoded body, and Hono's default JSON parsing will consume the stream. Getting the exact bytes Stripe signed is the single most common Stripe-on-Lambda failure. Solve it deliberately rather than discovering it in production. Note the webhook route must also bypass CloudFront-only OAC assumptions — Stripe posts to a public URL, so either route `/api/stripe/webhook` through CloudFront like everything else or give the webhook its own path; just decide once.
+- **Webhook signature verification needs the raw request body.** The Function URL event hands you a possibly base64-encoded body, and Hono's default JSON parsing will consume the stream. Getting the exact bytes Stripe signed is the single most common Stripe-on-Lambda failure. Solve it deliberately rather than discovering it in production. Route it through CloudFront like everything else, as Clerk's `/api/webhooks/clerk` already is: the origin-secret check (step 1) accepts any POST that came through CloudFront, and the webhook's own signature is what authenticates the sender. Add its path to the API's public-path list.
 - **The webhook endpoint must not require a Clerk token.** Stripe is not a logged-in user. Exclude that route from your auth middleware explicitly, and rely on signature verification as its authentication.
 - **Make the handler idempotent** via the `processed_stripe_events` table (`data-model.md` §3.8): insert the event id and apply the state change in one transaction, so a redelivery hits the primary key and is discarded.
 - **Webhook delivery is not ordered.** A `customer.subscription.updated` can arrive after the `deleted` that supersedes it. Compare the event's timestamp against what you have stored, or re-read the subscription from Stripe when applying.
