@@ -26,14 +26,14 @@ Chase wants 12 cycles of Push / Back / Legs.
 
 **`exercises`** — `owner_user_id NULL` ships with the app; 20 is his own.
 
-| id | owner_user_id | name | muscle_group | is_active |
-|---|---|---|---|---|
-| 10 | `NULL` | Barbell Bench Press | chest | t |
-| 11 | `NULL` | Overhead Press | shoulders | t |
-| 12 | `NULL` | Barbell Row | back | t |
-| 13 | `NULL` | Pull-up | back | t |
-| 14 | `NULL` | Back Squat | legs | t |
-| 20 | **1** | Lat Pulldown | back | t |
+| id | owner_user_id | name | primary_muscles | secondary_muscles | equipment | is_active |
+|---|---|---|---|---|---|---|
+| 10 | `NULL` | Barbell Bench Press | `{CHEST}` | `{TRICEPS,FRONT_DELTS}` | `BARBELL` | t |
+| 11 | `NULL` | Overhead Press | `{FRONT_DELTS}` | `{TRICEPS,SIDE_DELTS}` | `BARBELL` | t |
+| 12 | `NULL` | Barbell Row | `{UPPER_BACK,LATS}` | `{BICEPS,REAR_DELTS}` | `BARBELL` | t |
+| 13 | `NULL` | Pull-up | `{LATS}` | `{BICEPS,UPPER_BACK}` | `BODYWEIGHT` | t |
+| 14 | `NULL` | Back Squat | `{QUADS,GLUTES}` | `{ADDUCTORS,LOWER_BACK}` | `BARBELL` | t |
+| 20 | **1** | Lat Pulldown | `{LATS}` | `{}` | `CABLE` | t |
 
 **`exercise_metrics`** — what each one tracks.
 

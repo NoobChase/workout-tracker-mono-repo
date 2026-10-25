@@ -351,9 +351,10 @@ did was something specific.
 **Decided: placeholders do not prescribe a muscle group.** An earlier draft
 argued that slots should be typed so the app could filter the catalog to "quad
 exercises". Rejected — it would force every placeholder to be classifiable,
-which "do something that feels good" is not, and it would make
-`exercises.muscle_group` load-bearing for a feature nobody asked for. The
-resolution UI shows the label and the full exercise list; the user picks.
+which "do something that feels good" is not. Exercises now carry structured
+muscles (§3.3), so the picker *can* filter by muscle, but that is a search the
+user runs, not a type the slot imposes. The resolution UI shows the label and the
+full exercise list; the user picks.
 
 ### 2.10 Fixed-length and open-ended programs
 
@@ -469,7 +470,7 @@ frozen once written.
 ## 3. Schema
 
 **PostgreSQL.** Settled — the schema leans on partial unique indexes
-(`one_active_program_per_user`, the two exercise-name indexes), deferrable
+(the two exercise-name indexes), deferrable
 constraints for reordering, `num_nonnulls`, and generated columns. MySQL 8 has
 only the last of those, so the others would become application-enforced
 conventions instead of guarantees. Postgres keeps them in the database.
@@ -554,6 +555,26 @@ Defined in [`packages/db/src/schema.ts`](../packages/db/src/schema.ts) (`exercis
 
 `owner_user_id IS NULL` = ships with the app, visible to everyone. Non-null =
 the user's own. A user's list is `WHERE owner_user_id IS NULL OR owner_user_id = $1`.
+
+**Muscles and equipment are fixed lists, not free text** (§7 #11, #31), so
+"everything that hits quads" and "what can I do with dumbbells" are exact
+filters rather than string matching.
+
+- **`primary_muscles` and `secondary_muscles`**, each an array of the
+  `muscle_group` enum: eighteen muscles plus `CARDIO`, which is not a muscle but
+  is the honest group for a treadmill. A bench press is `{CHEST}` primary and
+  `{TRICEPS,FRONT_DELTS}` secondary; a squat has two primaries, `{QUADS,GLUTES}`.
+  Both may be empty, so a user can save a custom exercise without classifying
+  it, but **secondary requires a primary** and **no muscle may be in both** —
+  two `CHECK`s, database guarantees rather than form validation.
+  Arrays rather than an `exercise_muscles` join table because the
+  secondary-needs-primary rule is then a plain `CHECK`; across a join table it
+  would need a trigger. The catalog is small enough that `= ANY(...)` needs no
+  index; a GIN index is additive if that changes.
+- **`equipment`**, one nullable value of the `equipment` enum: the exercise's
+  main implement (`BARBELL`, `DUMBBELL`, `MACE`, `SANDBAG`, `CARDIO_MACHINE`, …,
+  and `OTHER`). One, not several: a weighted dip is `BODYWEIGHT` even with a
+  belt. Adding a value is one `ALTER TYPE … ADD VALUE`.
 
 Exercises are never hard-deleted once referenced (`ON DELETE RESTRICT` from
 planned and session rows); retire them with `is_active = FALSE`.
@@ -891,8 +912,13 @@ completed", which this query answers, and `workout_sessions.performed_at`
 records when each one actually happened. A missed week therefore needs no
 catch-up logic — nothing was ever behind.
 
+A user may run several programs at once (§7 #30), so the answer is **one row
+per active program**, and the home screen lists them for the user to pick:
+
 ```sql
-SELECT w.id, w.name, p.cycle_number
+SELECT DISTINCT ON (pr.id)
+       pr.id AS program_id, pr.name AS program_name,
+       w.id, w.name, p.cycle_number
 FROM workout_programs pr
 JOIN workout_plans p ON p.program_id = pr.id
 JOIN workouts       w ON w.plan_id    = p.id
@@ -903,9 +929,13 @@ WHERE pr.user_id = $1
     WHERE s.workout_id = w.id
       AND s.status IN ('COMPLETED','SKIPPED')
   )
-ORDER BY p.cycle_number, w.position
-LIMIT 1;
+ORDER BY pr.id, p.cycle_number, w.position;
 ```
+
+`DISTINCT ON (pr.id)` keeps the first row per program under that ordering —
+each program's earliest unresolved workout. Programs are independent: training
+one never advances another, because the `NOT EXISTS` is per workout and
+workouts belong to exactly one program (§2.2).
 
 Note `SKIPPED` in that predicate. Matching only `COMPLETED` is a bug: a
 deliberately skipped workout would stay "next" forever and wedge the program
@@ -983,7 +1013,7 @@ those need rotating regardless of what happens here.
 | 8 | Identity | **Clerk**, with a local `users` anchor row (§2.6). |
 | 9 | Supersets / drop sets | **`group_key`** across exercises, **`parent_set_id`** within one (§2.8). Logged only, never prescribed. |
 | 10 | Placeholder slots | **Free text**, no muscle-group coupling (§2.9). |
-| 11 | `exercises.muscle_group` | **Keep as free `TEXT`.** Browsing and filtering only; nothing depends on it. |
+| 11 | Exercise muscles | **Fixed list, primary and secondary** — `primary_muscles` / `secondary_muscles` arrays of the `muscle_group` enum (18 muscles plus `CARDIO`). Both optional; secondary requires a primary; no overlap (§3.3). Revised 2026-10-24 from free `TEXT`. |
 | 12 | Rest periods | **Notes, not columns** (§3.7). Additive later if needed. |
 | 13 | Cycle scheduling | **Sequencing only**, no calendar (§5). |
 | 14 | Account deletion | **Soft-delete, then purge** (§4). |
@@ -1002,6 +1032,9 @@ those need rotating regardless of what happens here.
 | 27 | Generated unit columns | **No `ELSE` in the conversion `CASE`s** (§2.5) — an unmapped enum value yields `NULL` (visible) instead of converting as pounds (silent). |
 | 28 | Market | **US only.** Stripe direct (no merchant of record), USD pricing, Stripe Tax for state digital-goods tax. No geo-gating code — "US only" is a billing posture, not a firewall. |
 | 29 | Stat date buckets | **Client-supplied boundaries** from the user's timezone, never server `now()` truncation (§5). |
+| 30 | Active programs | **Any number at once** — a lifting block alongside a running block. "What's next?" answers once per active program and the user picks (§5); activating a program never deactivates another. Revised 2026-10-24 from one per user. |
+| 31 | Exercise equipment | **One value from a fixed `equipment` enum**, nullable (§3.3). Revised 2026-10-24 from free `TEXT`. |
+| 32 | Timed circuit formats | **Not modeled.** Supersets and circuits are `group_key` (§2.8), with rounds as each member's `target_sets`; EMOM, AMRAP time caps, Tabata and rest between rounds go in notes, and users run their own timer. Decided 2026-10-24: a group-level format table and in-app clock would clutter the logger for a minority of workouts. Additive later if that changes. |
 
 ### Still open
 
@@ -1012,15 +1045,8 @@ likely to be revisited, and knowing which they are matters more than the count:
   who logs on a phone and a tablet in the same session breaks that assumption,
   and the answer then is `updated_at` plus last-write-wins on `session_sets`,
   not a sync engine. Worth re-reading before adding any multi-device feature.
-- **One active program per user** (`one_active_program_per_user`). Someone
-  running a lifting block and a running block at once cannot. This is a real
-  product limit, not a technical one; changing it means dropping the index and
-  deciding what "what's next?" returns.
 - **Rest periods** (#12) will get asked for. The migration is one nullable
   column; the UI work is the real cost.
-- **`exercises.muscle_group` as free text** (#11) is fine until the first
-  "show me everything that hits quads" feature, which needs a controlled
-  vocabulary and a backfill.
 - **The exact Free/Pro line** (#25) will move as real users react to it. The
   enforcement shape (`requirePro` on route groups) is what makes moving it
   cheap; keep it that way.

@@ -21,6 +21,7 @@ const PLANNED_EXERCISE = "01900000-0000-7000-8000-000000000007";
 
 const UNIQUE_VIOLATION = "23505";
 const CHECK_VIOLATION = "23514";
+const INVALID_TEXT_REPRESENTATION = "22P02";
 
 /** Asserts `sql` fails with `code`, leaving the transaction usable. */
 async function assertRejects(
@@ -208,26 +209,90 @@ describe("partial unique indexes", () => {
     });
   });
 
-  it("a user has at most one ACTIVE program", async () => {
+  it("a user may have several ACTIVE programs at once", async () => {
+    // one_active_program_per_user was dropped (migration 0002): a lifting
+    // block can run alongside a running block (data-model.md 7).
     await inRolledBackTransaction(async (client) => {
       await client.query(
         "INSERT INTO users (id, clerk_user_id) VALUES ($1, 'seed_test')",
         [USER],
       );
       const insert =
-        "INSERT INTO workout_programs (id, user_id, name, status) VALUES ($1, $2, $3, $4)";
-      await client.query(insert, [PROGRAM, USER, "One", "ACTIVE"]);
+        "INSERT INTO workout_programs (id, user_id, name, status) VALUES ($1, $2, $3, 'ACTIVE')";
+      await client.query(insert, [PROGRAM, USER, "Lifting"]);
       await client.query(insert, [
         "01900000-0000-7000-8000-0000000000c1",
         USER,
-        "Two",
-        "DRAFT",
+        "Running",
       ]);
+      const { rows } = await client.query<{ n: number }>(
+        "SELECT count(*)::int AS n FROM workout_programs WHERE user_id = $1 AND status = 'ACTIVE'",
+        [USER],
+      );
+      assert.equal(rows[0]!.n, 2);
+    });
+  });
+});
+
+describe("exercise muscles and equipment", () => {
+  const insert =
+    "INSERT INTO exercises (id, name, primary_muscles, secondary_muscles, equipment) VALUES ($1, $2, $3::muscle_group[], $4::muscle_group[], $5)";
+  const id = (n: number) => `01900000-0000-7000-8000-0000000000e${n}`;
+
+  it("allows none, primary only, or primary with secondary", async () => {
+    await inRolledBackTransaction(async (client) => {
+      await client.query(insert, [id(1), "Blank", "{}", "{}", null]);
+      await client.query(insert, [id(2), "Curl", "{BICEPS}", "{}", "DUMBBELL"]);
+      await client.query(insert, [
+        id(3),
+        "Squat",
+        "{QUADS,GLUTES}",
+        "{ADDUCTORS,LOWER_BACK}",
+        "BARBELL",
+      ]);
+      const { rows } = await client.query<{ primary_muscles: string }>(
+        "SELECT primary_muscles::text FROM exercises WHERE id = $1",
+        [id(3)],
+      );
+      assert.equal(rows[0]!.primary_muscles, "{QUADS,GLUTES}");
+    });
+  });
+
+  it("refuses secondary muscles without a primary", async () => {
+    await inRolledBackTransaction(async (client) => {
       await assertRejects(
         client,
         insert,
-        ["01900000-0000-7000-8000-0000000000c2", USER, "Three", "ACTIVE"],
-        UNIQUE_VIOLATION,
+        [id(4), "Orphan", "{}", "{TRICEPS}", null],
+        CHECK_VIOLATION,
+      );
+    });
+  });
+
+  it("refuses a muscle listed as both primary and secondary", async () => {
+    await inRolledBackTransaction(async (client) => {
+      await assertRejects(
+        client,
+        insert,
+        [id(5), "Both", "{CHEST}", "{CHEST,TRICEPS}", "BARBELL"],
+        CHECK_VIOLATION,
+      );
+    });
+  });
+
+  it("refuses values outside the fixed lists", async () => {
+    await inRolledBackTransaction(async (client) => {
+      await assertRejects(
+        client,
+        insert,
+        [id(6), "Typo muscle", "{QUADZ}", "{}", null],
+        INVALID_TEXT_REPRESENTATION,
+      );
+      await assertRejects(
+        client,
+        insert,
+        [id(7), "Typo kit", "{}", "{}", "rock"],
+        INVALID_TEXT_REPRESENTATION,
       );
     });
   });

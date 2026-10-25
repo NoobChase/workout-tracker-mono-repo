@@ -274,7 +274,7 @@ reversed.
 The case for splitting is that it will grow, and here we know it will not:
 `docs/data-model.md` specifies the whole schema and §7 settles it. Nine tables
 now, twelve after step 3's session tables, thirteen once
-`processed_stripe_events` lands in step 5, plus seven enums — a normal single
+`processed_stripe_events` lands in step 5, plus nine enums — a normal single
 file.
 
 Against splitting, once growth is off the table: `planned_exercises` references
