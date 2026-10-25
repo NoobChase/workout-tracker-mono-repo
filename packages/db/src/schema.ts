@@ -17,7 +17,7 @@
 // made deferrable by a --custom migration (migrations/0001). Changing either
 // constraint's columns makes drizzle-kit recreate it *without* the clause --
 // follow that migration with another --custom one. test/schema.test.ts fails
-// if it is forgotten. (specs/step-2-auth-and-core-schema decision 7.)
+// if it is forgotten. (specs/shipped/step-2-auth-and-core-schema decision 7.)
 import { sql } from "drizzle-orm";
 import {
   boolean,
