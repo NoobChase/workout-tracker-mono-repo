@@ -14,6 +14,9 @@ cdk.out/
 .env
 .env.*
 !.env.example
+# The one exception: public, build-time values only (Clerk's publishable key
+# ships in the JS bundle anyway). Never put a secret in it.
+!apps/web/.env.production
 *.pem
 
 # Logs
