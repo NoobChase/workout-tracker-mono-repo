@@ -65,6 +65,24 @@ merge to `main` it runs the checks, then migrates `dev`, then `production`. A
 migration therefore reaches a shared database only after it has merged and its
 tests have passed.
 
+## The exercise catalog is content, not schema
+
+Standard exercises live in `packages/db/src/catalog.ts`, not in a migration
+(spec step 2, decision 8). To change the catalog, edit that file — nothing else:
+
+- **New entry:** a new UUIDv7 literal, minted once
+  (`node -e "import('uuid').then(u=>console.log(u.v7()))"`). Never regenerate,
+  reuse or reorder existing ids; every environment's plans point at them.
+- **Remove an exercise:** set `isActive: false`. Deleting the entry leaves the
+  row (it is `RESTRICT`ed from plans and history).
+- **Change metrics:** edit the entry's `metrics`. A metric dropped from an entry
+  is deleted on the next seed, for listed exercises only.
+
+`npm run seed -w @workout-tracker/db` applies it. CI runs it after every
+migration on `dev` and `production`; it is idempotent, so an unchanged file
+writes nothing. Like migrations, never run it by hand against either.
+`test/catalog.test.ts` checks the file; `test/seed.test.ts` checks the seed.
+
 ## Non-negotiables for new tables
 
 - Primary key is **UUIDv7 minted in application code**. No `DEFAULT gen_random_uuid()`,
