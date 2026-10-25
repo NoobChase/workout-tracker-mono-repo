@@ -10,7 +10,7 @@ The division of labour:
 | `CLAUDE.md` | Rules that must be in context for **every** task. Short, absolute, no procedure. |
 | `docs/` | The design. Why the system is shaped the way it is. Governs before code exists. |
 | `.claude/skills/` | Step-by-step procedure for one recurring task, loaded only when that task comes up. |
-| `specs/<feature>/` | One feature, in flight. Deleted or moved to `specs/shipped/` when it lands. |
+| `openspec/changes/<name>/` | One change, in flight (OpenSpec). Archived into `openspec/specs/` when it lands; see the `spec` skill. `specs/shipped/` holds steps 1–2, from before OpenSpec. |
 
 A skill is worth writing when the same mistake is available twice: the
 procedure has a non-obvious ordering, a footgun, or a verification step that is

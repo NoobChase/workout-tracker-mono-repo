@@ -1,64 +1,73 @@
 ---
 name: spec
-description: Decide whether a change needs a spec, write one in specs/<feature>/, or archive a spec once its feature ships. Use at the start of a multi-layer or schema-touching feature, when starting a numbered build step, and immediately after one lands.
+description: Decide whether a change needs a spec, and if so run it through OpenSpec (/opsx:propose → /opsx:apply → /opsx:archive) under this project's rules. Use at the start of a multi-layer or schema-touching feature, when starting a numbered build step, and immediately after one lands.
 ---
 
-# Specs
+# Specs (OpenSpec)
 
 Spec-driven, kept deliberately light. **Specs govern before implementation; code
-governs after.**
+governs after.** The tool is OpenSpec (adopted 2026-10-25, replacing the old
+`specs/<feature>/` convention); this skill is the project's rules for using it.
+`openspec/config.yaml` carries the same rules so OpenSpec applies them while
+writing artifacts.
 
 ## Does this need one?
 
-Yes, if it touches **the schema, the auth model, or more than one layer**.
-Build steps 2–6 in `docs/workout-tracker-build-plan.md` all qualify.
+Yes, if it touches **the schema, the auth model, or more than one layer**. Build
+steps 3–6 in `docs/workout-tracker-build-plan.md` all qualify.
 
 No, otherwise. A bug fix, a copy change, one endpoint against an existing table
 — skip the ceremony and just do it. A spec for a small change is a document
 nobody reads and everybody has to keep current.
 
-## Writing one
+## The loop
 
-`specs/<feature>/overview.md`, plus `plan.md` and `tasks.md` if the feature is
-big enough that the ordering is not obvious. Keep them short — this is a record
-of decisions, not a design doc; the design already lives in `docs/`.
+1. **`/opsx:explore`** (optional) to think a change through before committing
+   to it.
+2. **`/opsx:propose "<change>"`** creates `openspec/changes/<name>/`:
+   `proposal.md` (why, what, out of scope), delta `specs/<capability>/spec.md`
+   (requirements and scenarios), `design.md` (how), `tasks.md`. It plans only —
+   no code in the same turn.
+3. **`/opsx:apply`** works through `tasks.md`. `/opsx:update` revises the plan
+   when a decision changes mid-flight — fold it in, don't let the plan drift.
+4. **`/opsx:archive`** when the change ships: its delta specs merge into the
+   living specs in `openspec/specs/`, and the change moves to
+   `openspec/changes/archive/`.
 
-What earns its place:
+The CLI (`openspec`, pinned at 1.14.1 globally and in the root `package.json`)
+also answers `openspec list`, `openspec status --change <name>`, and
+`openspec validate <name>`.
 
-- **Goal**, in one sentence, stated so you can tell whether it is met.
-- **What this changes**, by workspace.
-- **Decisions made here that are not derivable from `docs/`** — the reason the
-  file exists at all.
-- **Deliberately not done**, with the reason. Prevents the next reader
-  "finishing" something that was a decision.
-- **Verification** — what was actually run, with results.
+## What earns its place in the artifacts
 
-What does not: restating `docs/data-model.md`, restating `CLAUDE.md`, or a task
-list that duplicates the build plan. Do **not** define "done" here; it is
-defined once, in `CLAUDE.md`.
+- **Decisions not derivable from `docs/`** — the reason a change has a design
+  at all. Link `docs/data-model.md`, `docs/operations.md` and the build plan by
+  section; never restate them.
+- **Out of scope / deliberately not done**, with the reason, in `proposal.md`.
+  It stops the next reader "finishing" something that was a decision.
+- **Verification** in `tasks.md`: what will be run, including the integration
+  tests root `CLAUDE.md` requires against a real Neon branch.
 
-`specs/shipped/step-1-infrastructure-skeleton/overview.md` is the reference
-shape — read it before writing a new one.
+Not: restating `CLAUDE.md`, re-deciding `docs/data-model.md` §7 (settled; a
+change there is an explicit decision recorded in §7 itself), or defining
+"done" (it is defined once, in `CLAUDE.md`).
 
-## Archiving — do this the moment the feature ships
+## Archiving is the moment the change ships
 
 A stale spec fed to an agent six months from now produces confident "fixes" to
-working code. That is the failure this rule exists to prevent, and it costs
-nothing to avoid.
+working code. Archive in the same PR that lands the change, and before
+archiving, correct the artifacts to what was actually built — the living specs
+in `openspec/specs/` must describe the code, not the plan.
 
-1. Move it to `specs/shipped/<name>/`.
-2. Put a status banner at the top: shipped, the date, and **"this is a record,
-   not a spec — where this and the code disagree, the code is right."**
-3. Cut everything now derivable from the code. Keep only the decisions and the
-   non-obvious failures.
-4. Note when it should be deleted outright.
+## Before OpenSpec
 
-Better still, delete it. Keep a shipped spec only for what a reader genuinely
-cannot reconstruct by reading the code.
+Steps 1 and 2 were specced in the old format and are archived in
+`specs/shipped/` as records. Code comments cite "spec step 2, decision N";
+those numbers live in `specs/shipped/step-2-auth-and-core-schema/overview.md`.
+Do not migrate them into OpenSpec.
 
 ## Keeping `docs/` honest
 
 When implementation contradicts a design doc, fix the doc in the same change —
-after a feature ships the code wins, and a doc that lost an argument to reality
-is worse than no doc. `docs/data-model.md` §7 is the exception: those decisions
-are settled and are not reopened by a spec.
+after a feature ships the code wins. `docs/data-model.md` §7 is the exception:
+those decisions are settled and are not reopened by a spec.

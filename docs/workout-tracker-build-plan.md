@@ -70,9 +70,10 @@ Spec-driven, with the specs kept deliberately light:
   apply everywhere. Nested `CLAUDE.md` files per workspace for package-specific
   conventions. Everything in the root file is in every agent context for every
   task, so it competes with the actual work — keep it short.
-- **`specs/<feature>/`** with overview, plan, and tasks, but only for features
-  that touch the schema, the auth model, or more than one layer. Smaller changes
-  skip the ceremony.
+- **Specs via OpenSpec** (`openspec/changes/<name>/`: proposal, design, delta
+  specs, tasks), but only for changes that touch the schema, the auth model, or
+  more than one layer. Smaller changes skip the ceremony. Adopted from step 3;
+  steps 1–2 used `specs/<feature>/` and are archived in `specs/shipped/`.
 - **Specs govern before implementation; code governs after.** Archive or delete
   a spec once its feature ships. A stale spec fed to an agent six months from
   now will produce confident "fixes" to working code.
