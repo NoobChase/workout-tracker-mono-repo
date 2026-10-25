@@ -173,7 +173,9 @@ function Facts({ rows }: { rows: [label: string, value: string][] }) {
       {rows.map(([label, value]) => (
         <div key={label} className="contents">
           <dt className="text-neutral-500">{label}</dt>
-          <dd className="font-mono break-all tabular-nums">{value}</dd>
+          <dd className="font-mono tabular-nums [overflow-wrap:anywhere]">
+            {value}
+          </dd>
         </div>
       ))}
     </dl>
