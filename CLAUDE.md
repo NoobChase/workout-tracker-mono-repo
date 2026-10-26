@@ -1,6 +1,6 @@
 # Workout Tracker
 
-A paid, US-only workout tracking PWA (React + Hono on Lambda + Neon Postgres),
+A paid (trial, then subscription), US-only workout tracking PWA (React + Hono on Lambda + Neon Postgres),
 rebuilt from scratch. Users can connect their own AI (import/export format +
 MCP server) — we never pay for inference.
 
@@ -39,8 +39,10 @@ feature ships, the code wins and the doc should be fixed.
 - **Service layer is HTTP-agnostic** (`startWorkout()`, not route handlers with
   logic). Lambda routes and MCP tools are both thin adapters over it.
 - **Entitlement**: `requireAuth` on everything; `requirePro`
-  (`sub_status IN ('TRIALING','ACTIVE')`) on progression analytics and MCP tools
-  only. Hardcoded-entitled until build step 5. There is no `sub_tier` column.
+  (`sub_status IN ('TRIALING','ACTIVE')`) on every write, progression analytics
+  and MCP tools. Lapsed accounts are read-only: reads and export stay open
+  (`data-model.md` §3.8). Hardcoded-entitled until build step 5. There is no
+  `sub_tier` column.
 - **Everything is CDK except Neon.** Nothing is created in the AWS console.
 - **Offline writes** go through the ordered, serial-per-session mutation queue —
   never a bare fetch from the logging UI.

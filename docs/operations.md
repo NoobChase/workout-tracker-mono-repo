@@ -811,8 +811,8 @@ as JSON. The data-portability answer for a paid product holding years of
 training history, and the practical answer to a data-access request. A read of
 everything the scoped-query helper can see; no new machinery.
 
-Both are ordinary authenticated reads, **free tier included** — export is never
-held hostage (§3.8 of the data model).
+Both are ordinary authenticated reads, **lapsed accounts included** — export is
+never held hostage (§3.8 of the data model).
 
 ---
 

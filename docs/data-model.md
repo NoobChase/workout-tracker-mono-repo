@@ -778,27 +778,29 @@ round trip. There is no `sub_tier` column: with one paid tier it is derivable
 from `sub_status` (§3.1), and a tier column is additive if a second paid tier
 ever exists.
 
-**What Free and Pro actually get.** This was previously unspecified, which made
-the billing columns dead weight. Decided:
+**What an entitled and a lapsed account get.** There is no free tier: every
+account starts on a trial and must subscribe when it ends. Revised 2026-10-25
+from an earlier free-logging / paid-analytics split. Decided:
 
-| | Free (`sub_status` anything else) | Pro (`TRIALING` / `ACTIVE`) |
+| | Lapsed (`sub_status` anything else) | Entitled (`TRIALING` / `ACTIVE`) |
 |---|---|---|
-| Logging, offline queue, history browsing | ✔ | ✔ |
-| Program building, editing, cloning, placeholders | ✔ | ✔ |
-| Custom exercises, per-exercise settings | ✔ | ✔ |
-| Program import/export (the published JSON format) | ✔ | ✔ |
+| Browsing history and plans (reads) | ✔ | ✔ |
+| Account and program export (the published JSON format) | ✔ | ✔ |
+| Subscribing, billing management, account deletion | ✔ | ✔ |
+| Every write: logging, program building/editing/cloning, import, custom exercises, settings | ✖ | ✔ |
 | Progression analytics (cycle-over-cycle, plan-vs-actual, PR history) | ✖ | ✔ |
-| MCP connector (bring-your-own-AI) | ✖ | ✔ |
+| MCP connector (bring-your-own-AI), read and write tools alike | ✖ | ✔ |
 
-The line is drawn so the free app is a complete, honest tracker — logging is
-never held hostage, and the import/export path means even free users can use
-any AI they like to draft programs. Pro gates the two things that are
-expensive-to-build and high-perceived-value: the analytics queries (§5) and the
-MCP surface. This is a **product knob, not a schema decision** — moving a
+A lapsed account is **read-only, never held hostage**: the user can always see
+and export years of training history, and can always pay or leave. Analytics
+and MCP stay locked because they are the reasons to resubscribe, not the
+user's data. This is a **product knob, not a schema decision** — moving a
 feature across the line means moving a `requirePro` middleware check, nothing
-more. What is structural is the enforcement shape: `requireAuth` on everything,
-`requirePro` on exactly two route groups (analytics, MCP tools), checked from
-the local columns and hardcoded-entitled until step 5 of the build plan.
+more. What is structural is the enforcement shape: `requireAuth` on everything;
+`requirePro` on every mutating route, the analytics route group, and the MCP
+tools; the lapsed-allowed writes (checkout, billing portal, account deletion)
+are an explicit, named exemption list. Checked from the local columns and
+hardcoded-entitled until step 5 of the build plan.
 
 Webhooks are the only writer of these columns, and Stripe redelivers, so they
 need a dedupe table:
@@ -1027,8 +1029,8 @@ those need rotating regardless of what happens here.
 | 22 | Database host | **Neon**, WebSocket driver (§3). |
 | 23 | Pre-authored cycle variation | **Confirmed as a real requirement** (§2.1) — this is what justifies full materialization over lazy clone-on-demand for fixed programs. |
 | 24 | "Apply to remaining cycles" | **Edit-time only, explicit per-cycle confirmation** (§2.1, `operations.md` §3.8). Never silently skips; never offered after the fact. |
-| 25 | Free / Pro boundary | **Logging, program building, and import/export are free; progression analytics and the MCP connector are Pro** (§3.8). A product knob — moving a feature is moving a middleware check. |
-| 26 | AI integration | **Two doors, both bring-your-own-AI**: a published JSON import/export format any chatbot can target (free, universal), and an MCP server for live read/write (Pro). No developer-paid inference, no bring-your-own-API-key (`workout-tracker-build-plan.md` steps 4 and 6). |
+| 25 | Entitlement boundary | **No free tier: trial, then paid. A lapsed account is read-only** — reads of history and plans plus export stay open; every write, progression analytics and the MCP connector require `TRIALING`/`ACTIVE` (§3.8). Revised 2026-10-25 from free logging / paid analytics. A product knob — moving a feature is moving a middleware check. |
+| 26 | AI integration | **Two doors, both bring-your-own-AI**: a published JSON import/export format any chatbot can target (universal; export works even when lapsed), and an MCP server for live read/write. No developer-paid inference, no bring-your-own-API-key (`workout-tracker-build-plan.md` steps 4 and 6). |
 | 27 | Generated unit columns | **No `ELSE` in the conversion `CASE`s** (§2.5) — an unmapped enum value yields `NULL` (visible) instead of converting as pounds (silent). |
 | 28 | Market | **US only.** Stripe direct (no merchant of record), USD pricing, Stripe Tax for state digital-goods tax. No geo-gating code — "US only" is a billing posture, not a firewall. |
 | 29 | Stat date buckets | **Client-supplied boundaries** from the user's timezone, never server `now()` truncation (§5). |

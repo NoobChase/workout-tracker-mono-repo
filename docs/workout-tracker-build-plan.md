@@ -216,7 +216,7 @@ theirs. That is the trade, made deliberately.
 - **Ids are minted in app code, never by a database default.** UUIDv7 for time-ordering, so index locality stays close to a sequence. This is what makes step 3's offline writes possible — see `data-model.md` §2.11 — and it needs to be true from the first migration, because changing key types later is not a migration you want to write.
 - **Key on the token's `sub`, never the email.** Emails change and are not guaranteed unique across identity providers.
 - **Lazy-create the user row on first authenticated request** rather than wiring up Clerk's `user.created` webhook. Fewer moving parts, no ordering problems if the webhook is slow, and one less endpoint to secure. The one webhook worth wiring is `user.deleted`, and it soft-deletes (`data-model.md` §4).
-- **Write entitlement checks from day one** against `users.sub_status`, with everyone hardcoded to an entitled value until step 5. The shape is two middlewares: `requireAuth` on everything, `requirePro` (`sub_status IN ('TRIALING','ACTIVE')`) on exactly the Pro route groups — progression analytics and, later, MCP tools. The Free/Pro boundary itself is `data-model.md` §3.8. Retrofitting entitlement across forty endpoints later is genuinely miserable, and this is the single cheapest thing in this document.
+- **Write entitlement checks from day one** against `users.sub_status`, with everyone hardcoded to an entitled value until step 5. The shape is two middlewares: `requireAuth` on everything, `requirePro` (`sub_status IN ('TRIALING','ACTIVE')`) on every write plus progression analytics and, later, MCP tools, so a lapsed account is read-only. The boundary itself is `data-model.md` §3.8. Retrofitting entitlement across forty endpoints later is genuinely miserable, and this is the single cheapest thing in this document.
 - **Migrations run from CI or from a script**, against a connection string. No tunnel, no bastion, no migration Lambda. Decide which one and make it the only way — ad-hoc migrations from a laptop are how environments drift. **Decided in step 2: CI**, on merge to `main`, migrating `dev` then `production` and seeding the catalog after each (`.github/workflows/ci.yml`).
 
 ---
@@ -283,8 +283,8 @@ independent of — the MCP server:
   through the same service function as manual creation. Validation errors must
   be written to be pasted back into a chatbot verbatim.
 - **Export is the same schemas in reverse** — one program's plan tree, plus a
-  full-account export (every row the user owns). Both free; export is never
-  paywalled.
+  full-account export (every row the user owns). Export works on lapsed
+  accounts too; it is never paywalled.
 - Why this exists when MCP is coming anyway: connecting a custom MCP server
   requires a paid AI plan on the major platforms, and the specifics keep
   shifting. Paste-import works with every model's free tier, forever, with no
@@ -311,7 +311,7 @@ Things to keep an eye on:
 - Stripe Checkout for the purchase. Stripe hosts the page.
 - Stripe Customer Portal for plan changes, cancellations, and card updates. Stripe hosts that too.
 - A webhook handler that writes subscription state into the billing columns on `users` that have been there since step 2.
-- Flip the entitlement middleware from hardcoded-entitled to reading `sub_status`. The Free/Pro boundary is `data-model.md` §3.8: logging, program building, and import/export stay free; `requirePro` gates progression analytics and (step 6) MCP tools. No request path ever calls the Stripe API to answer "is this user subscribed?".
+- Flip the entitlement middleware from hardcoded-entitled to reading `sub_status`. The boundary is `data-model.md` §3.8: there is no free tier; a lapsed account keeps reads and export, while `requirePro` gates every write, progression analytics and (step 6) MCP tools. Lapsed users must still reach checkout, the billing portal and account deletion — an explicit exemption list. No request path ever calls the Stripe API to answer "is this user subscribed?".
 
 **Watch out for:**
 
@@ -343,8 +343,8 @@ Things to keep an eye on:
 - **Build on CIMD, not DCR.** The 2026-07-28 spec deprecated Dynamic Client Registration in favor of Client ID Metadata Documents. DCR still works for backward compatibility with a minimum twelve-month runway, so support both, but default to CIMD. Clerk's CIMD support was in beta as of this writing and requires contacting their support to enable.
 - **Never pass a client's bearer token through to an upstream API.** Your server is an OAuth client to those services and obtains its own tokens. Forwarding is the confused-deputy problem and the spec forbids it.
 - **Scope the tools narrowly.** An LLM with a `deleteWorkoutHistory` tool will eventually call it. Expose reads and plan-construction writes; keep destructive operations out of the tool surface entirely. Note that the schema is already on your side here — programs with logged sessions cannot be deleted, only archived.
-- **Entitlement applies here too.** MCP tool calls are authenticated requests, and the MCP surface is Pro by decision (`data-model.md` §3.8) — every tool goes through `requirePro`, or you have given away the paid feature by accident.
-- **Reach is limited by the AI platforms, not by you.** Connecting a custom MCP server currently requires a paid plan on the major chat products, and the gating details shift. This is why the import/export format shipped in step 4: free-tier users of any AI already have a working path, and MCP is the premium live integration, not the only one. Check current connector requirements when you get here.
+- **Entitlement applies here too.** MCP tool calls are authenticated requests, and the MCP surface requires an entitled account (`data-model.md` §3.8) — every tool goes through `requirePro`, or you have given away the paid feature by accident.
+- **Reach is limited by the AI platforms, not by you.** Connecting a custom MCP server currently requires a paid plan on the major chat products, and the gating details shift. This is why the import/export format shipped in step 4: users on any AI's free tier already have a working path, and MCP is the premium live integration, not the only one. Check current connector requirements when you get here.
 - **The spec is moving fast.** It changed substantially in both November 2025 and July 2026. Check the current revision when you actually get here rather than trusting a plan written months earlier.
 
 ---
