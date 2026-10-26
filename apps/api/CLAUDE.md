@@ -26,9 +26,10 @@ lives in the service layer, queries in `packages/db` (root `CLAUDE.md`).
   unknown paths get 401, not 404.
 - `c.get("user")` is `{ id, subStatus }` — `id` is `users.id`, the thing every
   query is scoped by. Never pass the Clerk id further than identity resolution.
-- `requirePro` goes on exactly two route groups: `/analytics/*` (mounted) and
-  the MCP tools (step 6). Moving a feature across the Free/Pro line is moving
-  that middleware, nothing else.
+- `requirePro` goes on every mutating route, `/analytics/*` (mounted) and the
+  MCP tools (step 6); lapsed accounts are read-only (`data-model.md` §3.8).
+  Until step 5 it is mounted on analytics only — writes get it with billing.
+  Moving a feature across the line is moving that middleware, nothing else.
 - `BILLING_NOT_LIVE` is deleted in step 5. Do not set `sub_status` to fake
   entitlement instead (spec step 2, decision 4).
 - Token verification is `verifyToken` with `authorizedParties` from the
