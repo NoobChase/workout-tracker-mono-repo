@@ -42,7 +42,7 @@ export function App() {
           <h1 className="text-2xl font-semibold tracking-tight">
             Workout Tracker
           </h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-muted-foreground">
             Step 2: auth. Browser, Clerk, CloudFront, Lambda, Neon.
           </p>
         </div>
@@ -52,7 +52,7 @@ export function App() {
             <SignInButton mode="modal">
               <button
                 type="button"
-                className="h-9 rounded-md bg-neutral-900 px-4 text-sm font-medium text-white transition-[transform,background-color] duration-150 ease-out hover:bg-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 active:scale-[0.97]"
+                className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-[transform,background-color] duration-150 ease-out hover:bg-primary/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:scale-[0.97]"
               >
                 Sign in
               </button>
@@ -66,7 +66,7 @@ export function App() {
 
       <Section title="Your account">
         <Show when="signed-out">
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-muted-foreground">
             Sign in to check that the API recognises you.
           </p>
         </Show>
@@ -85,7 +85,7 @@ export function App() {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-medium text-neutral-900">{title}</h2>
+      <h2 className="text-sm font-medium text-foreground">{title}</h2>
       {children}
     </section>
   );
@@ -152,13 +152,13 @@ function Loaded<T>({
   children: (data: T) => ReactNode;
 }) {
   if (state.status === "loading") {
-    return <p className="text-sm text-neutral-600">{pending}</p>;
+    return <p className="text-sm text-muted-foreground">{pending}</p>;
   }
   if (state.status === "error") {
     return (
       <p
         role="alert"
-        className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-800"
+        className="rounded-md border border-destructive p-4 text-sm text-destructive"
       >
         {state.message}
       </p>
@@ -169,10 +169,10 @@ function Loaded<T>({
 
 function Facts({ rows }: { rows: [label: string, value: string][] }) {
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-md border border-neutral-200 p-4 text-sm">
+    <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-md border border-border p-4 text-sm">
       {rows.map(([label, value]) => (
         <div key={label} className="contents">
-          <dt className="text-neutral-500">{label}</dt>
+          <dt className="text-muted-foreground">{label}</dt>
           <dd className="font-mono tabular-nums [overflow-wrap:anywhere]">
             {value}
           </dd>

@@ -1,0 +1,706 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-26T02:50:43+00:00",
+  "title": "Design System: Tanren",
+  "extensions": {
+    "colorMeta": {
+      "copper-light": {
+        "role": "primary",
+        "displayName": "Forge Copper (light)",
+        "canonical": "oklch(51.2% 0.127 45)",
+        "tonalRamp": [
+          "#1f0000",
+          "#4c0500",
+          "#752200",
+          "#9a4416",
+          "#c0663c",
+          "#e18d66",
+          "#f1bba3",
+          "#feeae1"
+        ],
+        "cssVar": "--copper"
+      },
+      "copper-dark": {
+        "role": "primary",
+        "displayName": "Forge Copper (dark)",
+        "canonical": "oklch(66.6% 0.123 49)",
+        "tonalRamp": [
+          "#1f0100",
+          "#4b0700",
+          "#732600",
+          "#974711",
+          "#bc6939",
+          "#e08e61",
+          "#f0bca1",
+          "#fdeae0"
+        ],
+        "cssVar": "--copper"
+      },
+      "copper-btn-light": {
+        "role": "primary",
+        "displayName": "Copper Fill (light)",
+        "canonical": "oklch(51.2% 0.127 45)",
+        "tonalRamp": [
+          "#1f0000",
+          "#4c0500",
+          "#752200",
+          "#9a4416",
+          "#c0663c",
+          "#e18d66",
+          "#f1bba3",
+          "#feeae1"
+        ],
+        "cssVar": "--copper-btn"
+      },
+      "copper-btn-dark": {
+        "role": "primary",
+        "displayName": "Copper Fill (dark)",
+        "canonical": "oklch(54.5% 0.128 45)",
+        "tonalRamp": [
+          "#1f0000",
+          "#4c0500",
+          "#752200",
+          "#9a4415",
+          "#c0673b",
+          "#e18d66",
+          "#f1bba3",
+          "#feeae1"
+        ],
+        "cssVar": "--copper-btn"
+      },
+      "on-copper": {
+        "role": "primary",
+        "displayName": "On-Copper",
+        "canonical": "oklch(98.1% 0.012 60)",
+        "tonalRamp": [
+          "#0f0a07",
+          "#29241f",
+          "#47413c",
+          "#66605b",
+          "#88817b",
+          "#aba39e",
+          "#cfc7c2",
+          "#f5ede7"
+        ],
+        "cssVar": "--on-copper"
+      },
+      "bg-light": {
+        "role": "neutral",
+        "displayName": "Warm Paper / Warm Night (light)",
+        "canonical": "oklch(95.9% 0.007 81)",
+        "tonalRamp": [
+          "#0d0b08",
+          "#272521",
+          "#44423e",
+          "#63615d",
+          "#85827d",
+          "#a7a5a0",
+          "#ccc9c4",
+          "#f1eee9"
+        ],
+        "cssVar": "--bg"
+      },
+      "bg-dark": {
+        "role": "neutral",
+        "displayName": "Warm Paper / Warm Night (dark)",
+        "canonical": "oklch(18.3% 0.004 85)",
+        "tonalRamp": [
+          "#0c0b09",
+          "#262523",
+          "#43423f",
+          "#62615e",
+          "#83827f",
+          "#a6a5a2",
+          "#cac9c6",
+          "#f0eeeb"
+        ],
+        "cssVar": "--bg"
+      },
+      "card-light": {
+        "role": "neutral",
+        "displayName": "Card Stock (light)",
+        "canonical": "oklch(92.7% 0.011 77)",
+        "tonalRamp": [
+          "#0e0b06",
+          "#28241f",
+          "#45413c",
+          "#65605a",
+          "#86827b",
+          "#a9a49e",
+          "#cdc8c1",
+          "#f3eee7"
+        ],
+        "cssVar": "--card"
+      },
+      "card-dark": {
+        "role": "neutral",
+        "displayName": "Card Stock (dark)",
+        "canonical": "oklch(21.5% 0.007 78)",
+        "tonalRamp": [
+          "#0d0b08",
+          "#272522",
+          "#44423e",
+          "#63615d",
+          "#84827e",
+          "#a7a5a0",
+          "#cbc9c4",
+          "#f1eeea"
+        ],
+        "cssVar": "--card"
+      },
+      "ghost-light": {
+        "role": "neutral",
+        "displayName": "Ghost Wash (light)",
+        "canonical": "oklch(89.7% 0.014 78)",
+        "tonalRamp": [
+          "#0e0a05",
+          "#29241e",
+          "#46413a",
+          "#666059",
+          "#878179",
+          "#aaa49c",
+          "#cec8bf",
+          "#f4eee4"
+        ],
+        "cssVar": "--ghost"
+      },
+      "ghost-dark": {
+        "role": "neutral",
+        "displayName": "Ghost Wash (dark)",
+        "canonical": "oklch(27.2% 0.009 67)",
+        "tonalRamp": [
+          "#0e0a07",
+          "#282420",
+          "#45413d",
+          "#65605c",
+          "#86817c",
+          "#a9a49f",
+          "#cdc8c3",
+          "#f3ede8"
+        ],
+        "cssVar": "--ghost"
+      },
+      "line-light": {
+        "role": "neutral",
+        "displayName": "Hairline (light)",
+        "canonical": "oklch(86.4% 0.016 74)",
+        "tonalRamp": [
+          "#0f0a05",
+          "#2a241c",
+          "#474139",
+          "#676057",
+          "#888178",
+          "#aba49a",
+          "#d0c8be",
+          "#f5ede3"
+        ],
+        "cssVar": "--line"
+      },
+      "line-dark": {
+        "role": "neutral",
+        "displayName": "Hairline (dark)",
+        "canonical": "oklch(28.3% 0.011 73)",
+        "tonalRamp": [
+          "#0e0b07",
+          "#28241f",
+          "#46413c",
+          "#65605b",
+          "#86817b",
+          "#a9a49e",
+          "#cdc8c2",
+          "#f3eee7"
+        ],
+        "cssVar": "--line"
+      },
+      "line-2-light": {
+        "role": "neutral",
+        "displayName": "Strong Hairline (light)",
+        "canonical": "oklch(79.2% 0.021 70)",
+        "tonalRamp": [
+          "#110a03",
+          "#2c231a",
+          "#494036",
+          "#695f55",
+          "#8b8075",
+          "#aea397",
+          "#d2c7bb",
+          "#f8ece0"
+        ],
+        "cssVar": "--line-2"
+      },
+      "line-2-dark": {
+        "role": "neutral",
+        "displayName": "Strong Hairline (dark)",
+        "canonical": "oklch(34.5% 0.013 67)",
+        "tonalRamp": [
+          "#0f0a06",
+          "#2a241e",
+          "#47413b",
+          "#666059",
+          "#88817a",
+          "#aba49c",
+          "#cfc8c0",
+          "#f5ede5"
+        ],
+        "cssVar": "--line-2"
+      },
+      "edge-light": {
+        "role": "neutral",
+        "displayName": "Edge (light)",
+        "canonical": "oklch(61.3% 0.019 67)",
+        "tonalRamp": [
+          "#110a04",
+          "#2b231b",
+          "#494037",
+          "#695f56",
+          "#8a8076",
+          "#ada399",
+          "#d2c7bc",
+          "#f8ece1"
+        ],
+        "cssVar": "--edge"
+      },
+      "edge-dark": {
+        "role": "neutral",
+        "displayName": "Edge (dark)",
+        "canonical": "oklch(51.2% 0.018 67)",
+        "tonalRamp": [
+          "#100a04",
+          "#2b231c",
+          "#494038",
+          "#685f57",
+          "#8a8177",
+          "#ada399",
+          "#d1c7bd",
+          "#f7ece2"
+        ],
+        "cssVar": "--edge"
+      },
+      "text-light": {
+        "role": "neutral",
+        "displayName": "Ink (light)",
+        "canonical": "oklch(20.4% 0.009 59)",
+        "tonalRamp": [
+          "#0e0a08",
+          "#282421",
+          "#46413d",
+          "#65605c",
+          "#86817d",
+          "#a9a4a0",
+          "#cec8c4",
+          "#f3ede9"
+        ],
+        "cssVar": "--text"
+      },
+      "text-dark": {
+        "role": "neutral",
+        "displayName": "Ink (dark)",
+        "canonical": "oklch(94.3% 0.011 72)",
+        "tonalRamp": [
+          "#0e0a06",
+          "#29241f",
+          "#46413b",
+          "#65605a",
+          "#87817b",
+          "#aaa49d",
+          "#cec8c1",
+          "#f3ede6"
+        ],
+        "cssVar": "--text"
+      },
+      "muted-light": {
+        "role": "neutral",
+        "displayName": "Muted Ink (light)",
+        "canonical": "oklch(43.3% 0.016 64)",
+        "tonalRamp": [
+          "#100a05",
+          "#2b241d",
+          "#48403a",
+          "#686058",
+          "#898179",
+          "#aca39b",
+          "#d1c7bf",
+          "#f6ede4"
+        ],
+        "cssVar": "--muted"
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "Muted Ink (dark)",
+        "canonical": "oklch(70.4% 0.017 68)",
+        "tonalRamp": [
+          "#100a05",
+          "#2b241c",
+          "#484039",
+          "#686057",
+          "#898178",
+          "#aca39a",
+          "#d1c7be",
+          "#f6ede3"
+        ],
+        "cssVar": "--muted"
+      },
+      "faint-light": {
+        "role": "neutral",
+        "displayName": "Faint Ink (light)",
+        "canonical": "oklch(49.9% 0.017 64)",
+        "tonalRamp": [
+          "#100a05",
+          "#2b231d",
+          "#494039",
+          "#685f57",
+          "#8a8078",
+          "#ada39a",
+          "#d1c7be",
+          "#f7ece3"
+        ],
+        "cssVar": "--faint"
+      },
+      "faint-dark": {
+        "role": "neutral",
+        "displayName": "Faint Ink (dark)",
+        "canonical": "oklch(63.0% 0.018 65)",
+        "tonalRamp": [
+          "#100a04",
+          "#2b231c",
+          "#494038",
+          "#695f57",
+          "#8a8077",
+          "#ada39a",
+          "#d2c7bd",
+          "#f7ece2"
+        ],
+        "cssVar": "--faint"
+      },
+      "danger-light": {
+        "role": "error",
+        "displayName": "Danger (light)",
+        "canonical": "oklch(50.6% 0.166 27)",
+        "tonalRamp": [
+          "#200000",
+          "#4e0001",
+          "#810006",
+          "#ab2b26",
+          "#d25349",
+          "#e5877c",
+          "#f4b8b0",
+          "#ffe9e5"
+        ],
+        "cssVar": "--danger"
+      },
+      "danger-dark": {
+        "role": "error",
+        "displayName": "Danger (dark)",
+        "canonical": "oklch(70.7% 0.142 25)",
+        "tonalRamp": [
+          "#200001",
+          "#4e0004",
+          "#7c0f15",
+          "#a23835",
+          "#c95b55",
+          "#e5877f",
+          "#f4b8b2",
+          "#ffe9e6"
+        ],
+        "cssVar": "--danger"
+      },
+      "scrim-light": {
+        "role": "neutral",
+        "displayName": "Scrim (light)",
+        "cssVar": "--scrim"
+      },
+      "scrim-dark": {
+        "role": "neutral",
+        "displayName": "Scrim (dark)",
+        "cssVar": "--scrim"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The live set's prescribed weight × reps; the largest thing on a logging screen."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Exercise name above the live set; page headings (32px in the kit)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Dialog and sheet titles."
+      },
+      "title-sm": {
+        "displayName": "Title Small",
+        "purpose": "Card and empty-state titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default text and inputs."
+      },
+      "body-sm": {
+        "displayName": "Body Small",
+        "purpose": "Descriptions and overlay body; prose at 48-60ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Form and stepper labels, sentence case, Muted Ink."
+      },
+      "label-sc": {
+        "displayName": "Small Caps Label",
+        "purpose": "Section headings, set-kind badges (11px) and the live 'now' marker. Color from context; copper only on 'now'."
+      },
+      "figures": {
+        "displayName": "Figures",
+        "purpose": "Every set line: mono tabular weight, unit, ×, reps."
+      },
+      "figures-stepper": {
+        "displayName": "Stepper Figures",
+        "purpose": "The value inside a number stepper."
+      },
+      "mark": {
+        "displayName": "Wordmark Kanji",
+        "purpose": "鍛錬 in the wordmark only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-color",
+        "value": "rgb(26 22 19 / 0.14) light; rgb(0 0 0 / 0.5) dark",
+        "purpose": "The --shadow token every floater shadow is built on."
+      },
+      {
+        "name": "dialog",
+        "value": "0 24px 48px -12px var(--shadow)",
+        "purpose": "Centered dialogs."
+      },
+      {
+        "name": "sheet",
+        "value": "0 -16px 40px -16px var(--shadow)",
+        "purpose": "Bottom sheets, cast upward."
+      },
+      {
+        "name": "toast",
+        "value": "0 12px 32px -12px var(--shadow)",
+        "purpose": "Toasts."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "purpose": "Default easing: presses, hovers, field borders, dialog entry, the set-ruling moment."
+      },
+      {
+        "name": "ease-drawer",
+        "value": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "purpose": "Bottom sheet and its scrim entering (300ms)."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.97), 160ms ease-out",
+        "purpose": "Every pressable; stepper − / + scale their icon to 0.85 instead."
+      },
+      {
+        "name": "control-color",
+        "value": "150-160ms ease-out",
+        "purpose": "Border, background and color shifts on hover and focus."
+      },
+      {
+        "name": "dialog",
+        "value": "in 200ms scale 0.97 + fade; out 150ms scale 0.98 + fade",
+        "purpose": "Dialog keyframes; exits faster than entries."
+      },
+      {
+        "name": "sheet",
+        "value": "in 300ms translateY(100%) on ease-drawer; out 200ms ease-out",
+        "purpose": "Bottom sheet keyframes."
+      },
+      {
+        "name": "set-ruled",
+        "value": "240ms ease-out, once: row settles 3px, copper rule draws outward, copper index cools to ink",
+        "purpose": "The one authored moment, when a set is logged. Off under prefers-reduced-motion."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animations 1ms, transitions 0ms",
+        "purpose": "Global prefers-reduced-motion override."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "container-max",
+        "value": "1280px"
+      }
+    ],
+    "themes": {
+      "mechanism": "Each color token is one light/dark pair in src/index.css via the --if-light / --if-dark space toggles; prefers-color-scheme decides unless <html data-theme> (localStorage 'tanren-theme') pins it; any element may pin its own with data-theme.",
+      "source": "apps/web/src/index.css"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one copper action on a screen.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Finish workout</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 8px; border: 1px solid transparent; font-family: 'Albert Sans Variable', system-ui, sans-serif; font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: transform 160ms cubic-bezier(0.23,1,0.32,1), background-color 160ms cubic-bezier(0.23,1,0.32,1), border-color 160ms cubic-bezier(0.23,1,0.32,1), color 160ms cubic-bezier(0.23,1,0.32,1); } .ds-btn:active { transform: scale(0.97); } .ds-btn:focus-visible { outline: 2px solid var(--copper, #a04a1d); outline-offset: 3px; } .ds-btn-primary { background: var(--copper-btn, #a04a1d); border-color: var(--copper-btn, #a04a1d); color: var(--on-copper, #fff7f1); } @media (hover: hover) { .ds-btn-primary:hover { background: color-mix(in oklab, var(--copper-btn, #a04a1d) 86%, black); } }"
+    },
+    {
+      "name": "Log Set Button",
+      "kind": "button",
+      "refersTo": "button-log",
+      "description": "The 56px full-width primary action for logging mid-workout, within thumb reach.",
+      "html": "<button class=\"ds-btn ds-btn-primary ds-btn-log\">Log set</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 8px; border: 1px solid transparent; font-family: 'Albert Sans Variable', system-ui, sans-serif; font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: transform 160ms cubic-bezier(0.23,1,0.32,1), background-color 160ms cubic-bezier(0.23,1,0.32,1), border-color 160ms cubic-bezier(0.23,1,0.32,1), color 160ms cubic-bezier(0.23,1,0.32,1); } .ds-btn:active { transform: scale(0.97); } .ds-btn:focus-visible { outline: 2px solid var(--copper, #a04a1d); outline-offset: 3px; } .ds-btn-primary { background: var(--copper-btn, #a04a1d); border-color: var(--copper-btn, #a04a1d); color: var(--on-copper, #fff7f1); } @media (hover: hover) { .ds-btn-primary:hover { background: color-mix(in oklab, var(--copper-btn, #a04a1d) 86%, black); } } .ds-btn-log { height: 56px; width: 100%; padding: 0 24px; font-size: 16px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "The default button: ink on the page with a quiet hairline edge.",
+      "html": "<button class=\"ds-btn ds-btn-secondary\">Substitute exercise</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 8px; border: 1px solid transparent; font-family: 'Albert Sans Variable', system-ui, sans-serif; font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: transform 160ms cubic-bezier(0.23,1,0.32,1), background-color 160ms cubic-bezier(0.23,1,0.32,1), border-color 160ms cubic-bezier(0.23,1,0.32,1), color 160ms cubic-bezier(0.23,1,0.32,1); } .ds-btn:active { transform: scale(0.97); } .ds-btn:focus-visible { outline: 2px solid var(--copper, #a04a1d); outline-offset: 3px; } .ds-btn-secondary { background: transparent; border-color: var(--line-2, #c4b9ad); color: var(--text, #1a1613); } @media (hover: hover) { .ds-btn-secondary:hover { border-color: var(--muted, #574f48); } }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Low-emphasis action; fills with Ghost Wash on hover.",
+      "html": "<button class=\"ds-btn ds-btn-ghost\">Skip exercise</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 8px; border: 1px solid transparent; font-family: 'Albert Sans Variable', system-ui, sans-serif; font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: transform 160ms cubic-bezier(0.23,1,0.32,1), background-color 160ms cubic-bezier(0.23,1,0.32,1), border-color 160ms cubic-bezier(0.23,1,0.32,1), color 160ms cubic-bezier(0.23,1,0.32,1); } .ds-btn:active { transform: scale(0.97); } .ds-btn:focus-visible { outline: 2px solid var(--copper, #a04a1d); outline-offset: 3px; } .ds-btn-ghost { background: transparent; color: var(--muted, #574f48); } @media (hover: hover) { .ds-btn-ghost:hover { background: var(--ghost, #e2dcd3); color: var(--text, #1a1613); } }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "48px field with a 3:1 Edge boundary; copper border on focus, Danger when invalid.",
+      "html": "<input class=\"ds-input\" placeholder=\"Setup and cues\" />",
+      "css": ".ds-input { height: 48px; width: 100%; padding: 0 14px; border-radius: 8px; border: 1px solid var(--edge, #8c8278); background: transparent; color: var(--text, #1a1613); font-family: 'Albert Sans Variable', system-ui, sans-serif; font-size: 16px; transition: border-color 150ms cubic-bezier(0.23,1,0.32,1); } .ds-input::placeholder { color: var(--faint, #6a6159); } .ds-input:hover { border-color: var(--muted, #574f48); } .ds-input:focus-visible { border-color: var(--copper, #a04a1d); outline: 2px solid var(--copper, #a04a1d); outline-offset: 3px; } .ds-input[aria-invalid=true] { border-color: var(--danger, #b0302a); }"
+    },
+    {
+      "name": "Number Stepper",
+      "kind": "custom",
+      "refersTo": "number-stepper",
+      "description": "The logging control: 56px − and + around a typed mono value.",
+      "html": "<div class=\"ds-stepper\"><button class=\"ds-step\" aria-label=\"Decrease weight by 5 lb\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\"><path d=\"M5 12h14\"/></svg></button><div class=\"ds-step-value\"><span class=\"ds-num\">225</span><span class=\"ds-unit\">lb</span></div><button class=\"ds-step\" aria-label=\"Increase weight by 5 lb\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\"><path d=\"M5 12h14M12 5v14\"/></svg></button></div>",
+      "css": ".ds-stepper { display: flex; height: 56px; border: 1px solid var(--edge, #8c8278); border-radius: 8px; color: var(--text, #1a1613); } .ds-step { display: grid; place-items: center; width: 56px; background: transparent; border: 0; color: inherit; cursor: pointer; transition: background-color 150ms cubic-bezier(0.23,1,0.32,1); } .ds-step svg { width: 20px; height: 20px; transition: transform 160ms cubic-bezier(0.23,1,0.32,1); } .ds-step:hover, .ds-step:active { background: var(--ghost, #e2dcd3); } .ds-step:active svg { transform: scale(0.85); } .ds-step:focus-visible { outline: 2px solid var(--copper, #a04a1d); outline-offset: -2px; } .ds-step-value { flex: 1; display: flex; align-items: baseline; justify-content: center; gap: 6px; align-self: center; border-inline: 1px solid var(--line, #d9d1c7); padding-block: 14px; } .ds-num { font-family: 'Geist Mono Variable', ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 500; line-height: 1; } .ds-unit { font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 14px; color: var(--muted, #574f48); }"
+    },
+    {
+      "name": "Set Log",
+      "kind": "custom",
+      "refersTo": "set-row",
+      "description": "Ruled, numbered set lines: logged, live (copper index and 'now'), queued, planned.",
+      "html": "<ol class=\"ds-log\"><li class=\"ds-row\"><span class=\"ds-idx\">1</span><span class=\"ds-fig\">225<small>lb</small><i>×</i>5</span><span class=\"ds-status\">logged</span></li><li class=\"ds-row\"><span class=\"ds-idx\">2</span><span class=\"ds-fig\">225<small>lb</small><i>×</i>5</span><span class=\"ds-status\">queued, no signal</span></li><li class=\"ds-row ds-live\"><span class=\"ds-idx\">3</span><span class=\"ds-fig\">225<small>lb</small><i>×</i>5</span><span class=\"ds-now\">Now</span></li><li class=\"ds-row ds-planned\"><span class=\"ds-idx\">4</span><span class=\"ds-fig\">225<small>lb</small><i>×</i>5</span><span></span></li></ol>",
+      "css": ".ds-log { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line, #d9d1c7); font-family: 'Albert Sans Variable', system-ui, sans-serif; color: var(--text, #1a1613); } .ds-row { display: grid; grid-template-columns: 2.5rem minmax(0,1fr) auto; align-items: center; column-gap: 12px; min-height: 52px; border-bottom: 1px solid var(--line, #d9d1c7); } .ds-idx, .ds-fig { font-family: 'Geist Mono Variable', ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 15px; } .ds-idx { font-weight: 500; } .ds-fig small { margin-left: 4px; font-size: 0.8em; color: var(--muted, #574f48); } .ds-fig i { font-style: normal; padding: 0 6px; color: var(--muted, #574f48); } .ds-status { font-size: 13px; color: var(--muted, #574f48); } .ds-live .ds-idx { color: var(--copper, #a04a1d); } .ds-now { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--copper, #a04a1d); } .ds-planned .ds-idx { color: var(--faint, #6a6159); } .ds-planned .ds-fig { color: var(--muted, #574f48); }"
+    },
+    {
+      "name": "Set Kind Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Dashed edge = does not count (warmup, drop); never copper.",
+      "html": "<span class=\"ds-badge ds-badge-kind\">Warmup</span> <span class=\"ds-badge ds-badge-unit\">lb</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--line-2, #c4b9ad); color: var(--muted, #574f48); } .ds-badge-kind { border-style: dashed; border-color: var(--edge, #8c8278); font-family: 'Albert Sans Variable', system-ui, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; } .ds-badge-unit { font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 12px; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "12px Card Stock container whose rows are ruled, not boxed. Never nested.",
+      "html": "<div class=\"ds-card\"><div><h3 class=\"ds-card-title\">Last session</h3><p class=\"ds-card-desc\">Back Squat · demo data</p></div><div class=\"ds-card-row\"><span>Set 1</span><span>logged</span></div><div class=\"ds-card-row\"><span>Set 2</span><span>1 rep short of plan</span></div></div>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 16px; padding: 16px; border-radius: 12px; border: 1px solid var(--line, #d9d1c7); background: var(--card, #ebe6df); color: var(--text, #1a1613); font-family: 'Albert Sans Variable', system-ui, sans-serif; } .ds-card-title { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.375; } .ds-card-desc { margin: 4px 0 0; font-size: 14px; color: var(--muted, #574f48); } .ds-card-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; border-bottom: 1px solid var(--line, #d9d1c7); font-size: 14px; } .ds-card-row:last-child { border-bottom: 0; } .ds-card-row span:last-child { font-size: 13px; color: var(--muted, #574f48); }"
+    },
+    {
+      "name": "Header with Wordmark",
+      "kind": "nav",
+      "refersTo": "",
+      "description": "64px bar ruled beneath: the 鍛錬 TANREN lockup and the theme toggle.",
+      "html": "<header class=\"ds-nav\"><span class=\"ds-mark\"><span lang=\"ja\" aria-hidden=\"true\">鍛錬</span><b>Tanren</b></span><button class=\"ds-toggle\" aria-label=\"Light theme, switch to dark\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 4a8 8 0 0 1 0 16Z\" fill=\"currentColor\"/></svg>Light</button></header>",
+      "css": ".ds-nav { display: flex; align-items: center; height: 64px; padding: 0 16px; border-bottom: 1px solid var(--line, #d9d1c7); color: var(--text, #1a1613); font-family: 'Albert Sans Variable', system-ui, sans-serif; } .ds-mark { display: inline-flex; align-items: center; gap: 10px; } .ds-mark span { font-family: 'Tanren Mark', serif; font-size: 20px; font-weight: 800; line-height: 1; } .ds-mark b { font-size: 13px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; } .ds-toggle { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line-2, #c4b9ad); background: transparent; color: var(--muted, #574f48); font: 500 13px 'Albert Sans Variable', system-ui, sans-serif; cursor: pointer; transition: color 160ms cubic-bezier(0.23,1,0.32,1), border-color 160ms cubic-bezier(0.23,1,0.32,1), transform 160ms cubic-bezier(0.23,1,0.32,1); } .ds-toggle svg { width: 15px; height: 15px; } .ds-toggle:hover { border-color: var(--muted, #574f48); color: var(--text, #1a1613); } .ds-toggle:active { transform: scale(0.97); } .ds-toggle:focus-visible { outline: 2px solid var(--copper, #a04a1d); outline-offset: 3px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Ruled Ledger",
+    "overview": "Tanren's app world is the training log written as a lexicon entry: every set is a ruled, numbered line, written in order, the way a character is written stroke by stroke. Warm paper and warm near-black carry ink-colored type; hairline rules divide content instead of boxes; one copper accent marks the set happening now and the action that logs it. The surface is quiet so the numbers are loud: weights, reps and times sit in tabular mono at sizes a lifter can read from a bench.\n\nDensity is set by the gym, not the desk. Anything tapped mid-workout is a large target (44px floor, 56px for logging), the primary action sits in thumb reach, and nothing waits on the network: a set's state (\"logged\", \"queued, no signal\", \"failed, retrying\") is written into its line in words. Both themes are first-class and follow the device unless the lifter pins one.\n\nThe world comes from the home-page mockup \"Stroke Order\" (`design/mockups/7-stroke-order.html`). It rejects the fitness-app default: neon on black, progress rings, badges-as-rewards, gradient cards, streak confetti.",
+    "keyCharacteristics": [
+      "Warm paper / warm near-black, ink type, a single copper accent.",
+      "Ruled lines, not boxes; cards only where rows group, never nested.",
+      "Mono tabular numerals for every weight, rep and time; words in Albert Sans.",
+      "Large, flat, hairline-edged controls; press scales to .97.",
+      "One authored motion: a logged set is ruled into place, once, in 240ms or less."
+    ],
+    "rules": [
+      {
+        "name": "The One Copper Rule",
+        "body": "Copper means \"this set, now\" or \"do it\". It fills only the primary action and colors only the live set, plus the system-level focus ring, caret and selection. Badges, units, charts-in-app and status chips stay in ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ghost Ground Rule",
+        "body": "On the Ghost Wash, text is Ink. Faint Ink and copper fall below 4.5:1 there.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paired Token Rule",
+        "body": "A color exists as a light/dark pair in `src/index.css` or not at all. No raw hex in components; changing `--bg` also changes the two `theme-color` metas and the pre-paint script in `index.html`.",
+        "section": "colors"
+      },
+      {
+        "name": "The Numbers Are Mono Rule",
+        "body": "Every weight, rep, time and set index is Geist Mono with tabular figures, so 95 → 100 never shifts. Words never are: status text, labels and units-as-words stay in Albert Sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Set Grammar Rule",
+        "body": "A set reads weight, small unit, ×, reps, in that order, everywhere: log, card, toast. Build it from the shared set-figures piece; never retype it.",
+        "section": "typography"
+      },
+      {
+        "name": "The Kanji Stay Home Rule",
+        "body": "鍛錬 and Shippori Mincho appear only in the wordmark lockup (20px kanji, 13px \"TANREN\" at 700 with 0.22em tracking).",
+        "section": "typography"
+      },
+      {
+        "name": "The Thumb Floor Rule",
+        "body": "Anything a lifter taps mid-workout is at least 44px; logging controls are 56px. The 36px small button is for planning and settings screens only. Nothing anywhere is under 24px.",
+        "section": "layout"
+      },
+      {
+        "name": "The Only Floaters Cast Rule",
+        "body": "If it does not sit above a scrim or over the page, it has no shadow. Cards, buttons and fields are flat.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep copper on the primary action and the live set; everything else is ink, muted ink or a hairline.",
+      "Do set every weight, rep, time and index in Geist Mono tabular figures, and compose set lines from the shared weight / unit / × / reps grammar.",
+      "Do separate rows with 1px Hairlines and group them in a 12px Card Stock card only when they belong together.",
+      "Do give in-workout controls 56px (logging) or at least 44px, and keep the primary action within thumb reach.",
+      "Do write sync and set state in words next to an icon (\"queued, no signal\"), never in color alone.",
+      "Do use Edge (at least 3:1) for field boundaries and recheck contrast numerically in both themes when a token changes.",
+      "Do press-scale pressables to .97 with the ease-out curve (cubic-bezier(0.23, 1, 0.32, 1)) and keep overlay exits faster than entries; stop all motion under prefers-reduced-motion."
+    ],
+    "donts": [
+      "Don't use neon on black, progress rings, reward badges, gradient cards or streak confetti.",
+      "Don't put copper on badges, units, status pills or decorative accents in the app.",
+      "Don't nest cards, or box individual rows that a hairline can rule.",
+      "Don't shadow anything that doesn't float above the page.",
+      "Don't use the tracked small-caps style for form labels; labels are sentence case at 14px.",
+      "Don't show the kanji or Shippori Mincho outside the wordmark lockup.",
+      "Don't use the 36px small button for anything tapped mid-workout.",
+      "Don't ship a shadcn/ui component stock; restyle it into these tokens first.",
+      "Don't bring the home page's marketing devices into the app: the stroke-order kanji diagram, copper emphasis inside headings, and copper small-caps labels belong to the Persuade surface (mockup 7), not to Operate screens."
+    ]
+  }
+}

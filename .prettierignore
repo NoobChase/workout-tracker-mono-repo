@@ -9,6 +9,10 @@ dist/
 
 # Local-only or another tool's workspace.
 docs/legacy-*
-design/
+/design/
 .impeccable/
 .claude/
+
+# Playwright output.
+test-results/
+playwright-report/

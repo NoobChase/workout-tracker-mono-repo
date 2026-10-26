@@ -2,8 +2,39 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Workout Tracker</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: light)"
+      content="#f4f1ec"
+    />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: dark)"
+      content="#131210"
+    />
+    <title>Tanren</title>
+    <script>
+      // Before first paint: apply a remembered theme so nothing flashes, and
+      // pin the browser chrome to it with a theme-color tag that goes first
+      // (src/ui/theme.ts owns the key and the tag id after load). The two
+      // hex values are index.css's --bg; no choice means the device decides.
+      try {
+        var t = localStorage.getItem("tanren-theme");
+        if (t === "light" || t === "dark") {
+          document.documentElement.dataset.theme = t;
+          var m = document.createElement("meta");
+          m.id = "tanren-theme-color";
+          m.name = "theme-color";
+          m.content = t === "dark" ? "#131210" : "#f4f1ec";
+          document.head.prepend(m);
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
