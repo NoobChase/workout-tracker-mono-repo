@@ -1,1 +1,259 @@
 @import "tailwindcss";
+
+/*
+ * Fonts are self-hosted from @fontsource so the installed PWA renders the same
+ * with no network. Variable files: one request covers every weight.
+ */
+@import "@fontsource-variable/albert-sans/wght.css";
+@import "@fontsource-variable/geist-mono/wght.css";
+
+/*
+ * Shippori Mincho B1 is only ever used for the two kanji in the wordmark, so
+ * only the two Fontsource subset files that contain them ship (about 20 KB
+ * each), and unicode-range keeps the browser from fetching either for any
+ * other character. 鍛 is U+935B, 錬 is U+932C.
+ */
+@font-face {
+  font-family: "Tanren Mark";
+  font-style: normal;
+  font-weight: 800;
+  font-display: block;
+  src: url("@fontsource/shippori-mincho-b1/files/shippori-mincho-b1-82-800-normal.woff2")
+    format("woff2");
+  unicode-range: U+935B;
+}
+@font-face {
+  font-family: "Tanren Mark";
+  font-style: normal;
+  font-weight: 800;
+  font-display: block;
+  src: url("@fontsource/shippori-mincho-b1/files/shippori-mincho-b1-73-800-normal.woff2")
+    format("woff2");
+  unicode-range: U+932C;
+}
+
+/*
+ * Tokens. Each color is written once, as a light/dark pair:
+ *
+ *   --x: var(--if-light, LIGHT) var(--if-dark, DARK);
+ *
+ * --if-light and --if-dark are space toggles: one is `initial` (so its
+ * fallback, the color, applies) and the other is empty. That is light-dark()
+ * without needing Safari 17.5. The device picks the theme; data-theme on
+ * <html>, set by the toggle, overrides it; and any element can pin its own
+ * with data-theme (the kit's side-by-side panes do), because the tokens are
+ * declared again on it and so resolve against its toggles.
+ *
+ * Contrast (WCAG 2.2 AA), checked against --bg and --card in both themes:
+ * text >= 14.4, muted >= 6.4, faint >= 4.8, copper >= 4.8, danger >= 5.1,
+ * on-copper on the button fill >= 4.9; --edge (control boundaries) >= 3.0.
+ * --ghost is a hover fill under --text only: faint and copper fall below 4.5
+ * on it.
+ */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --if-light: initial;
+  --if-dark: ;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --if-light: ;
+    --if-dark: initial;
+  }
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --if-light: ;
+  --if-dark: initial;
+}
+
+:root,
+[data-theme] {
+  --bg: var(--if-light, #f4f1ec) var(--if-dark, #131210);
+  --card: var(--if-light, #ebe6df) var(--if-dark, #1b1916);
+  --ghost: var(--if-light, #e2dcd3) var(--if-dark, #2a2622);
+  --line: var(--if-light, #d9d1c7) var(--if-dark, #2d2924);
+  --line-2: var(--if-light, #c4b9ad) var(--if-dark, #3e3832);
+  --edge: var(--if-light, #8c8278) var(--if-dark, #6e655c);
+  --text: var(--if-light, #1a1613) var(--if-dark, #f1ebe4);
+  --muted: var(--if-light, #574f48) var(--if-dark, #a79e95);
+  --faint: var(--if-light, #6a6159) var(--if-dark, #91877e);
+  --copper: var(--if-light, #a04a1d) var(--if-dark, #d07b4b);
+  --copper-btn: var(--if-light, #a04a1d) var(--if-dark, #ab5428);
+  --on-copper: #fff7f1;
+  --danger: var(--if-light, #b0302a) var(--if-dark, #ec7a72);
+  --scrim: var(--if-light, rgb(26 22 19 / 0.38))
+    var(--if-dark, rgb(0 0 0 / 0.6));
+  --shadow: var(--if-light, rgb(26 22 19 / 0.14))
+    var(--if-dark, rgb(0 0 0 / 0.5));
+
+  /* shadcn/ui's names, so its components inherit the world unchanged. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card-foreground: var(--text);
+  --popover: var(--bg);
+  --popover-foreground: var(--text);
+  --primary: var(--copper-btn);
+  --primary-foreground: var(--on-copper);
+  --secondary: var(--ghost);
+  --secondary-foreground: var(--text);
+  --muted-foreground: var(--muted);
+  --accent: var(--ghost);
+  --accent-foreground: var(--text);
+  --destructive: var(--danger);
+  --border: var(--line);
+  --input: var(--edge);
+  --ring: var(--copper);
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--card);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-edge: var(--edge);
+  --color-ghost: var(--ghost);
+  --color-faint: var(--faint);
+  --color-copper: var(--copper);
+  --color-danger: var(--danger);
+  --color-scrim: var(--scrim);
+
+  --font-sans: "Albert Sans Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --font-mark: "Tanren Mark", serif;
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    scrollbar-color: var(--line-2) var(--bg);
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 400 16px/1.6 var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    caret-color: var(--copper);
+    accent-color: var(--copper-btn);
+  }
+  *,
+  ::after,
+  ::before {
+    border-color: var(--line);
+  }
+  ::selection {
+    background: var(--copper);
+    color: var(--on-copper);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+  a {
+    color: inherit;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--line-2);
+  }
+  ::placeholder {
+    color: var(--faint);
+    opacity: 1;
+  }
+}
+
+/* The mockup's small-caps label: tracked uppercase; color comes from context (muted in the app). */
+@utility sc {
+  font: 600 12px/1.4 var(--font-sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Every weight, rep and time: Geist Mono with tabular figures. */
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/*
+ * Overlay motion. Radix keeps closing content mounted until its animation
+ * ends, so these are keyframes, not transitions. Exits are faster than
+ * entries.
+ */
+@keyframes tanren-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes tanren-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+/* Centering uses the `translate` property, so these only scale. */
+@keyframes tanren-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+@keyframes tanren-dialog-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+@keyframes tanren-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes tanren-sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes tanren-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::after,
+  ::before {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+  }
+}
