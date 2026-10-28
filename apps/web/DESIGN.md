@@ -37,6 +37,12 @@ typography:
     lineHeight: 1
     letterSpacing: "-0.03em"
     fontFeature: "\"tnum\""
+  headline-page:
+    fontFamily: "Albert Sans Variable, system-ui, sans-serif"
+    fontSize: "32px"
+    fontWeight: 700
+    lineHeight: 1.25
+    letterSpacing: "-0.02em"
   headline:
     fontFamily: "Albert Sans Variable, system-ui, sans-serif"
     fontSize: "28px"
@@ -69,9 +75,20 @@ typography:
     fontSize: "14px"
     fontWeight: 500
     lineHeight: 1
+  meta:
+    fontFamily: "Albert Sans Variable, system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: 1.4
   label-sc:
     fontFamily: "Albert Sans Variable, system-ui, sans-serif"
     fontSize: "12px"
+    fontWeight: 600
+    lineHeight: 1.4
+    letterSpacing: "0.14em"
+  label-sc-sm:
+    fontFamily: "Albert Sans Variable, system-ui, sans-serif"
+    fontSize: "11px"
     fontWeight: 600
     lineHeight: 1.4
     letterSpacing: "0.14em"
@@ -228,12 +245,14 @@ A warm, near-monochrome ink-and-paper palette with one copper voice. Every color
 
 ### Hierarchy
 - **Display** (mono 500, min(64px, 15vw), 1, -0.03em): the prescribed weight × reps of the live set. The unit drops to 0.3em in Muted Ink, and the × is muted too.
-- **Headline** (700, 28px, tight, -0.02em): the exercise name above the live set. Page-level headings in the kit run to 32px with the same weight and tracking.
+- **Page Headline** (700, 32px from md, 28px on phones, tight, -0.02em): the one h1 of a page ("What's next", "History", a session's workout name).
+- **Headline** (700, 28px, tight, -0.02em): the exercise name above the live set.
 - **Title** (700, 20px, -0.01em, balanced): dialog and sheet titles.
-- **Title Small** (600, 17px, 1.375): card titles, empty-state titles.
+- **Title Small** (600, 17px, 1.375): card titles, empty-state titles, and section headings in sentence case with their count beside them ("Today's log", "2 of 15 planned sets"; "Recent workouts").
 - **Body** (400, 16px, 1.6): default text and inputs. Body Small (15px) is for descriptions; prose holds at 48 to 60ch.
 - **Label** (500, 14px, sentence case, Muted Ink): form and stepper labels.
-- **Small Caps Label** (600, 12px, 0.14em, uppercase; 11px in badges and the "now" marker): section headings like "Today's log", set-kind badges, and the live "now" marker. Its color comes from the context: muted for headings and badges, copper only for "now".
+- **Meta** (400, 13px, 1.4, Muted Ink): a set's status words, row values and counts at the right of a ruled line, the sync line, and the wordmark's "TANREN" (at 700, 0.22em).
+- **Small Caps Label** (600, 11px, 0.14em, uppercase): only the live "now" marker (copper) and set-kind badges (muted). Never a section heading, eyebrow or kicker: a section is named by a sentence-case Title Small heading. The 12px step is kept for the marketing page.
 - **Figures** (mono 400, 15px, tabular): every set line. The stepper value is mono 500 at 26px.
 
 ### Named Rules
@@ -245,7 +264,7 @@ A warm, near-monochrome ink-and-paper palette with one copper voice. Every color
 
 ## Layout
 
-Single column at phone width; on desktop the live set (up to 26rem) and the log sit side by side with a 64px gutter. Content containers cap at 1280px with 16px side padding, 36px from the md breakpoint. Spacing is the Tailwind 4px scale, used in a short rhythm: 8 and 12px inside rows, 16 to 20px between fields and inside cards, 24 to 40px between sections. Rows have a 44px floor (set rows 52px). The primary logging action is full width at the bottom of its column, inside thumb reach; toasts therefore land at the top. Sheets rise from the bottom (max 85dvh, max-width 36rem) and pad for the safe-area inset.
+Single column at phone width; on desktop the live set (up to 26rem) and the log sit side by side with a 64px gutter. Home uses the same split when there is a program to train: what's next (up to 26rem) at left, recent workouts at right with the History link seated on its heading. In the log, each exercise's heading is itself a ruled row (52px floor, the name seated on its Hairline) so the log reads as one ledger with no unexplained gaps. Content containers cap at 1280px with 16px side padding, 36px from the md breakpoint. Spacing is the Tailwind 4px scale, used in a short rhythm: 8 and 12px inside rows, 16 to 20px between fields and inside cards, 24 to 40px between sections. Rows have a 44px floor (set rows 52px). The primary logging action is full width at the bottom of its column, inside thumb reach; toasts therefore land at the top. Sheets rise from the bottom (max 85dvh, max-width 36rem) and pad for the safe-area inset.
 
 **The Thumb Floor Rule.** Anything a lifter taps mid-workout is at least 44px; logging controls are 56px. The 36px small button is for planning and settings screens only. Nothing anywhere is under 24px.
 
@@ -263,7 +282,7 @@ Flat by default. Depth on the page is tonal (Card Stock one step off the paper) 
 
 ## Shapes
 
-Gently rounded, never pill. Controls use 8px corners, badges 6px, cards, overlays and toasts 12px; sheets drop their bottom corners and bottom border to meet the screen edge. Borders are 1px throughout: Hairline for rules, Strong Hairline for quiet control edges, Edge for input boundaries. A dashed border carries meaning: on a badge it marks a set that does not count (warmup, drop), and in an empty state it draws the blank lines sets will land on. Icons are Lucide line icons at 1.75 stroke, 14 to 20px.
+Gently rounded, never pill. Controls use 8px corners, badges 6px, cards, overlays and toasts 12px; sheets drop their bottom corners and bottom border to meet the screen edge. Borders are 1px throughout: Hairline for rules, Strong Hairline for quiet control edges, Edge for input boundaries. A dashed border carries meaning, and only these two: on a badge it marks a set that does not count (warmup, drop), and in an empty state it draws the blank lines sets will land on. Nothing else is dashed; a panel that is merely secondary is a plain Hairline. A number not entered yet is drawn as a short solid Edge rule on the baseline (BlankFigure), a blank to fill, never a dash, which reads as a minus. Icons are Lucide line icons at 1.75 stroke, 14 to 20px.
 
 ## Components
 
@@ -295,16 +314,19 @@ Flat, hairline-edged, confident; the press is felt, the hover is quiet.
 The logging control. A 56px field with an Edge border: a 56px − button, the number typed directly in mono 26px with its unit in muted mono 14px, and a 56px + button, divided by Hairlines. The buttons fill with Ghost Wash on hover and press, and their icons (not the buttons) scale to .85. Arrow keys step once; Page Up/Down five times. Out-of-range input turns the border Danger until blur clamps it.
 
 ### Set Row (signature)
-One ruled, numbered line of the log: a 40px mono index column, the set figures (plus a kind badge), and the status in words at the right, on a 52px minimum row with a Hairline beneath. Planned rows have a Faint index and muted figures; the live row has a copper index and the copper small-caps "now"; logged rows are Ink with a check and "logged" in Muted Ink; queued rows say "queued, no signal" or "queued, in order"; failed rows say "failed, retrying" in Danger. When a set is logged, the line settles 3px, a copper stroke runs along its rule from the index outward, and a copper copy of the index draws in and cools to ink, all within 240ms, once, ease-out, and not at all under reduced motion.
+One ruled, numbered line of the log: a 40px mono index column, the set figures (plus a kind badge), and the status in words at the right, on a 52px minimum row with a Hairline beneath. Planned rows have a Faint index and muted figures; the live row has a copper index and the copper small-caps "now"; logged rows are Ink with a check and "logged" in Muted Ink; queued rows say "queued, no signal" or "queued, in order"; failed rows say "failed, retrying" in Danger; rejected rows (the server refused the set for good) say "rejected" in Danger with a ban icon, and carry the server's reason on a second line in Danger under the figures. A live or planned row with no weight yet shows a BlankFigure in its place. A logged row can be one pressable line (52px, a pencil at the end, its press a .985 scale) that opens the set to edit or delete; it is named in full for assistive tech ("Set 2, 225 lb for 5 reps, logged. Edit"). When a set is logged, the line settles 3px, a copper stroke runs along its rule from the index outward, and a copper copy of the index draws in and cools to ink, all within 240ms, once, ease-out, and not at all under reduced motion.
 
 ### Sync Status
-A 32px live-region pill with 8px corners, a Strong Hairline border and a 14px line icon, stating the queue in one line ("All sets synced", "2 sets queued, no signal"). Muted Ink, or Danger when retrying.
+A 32px live-region pill with 8px corners, a Strong Hairline border and a 14px line icon, stating the queue in one line, counted in sets, never raw writes ("All sets synced", "2 sets queued, no signal"); a start or finish waiting alone reads as the workout ("Workout queued, no signal"). Six states: synced, syncing and offline in Muted Ink; failed-and-retrying and rejected ("A set was rejected, its workout stopped syncing", or "A workout was rejected and stopped syncing" for a start or finish; ban icon; one lane per workout, so others keep syncing) in Danger; on hold ("Sync on hold", pause icon) in Muted Ink, because waiting for the right account to sign in is not an error.
+
+### Sync Alert
+When a workout's writes have stopped (a rejection) or are on hold, the pill alone isn't enough. The queue runs one lane per workout, so this stops only that workout; the band names it. A band spans the page under the header, ruled off by a Hairline: one line naming the write in the lifter's terms ("Set 2 of Overhead Press wasn't saved:", semibold Danger), the server's reason in Ink, and "The rest of Push waits behind it on this device; other workouts still sync" in Muted Ink; then its actions at 48px: "Try again" leads (a secondary button: it resends the write as it was, the one recovery the queue offers until step 5), and a ghost "Show set" (or "Show workout") link follows unless that is already on screen. When the refusal is about the account (not entitled), the muted line says what is true today instead of offering a control that doesn't exist: subscribing comes with billing, and once the account is renewed, try again; until then the rest of that workout stays on this device (it does not promise other workouts sync, since the same account refuses them too). On hold shows the reason and "Nothing is lost: Push waits on this device." It is an alert region and appears on every screen.
 
 ### Overlays (Dialog, Sheet, Toast)
 Paper surface, Strong Hairline edge, 12px corners, the matching floater shadow. Dialogs are for decisions that need protected focus (max 28rem, 24px padding) and scale in from 0.97 over 200ms, leaving in 150ms. Sheets rise from the bottom on the drawer curve (cubic-bezier(0.32, 0.72, 0, 1), 300ms in, 200ms out). Close buttons are 44px ghost squares at top right. Toasts sit at the top center, max 24rem, with a 44px action.
 
 ### Navigation
-The header is a 64px bar with a Hairline beneath: the wordmark at left, the theme toggle at right (a 44px secondary-style control that names the theme showing, with a half-filled circle glyph).
+The header is a 64px bar with a Hairline beneath: the wordmark at left (a link home), and at right the sync status, the theme toggle (a 44px secondary-style control that names the theme showing, with a half-filled circle glyph) and the account control (a 36px Card Stock square with a Strong Hairline edge and the Lucide user glyph in Ink, inside a 44px target; never the account provider's generated avatar). On a phone the sync status takes its own row under the bar, inside the header. Pages below it open with a 44px back arrow (ghost) beside the page's heading where there is somewhere to go back to.
 
 ### Empty State
 Three blank lines with dashed Hairlines, numbered 1 to 3 in Faint mono, above a 17px title, a muted description and its action. The empty log already shows how sets will land.
@@ -325,7 +347,7 @@ Three blank lines with dashed Hairlines, numbered 1 to 3 in Faint mono, above a 
 - **Don't** put copper on badges, units, status pills or decorative accents in the app.
 - **Don't** nest cards, or box individual rows that a hairline can rule.
 - **Don't** shadow anything that doesn't float above the page.
-- **Don't** use the tracked small-caps style for form labels; labels are sentence case at 14px.
+- **Don't** use the tracked small-caps style for form labels, section headings, eyebrows or kickers; labels are sentence case at 14px, section headings sentence-case Title Small. Small caps are the "now" marker and the set-kind badges only.
 - **Don't** show the kanji or Shippori Mincho outside the wordmark lockup.
 - **Don't** use the 36px small button for anything tapped mid-workout.
 - **Don't** ship a shadcn/ui component stock; restyle it into these tokens first.

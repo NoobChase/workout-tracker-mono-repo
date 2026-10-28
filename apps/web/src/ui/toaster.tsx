@@ -16,6 +16,8 @@ export const toastClassNames = {
   icon: "mt-0.5 text-muted-foreground [&_svg]:size-4",
   actionButton:
     "ml-auto h-11 shrink-0 rounded-md border border-line-2 px-3.5 text-sm font-semibold text-foreground",
+  cancelButton:
+    "h-11 shrink-0 rounded-md border border-transparent px-3.5 text-sm font-semibold text-muted-foreground",
 } as const;
 
 /*

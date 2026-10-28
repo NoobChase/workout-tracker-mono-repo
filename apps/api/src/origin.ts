@@ -28,7 +28,10 @@ export function requireCloudFront(deps: OriginDeps): MiddlewareHandler {
   return async (c, next) => {
     const presented = c.req.header(ORIGIN_VERIFY_HEADER);
     if (!presented || !matches(presented, await deps.originVerifySecret())) {
-      return c.json({ ok: false, error: "forbidden" }, 403);
+      // Plain text, deliberately not the API's `{ ok: false, error }` body: a
+      // client's write queue treats only that JSON as a permanent rejection, so
+      // a mid-rotation secret mismatch is retried instead of stopping a lane.
+      return c.text("Forbidden", 403);
     }
     await next();
   };

@@ -13,7 +13,11 @@ import { cn } from "@/lib/utils";
 export type NumberStepperProps = {
   /** Visible label, also the start of each button's accessible name. */
   label: string;
-  value: number;
+  /**
+   * `null` is empty: nothing entered yet (a weight never logged before). It
+   * shows a dash; + starts from the minimum, − waits for a number.
+   */
+  value: number | null;
   onValueChange: (value: number) => void;
   /** What one press of − or + (or one ↑/↓) moves. */
   step: number;
@@ -26,6 +30,10 @@ export type NumberStepperProps = {
   /** Allow a decimal point (weights); reps are whole numbers. */
   decimal?: boolean;
   disabled?: boolean;
+  /** Marked invalid from outside (a required value is missing, say). */
+  invalid?: boolean;
+  /** Id of a message that explains the field, such as its error. */
+  describedBy?: string;
   id?: string;
   className?: string;
 };
@@ -35,8 +43,8 @@ function tidy(n: number) {
   return Math.round(n * 1000) / 1000;
 }
 
-function format(n: number) {
-  return String(tidy(n));
+function format(n: number | null) {
+  return n === null ? "" : String(tidy(n));
 }
 
 /**
@@ -60,6 +68,8 @@ export function NumberStepper({
   unit,
   decimal = false,
   disabled = false,
+  invalid: invalidFromOutside = false,
+  describedBy,
   id,
   className,
 }: NumberStepperProps) {
@@ -102,13 +112,17 @@ export function NumberStepper({
       : format(step);
   const typed = draft === null ? null : parse(draft);
   const inRange = (n: number) => n >= min && n <= max;
-  const invalid = typed !== null && !inRange(typed);
+  const invalid =
+    (typed !== null && !inRange(typed)) ||
+    (invalidFromOutside && typed === null);
   // What assistive tech hears always matches what the field shows.
   const announced = typed ?? value;
 
   const nudge = (delta: number) => {
     const from = draft !== null ? (parse(draft) ?? value) : value;
-    const next = clamp(from + delta);
+    // Empty: + lands on the first step above the minimum; − has nowhere to go.
+    if (from === null && delta < 0) return;
+    const next = from === null ? clamp(min + delta) : clamp(from + delta);
     if (draft !== null) setDraft(format(next));
     if (next !== value) report(next);
   };
@@ -147,8 +161,8 @@ export function NumberStepper({
     }
   };
 
-  const atMin = value <= min;
-  const atMax = value >= max;
+  const atMin = value === null || value <= min;
+  const atMax = value !== null && value >= max;
 
   return (
     <div
@@ -195,11 +209,14 @@ export function NumberStepper({
               inputMode={decimal ? "decimal" : "numeric"}
               autoComplete="off"
               enterKeyHint="done"
-              aria-valuenow={announced}
+              aria-valuenow={announced ?? undefined}
               aria-valuemin={min}
               aria-valuemax={max === Number.MAX_SAFE_INTEGER ? undefined : max}
-              aria-valuetext={`${format(announced)}${unitText}`}
+              aria-valuetext={
+                announced === null ? "Empty" : `${format(announced)}${unitText}`
+              }
               aria-invalid={invalid || undefined}
+              aria-describedby={describedBy}
               disabled={disabled}
               value={shown}
               onChange={onChange}

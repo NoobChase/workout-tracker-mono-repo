@@ -1,5 +1,6 @@
 import { verifyToken } from "@clerk/backend";
 import { resolveUser, softDeleteUser } from "@workout-tracker/db";
+import * as services from "@workout-tracker/services";
 import type { AppDeps } from "./app.js";
 import { getDb, getPool } from "./db.js";
 import { getSecret, getSecureParameter, requireEnv } from "./secrets.js";
@@ -53,6 +54,9 @@ export function productionDeps(): AppDeps {
     async softDeleteUser(clerkUserId) {
       return softDeleteUser(await getDb(), clerkUserId);
     },
+
+    database: getDb,
+    services,
 
     clerkWebhookSigningSecret: () => getSecureParameter(webhookSecretParameter),
 

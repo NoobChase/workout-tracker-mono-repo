@@ -348,14 +348,45 @@ export class WorkoutTrackerStack extends Stack {
       });
     }
 
-    new s3deploy.BucketDeployment(this, "SiteDeployment", {
-      sources: [
-        s3deploy.Source.asset(props.webDistPath ?? `${repoRoot}apps/web/dist`),
-      ],
+    // Two deployments share one bucket, split by key so neither can prune the
+    // other: `sync --delete` ignores keys its include/exclude filters rule out.
+    //
+    //  - `assets/*` is content-hashed by Vite, so it is cached for a year.
+    //  - Everything else (index.html, sw.js, manifest, workbox-*.js, icons)
+    //    keeps a stable or shell-referenced URL, so it is `no-cache`: stored,
+    //    but revalidated on every use. That is what lets a deploy reach
+    //    installed PWAs. Revalidation is a conditional GET (304), so it is cheap.
+    //
+    // Only the second deployment invalidates, and it depends on the first, so
+    // the invalidation lands after every object is in place and CloudFront
+    // cannot re-cache the old shell in between.
+    const webDist = s3deploy.Source.asset(
+      props.webDistPath ?? `${repoRoot}apps/web/dist`,
+    );
+    const hashedAssets = new s3deploy.BucketDeployment(
+      this,
+      "SiteAssetsDeployment",
+      {
+        sources: [webDist],
+        destinationBucket: siteBucket,
+        exclude: ["*"],
+        include: ["assets/*"],
+        cacheControl: [
+          s3deploy.CacheControl.setPublic(),
+          s3deploy.CacheControl.maxAge(Duration.days(365)),
+          s3deploy.CacheControl.immutable(),
+        ],
+      },
+    );
+    const shell = new s3deploy.BucketDeployment(this, "SiteShellDeployment", {
+      sources: [webDist],
       destinationBucket: siteBucket,
+      exclude: ["assets/*"],
+      cacheControl: [s3deploy.CacheControl.noCache()],
       distribution,
       distributionPaths: ["/*"],
     });
+    shell.node.addDependency(hashedAssets);
 
     new CfnOutput(this, "SiteUrl", {
       value: `https://${domainName}`,

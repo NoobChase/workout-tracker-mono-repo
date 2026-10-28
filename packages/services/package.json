@@ -1,0 +1,26 @@
+{
+  "name": "@workout-tracker/services",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "scripts/with-test-branch.sh node --import tsx --test \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@workout-tracker/db": "*",
+    "@workout-tracker/shared": "*",
+    "drizzle-orm": "^0.45.4"
+  },
+  "devDependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@types/node": "^22.20.5",
+    "@types/ws": "^8.18.2",
+    "neon": "^4.14.1",
+    "tsx": "^4.23.13",
+    "ws": "^8.21.3"
+  }
+}

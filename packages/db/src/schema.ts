@@ -11,15 +11,18 @@
 //   `_check` style, so the names a test or an error message refers to are the
 //   names written here.
 //
-// One thing this file cannot say: the two position uniques (`workouts`,
-// `planned_exercises`) are DEFERRABLE INITIALLY DEFERRED in the database.
-// Drizzle has no API for that, so they are declared here as plain uniques and
-// made deferrable by a --custom migration (migrations/0001). Changing either
-// constraint's columns makes drizzle-kit recreate it *without* the clause --
-// follow that migration with another --custom one. test/schema.test.ts fails
-// if it is forgotten. (specs/shipped/step-2-auth-and-core-schema decision 7.)
+// One thing this file cannot say: four uniques are DEFERRABLE INITIALLY
+// DEFERRED in the database -- the position uniques on `workouts`,
+// `planned_exercises` and `session_exercises`, and the set-number unique on
+// `session_sets`. Drizzle has no API for that, so they are declared here as
+// plain uniques and made deferrable by --custom migrations (migrations/0001,
+// migrations/0005). Changing any of these constraints' columns makes
+// drizzle-kit recreate it *without* the clause -- follow that migration with
+// another --custom one. test/schema.test.ts fails if it is forgotten.
+// (specs/shipped/step-2-auth-and-core-schema decision 7.)
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   date,
@@ -394,6 +397,156 @@ export const plannedSets = pgTable(
     check(
       "planned_sets_distance_unit_check",
       sql`${t.targetDistance} IS NULL OR ${t.distanceUnit} IS NOT NULL`,
+    ),
+  ],
+);
+
+// --- Session -> Session exercise -> Session set (data-model.md 3.6) --------
+//
+// What happened, never what was intended (operations.md 0.1): starting a
+// workout writes one workout_sessions row, and the rows below appear only when
+// something is logged. A set that did not happen is no row.
+//
+// Two invariants are deliberately absent here and live in src/scope.ts
+// instead: that `workout_id` and `planned_exercise_id` belong to the session's
+// user (data-model.md 3.6, "Two constraints that are deliberately absent").
+
+export const workoutSessions = pgTable(
+  "workout_sessions",
+  {
+    id: uuid("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // NULL = ad-hoc. RESTRICT: a workout with logged history cannot be
+    // deleted (data-model.md 4).
+    workoutId: uuid("workout_id").references(() => workouts.id, {
+      onDelete: "restrict",
+    }),
+    // Sent by the device when the lifter started; the default only covers a
+    // write that carries no time.
+    performedAt: timestamptz("performed_at").notNull().defaultNow(),
+    status: sessionStatus("status").notNull().default("IN_PROGRESS"),
+    notes: text("notes"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    // Deliberately no "one IN_PROGRESS per user" unique: the offline queue
+    // could never resolve its rejection (data-model.md 3.6).
+    index("workout_sessions_user_date_idx").on(
+      t.userId,
+      t.performedAt.desc().nullsFirst(),
+    ),
+    index("workout_sessions_workout_idx").on(t.workoutId),
+  ],
+);
+
+export const sessionExercises = pgTable(
+  "session_exercises",
+  {
+    id: uuid("id").primaryKey(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => workoutSessions.id, { onDelete: "cascade" }),
+    exerciseId: uuid("exercise_id")
+      .notNull()
+      .references(() => exercises.id, { onDelete: "restrict" }),
+    // NULL = added on the fly, off-script. SET NULL: editing the plan orphans
+    // the link, never the log.
+    plannedExerciseId: uuid("planned_exercise_id").references(
+      () => plannedExercises.id,
+      { onDelete: "set null" },
+    ),
+    position: smallint("position").notNull(),
+    // NULL = standalone; equal values = one superset/circuit.
+    groupKey: smallint("group_key"),
+    // "squat rack taken"
+    substitutionNote: text("substitution_note"),
+    notes: text("notes"),
+  },
+  (t) => [
+    // DEFERRABLE INITIALLY DEFERRED in the database -- see the header.
+    unique("session_exercises_session_id_position_key").on(
+      t.sessionId,
+      t.position,
+    ),
+    check("session_exercises_position_check", sql`${t.position} >= 0`),
+    index("session_exercises_exercise_idx").on(t.exerciseId),
+  ],
+);
+
+export const sessionSets = pgTable(
+  "session_sets",
+  {
+    id: uuid("id").primaryKey(),
+    sessionExerciseId: uuid("session_exercise_id")
+      .notNull()
+      .references(() => sessionExercises.id, { onDelete: "cascade" }),
+    // A flat, stable sequence -- not the working-set ordinal the user sees.
+    setNumber: smallint("set_number").notNull(),
+    reps: smallint("reps"),
+    weight: numeric("weight", { precision: 7, scale: 2 }),
+    weightUnit: weightUnit("weight_unit"),
+    // Comparison-only canonical weight. Every unit named, no ELSE (2.5).
+    weightKg: numeric("weight_kg", {
+      precision: 10,
+      scale: 4,
+    }).generatedAlwaysAs(
+      sql`weight * CASE weight_unit WHEN 'KG' THEN 1 WHEN 'LB' THEN 0.45359237 END`,
+    ),
+    durationSeconds: integer("duration_seconds"),
+    distance: numeric("distance", { precision: 9, scale: 3 }),
+    distanceUnit: distanceUnit("distance_unit"),
+    // Comparison-only canonical distance. Every unit named, no ELSE (2.5).
+    distanceM: numeric("distance_m", {
+      precision: 12,
+      scale: 4,
+    }).generatedAlwaysAs(
+      sql`distance * CASE distance_unit WHEN 'M' THEN 1 WHEN 'KM' THEN 1000 WHEN 'MI' THEN 1609.344 WHEN 'FT' THEN 0.3048 END`,
+    ),
+    completed: boolean("completed"),
+    rpe: numeric("rpe", { precision: 3, scale: 1 }),
+    kind: setType("kind").notNull().default("NORMAL"),
+    // The working set this one extends (drop set, myo-rep, ...). One level
+    // deep by intent; that is not a CHECK and is enforced by the writer (2.8).
+    parentSetId: uuid("parent_set_id").references(
+      (): AnyPgColumn => sessionSets.id,
+      { onDelete: "cascade" },
+    ),
+    notes: text("notes"),
+    // Sent by the device when the lifter logged it; see performed_at.
+    loggedAt: timestamptz("logged_at").notNull().defaultNow(),
+  },
+  (t) => [
+    // DEFERRABLE INITIALLY DEFERRED in the database -- see the header.
+    // Deleting a set renumbers the survivors in one transaction (8.2).
+    unique("session_sets_session_exercise_id_set_number_key").on(
+      t.sessionExerciseId,
+      t.setNumber,
+    ),
+    check("session_sets_set_number_check", sql`${t.setNumber} >= 1`),
+    check("session_sets_reps_check", sql`${t.reps} >= 0`),
+    check("session_sets_weight_check", sql`${t.weight} >= 0`),
+    check(
+      "session_sets_duration_seconds_check",
+      sql`${t.durationSeconds} >= 0`,
+    ),
+    check("session_sets_distance_check", sql`${t.distance} >= 0`),
+    check("session_sets_rpe_check", sql`${t.rpe} BETWEEN 0 AND 10`),
+    // Without these, a weight with no unit makes weight_kg NULL and silently
+    // drops out of every aggregate.
+    check(
+      "session_sets_weight_unit_check",
+      sql`${t.weight} IS NULL OR ${t.weightUnit} IS NOT NULL`,
+    ),
+    check(
+      "session_sets_distance_unit_check",
+      sql`${t.distance} IS NULL OR ${t.distanceUnit} IS NOT NULL`,
+    ),
+    // A set records something. RPE alone is not a set.
+    check(
+      "session_sets_has_value_check",
+      sql`num_nonnulls(${t.reps}, ${t.weight}, ${t.durationSeconds}, ${t.distance}, ${t.completed}) > 0`,
     ),
   ],
 );

@@ -18,6 +18,8 @@ export default tseslint.config(
       // Not part of the build: design references and Impeccable's workspace.
       "design/",
       ".impeccable/",
+      // Agent worktrees: separate checkouts, linted in their own right.
+      ".claude/worktrees/",
     ],
   },
   {

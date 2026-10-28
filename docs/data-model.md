@@ -484,9 +484,9 @@ the HTTP driver cannot do.
 **The schema itself lives in [`packages/db/src/schema.ts`](../packages/db/src/schema.ts).**
 The DDL that used to be here (and in `schema.dbml`) was deleted when that file
 landed, leaving this section to hold the *reasoning* — the part that cannot be
-generated and does not go stale. Two exceptions remain below, each marked: the
-session tables (§3.6, step 3) and `processed_stripe_events` (§3.8, step 5), which
-stay as spec until the step that adds them to the schema file deletes them.
+generated and does not go stale. One exception remains below, marked:
+`processed_stripe_events` (§3.8, step 5), which stays as spec until the step
+that adds it to the schema file deletes it.
 
 ### 3.1 Enums
 
@@ -619,69 +619,7 @@ exercises within a transaction would otherwise trip the constraint mid-update.
 
 ### 3.6 Session → Session Exercise → Session Set
 
-**Not yet in `schema.ts`** — the session tables land in step 3. Until then this
-block is the spec; delete it in the change that adds them to the schema file.
-
-```sql
-CREATE TABLE workout_sessions (
-  id           UUID           PRIMARY KEY,
-  user_id      UUID           NOT NULL REFERENCES users(id)    ON DELETE CASCADE,
-  workout_id   UUID           REFERENCES workouts(id) ON DELETE RESTRICT,  -- NULL = ad-hoc
-  performed_at TIMESTAMPTZ    NOT NULL DEFAULT now(),
-  status       session_status NOT NULL DEFAULT 'IN_PROGRESS',
-  notes        TEXT,
-  created_at   TIMESTAMPTZ    NOT NULL DEFAULT now()
-);
-CREATE INDEX workout_sessions_user_date_idx ON workout_sessions (user_id, performed_at DESC);
-CREATE INDEX workout_sessions_workout_idx   ON workout_sessions (workout_id);
-
-CREATE TABLE session_exercises (
-  id                  UUID     PRIMARY KEY,
-  session_id          UUID     NOT NULL REFERENCES workout_sessions(id)  ON DELETE CASCADE,
-  exercise_id         UUID     NOT NULL REFERENCES exercises(id)         ON DELETE RESTRICT,
-  planned_exercise_id UUID     REFERENCES planned_exercises(id) ON DELETE SET NULL,
-  position            SMALLINT NOT NULL CHECK (position >= 0),
-  group_key           SMALLINT,
-  substitution_note   TEXT,    -- "squat rack taken"
-  notes               TEXT,
-  UNIQUE (session_id, position) DEFERRABLE INITIALLY DEFERRED
-);
-CREATE INDEX session_exercises_exercise_idx ON session_exercises (exercise_id);
-
-CREATE TABLE session_sets (
-  id                  UUID     PRIMARY KEY,
-  session_exercise_id UUID     NOT NULL REFERENCES session_exercises(id) ON DELETE CASCADE,
-  set_number          SMALLINT NOT NULL CHECK (set_number >= 1),
-  reps                SMALLINT     CHECK (reps >= 0),
-  weight              NUMERIC(7,2) CHECK (weight >= 0),
-  weight_unit         weight_unit,
-  weight_kg           NUMERIC(10,4) GENERATED ALWAYS AS (
-                        weight * CASE weight_unit
-                          WHEN 'KG' THEN 1
-                          WHEN 'LB' THEN 0.45359237 END
-                      ) STORED,
-  duration_seconds    INT          CHECK (duration_seconds >= 0),
-  distance            NUMERIC(9,3) CHECK (distance >= 0),
-  distance_unit       distance_unit,
-  distance_m          NUMERIC(12,4) GENERATED ALWAYS AS (
-                        distance * CASE distance_unit
-                          WHEN 'M'  THEN 1
-                          WHEN 'KM' THEN 1000
-                          WHEN 'MI' THEN 1609.344
-                          WHEN 'FT' THEN 0.3048 END
-                      ) STORED,
-  completed           BOOLEAN,
-  rpe                 NUMERIC(3,1) CHECK (rpe BETWEEN 0 AND 10),
-  kind                set_type     NOT NULL DEFAULT 'NORMAL',
-  parent_set_id       UUID         REFERENCES session_sets(id) ON DELETE CASCADE,
-  notes               TEXT,
-  logged_at           TIMESTAMPTZ  NOT NULL DEFAULT now(),
-  UNIQUE (session_exercise_id, set_number) DEFERRABLE INITIALLY DEFERRED,
-  CHECK (weight   IS NULL OR weight_unit   IS NOT NULL),
-  CHECK (distance IS NULL OR distance_unit IS NOT NULL),
-  CHECK (num_nonnulls(reps, weight, duration_seconds, distance, completed) > 0)
-);
-```
+Defined in [`packages/db/src/schema.ts`](../packages/db/src/schema.ts) (`workout_sessions`, `session_exercises`, `session_sets`).
 
 `planned_exercise_id` is nullable: a `NULL` means the user added the exercise
 on the fly, off-script. That is the link legacy never had — it lets you ask
@@ -691,11 +629,14 @@ A set that was not performed is simply **no row**. This removes both the legacy
 cap of six sets and the `''`-means-absent convention.
 
 `kind` and `parent_set_id` carry set technique — see §2.8. A set counts toward
-`target_sets` when `parent_set_id IS NULL AND kind <> 'WARMUP'`.
+`target_sets` when `parent_set_id IS NULL AND kind <> 'WARMUP'` — the one shared
+predicate, `countsAsSet` in `packages/db/src/predicates.ts`.
 
 `UNIQUE (session_exercise_id, set_number)` is `DEFERRABLE` because deleting a
 logged set mid-session means renumbering the survivors, which trips a
-non-deferrable unique halfway through the update (§8.2).
+non-deferrable unique halfway through the update (§8.2). Drizzle cannot express
+`DEFERRABLE`, so it (and `UNIQUE (session_id, position)` on `session_exercises`)
+is made deferrable by a custom migration, as the plan-side position uniques are.
 
 **Two constraints that are deliberately absent.**
 

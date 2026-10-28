@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { SetLog, SetRow, type SetStatus } from "./set-row.js";
 
 function renderRow(status: SetStatus, kind?: "warmup" | "drop") {
@@ -55,5 +56,56 @@ describe("SetRow", () => {
     const row = screen.getByRole("listitem");
     expect(row).toHaveAttribute("data-status", "logged");
     expect(row).not.toHaveAttribute("aria-current");
+  });
+
+  it("says rejected in words, with the server's reason on the line", () => {
+    render(
+      <SetLog>
+        <SetRow
+          index={3}
+          weight={999}
+          reps={5}
+          unit="lb"
+          status="rejected"
+          reason="That weight is more than the bar can hold."
+        />
+      </SetLog>,
+    );
+    const row = screen.getByRole("listitem");
+    expect(row).toHaveAttribute("data-status", "rejected");
+    expect(row).toHaveTextContent("rejected");
+    expect(row).toHaveTextContent("That weight is more than the bar can hold.");
+  });
+
+  it("is one button to edit when pressable, and reads as the set", async () => {
+    const onPress = vi.fn();
+    render(
+      <SetLog>
+        <SetRow
+          index={2}
+          weight={225}
+          reps={5}
+          unit="lb"
+          status="logged"
+          onPress={onPress}
+        />
+      </SetLog>,
+    );
+    const button = screen.getByRole("button", {
+      name: "Set 2, 225 lb for 5 reps, logged. Edit",
+    });
+    await userEvent.click(button);
+    expect(onPress).toHaveBeenCalledOnce();
+  });
+
+  it("an empty weight is a blank to fill, said in words", () => {
+    render(
+      <SetLog>
+        <SetRow index={1} weight={null} reps={8} unit="kg" status="live" />
+      </SetLog>,
+    );
+    const row = screen.getByRole("listitem");
+    expect(row).toHaveTextContent("no weight yet");
+    expect(row).not.toHaveTextContent("–");
   });
 });

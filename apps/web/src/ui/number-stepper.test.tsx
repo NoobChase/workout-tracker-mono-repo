@@ -209,3 +209,53 @@ describe("NumberStepper", () => {
     expect(field).toHaveAttribute("aria-valuenow", "245");
   });
 });
+
+describe("NumberStepper, empty", () => {
+  function Empty({ spy }: { spy: (n: number) => void }) {
+    const [value, setValue] = useState<number | null>(null);
+    return (
+      <NumberStepper
+        label="Weight"
+        unit="lb"
+        step={5}
+        decimal
+        max={1000}
+        value={value}
+        invalid={value === null}
+        onValueChange={(n) => {
+          spy(n);
+          setValue(n);
+        }}
+      />
+    );
+  }
+
+  it("starts blank and says so; − waits, + starts from the first step", async () => {
+    const spy = vi.fn();
+    render(<Empty spy={spy} />);
+    const field = screen.getByRole("spinbutton", { name: "Weight" });
+    expect(field).toHaveValue("");
+    expect(field).toHaveAttribute("aria-valuetext", "Empty");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(
+      screen.getByRole("button", { name: "Decrease weight by 5 lb" }),
+    ).toBeDisabled();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Increase weight by 5 lb" }),
+    );
+    expect(spy).toHaveBeenLastCalledWith(5);
+    expect(field).toHaveValue("5");
+    expect(field).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("takes a typed number from blank", async () => {
+    const spy = vi.fn();
+    render(<Empty spy={spy} />);
+    await userEvent.type(
+      screen.getByRole("spinbutton", { name: "Weight" }),
+      "135",
+    );
+    expect(spy).toHaveBeenLastCalledWith(135);
+  });
+});

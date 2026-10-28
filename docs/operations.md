@@ -52,12 +52,14 @@ same generated ids and every insert is a no-op.
 
 ### 0.3 Which operations must work offline
 
-Only four, and they are all in §4:
+Only these, and they are all in §4:
 
 | Operation | Offline |
 |---|---|
 | §4.2 start the workout | **yes** |
 | §4.3–4.12 log, substitute, improvise, drop-set | **yes** |
+| §4.15 edit a logged set | **yes** |
+| §4.16 delete a logged set | **yes** — one request: delete, renumber, and drop an emptied exercise row in a single transaction |
 | §4.13 finish the workout | **yes**, minus the extension check |
 | §4.14 skip the workout | **yes** |
 | everything in §1, §2, §3, §5 | no — plan-side and review work happens with a connection |
@@ -643,7 +645,8 @@ substituted, the slot was resolved as designed.
 
 **Writes:** nothing.
 
-The absence of a `session_exercises` row *is* the skip.
+The absence of a `session_exercises` row *is* the skip. That stays true after an
+undo: deleting an exercise's last logged set removes its row too (§4.16).
 
 ### 4.8 Add an unplanned exercise
 
@@ -738,6 +741,15 @@ Note the predicate uses `IN ('COMPLETED','SKIPPED')`, matching §4.1 — a skipp
 workout is resolved, so a program whose final workout was skipped still extends
 correctly rather than hanging.
 
+Only an `ACTIVE` program is checked. Finishing a session under an `ARCHIVED`
+(or otherwise non-active) program still marks the session `COMPLETED`, but never
+extends the program or sets it `COMPLETED`: archived means abandoned (§3.10).
+
+Lock the program row (`SELECT … FROM workout_programs WHERE id = $program
+FOR UPDATE`) before the exhaustion check. Two sessions finishing the program's
+last two workouts concurrently would otherwise each see the other as
+unresolved, and neither would extend.
+
 Doing this on the write path rather than inside §4.1 is deliberate: "what's
 next?" stays a pure read. The extension runs in the **same transaction** as the
 status update that exhausted the program, so by the time any read happens there
@@ -755,6 +767,109 @@ the user can see offline depends on the difference.
 
 A row is still required — it is the marker that says "resolved, nothing logged."
 Writing no row at all would leave the workout as "next" forever.
+
+### 4.15 Edit a logged set
+
+**Writes:** `session_sets` ×1 (an `UPDATE` of `reps`, `weight`, and optionally
+`weight_unit`)
+
+```sql
+UPDATE session_sets ss
+SET reps        = $reps,
+    weight      = $weight,
+    weight_unit = COALESCE($client_unit, ss.weight_unit)
+FROM session_exercises se
+JOIN workout_sessions  s ON s.id = se.session_id
+WHERE ss.id = $set_id
+  AND se.id = ss.session_exercise_id
+  AND s.user_id = $user;
+```
+
+(`s.user_id = $user` is the user-scoping helper, not an inline filter — see
+`packages/db`.)
+
+The request carries **absolute values**, not a delta, so replaying it writes the
+same row the same way and is harmless — no `ON CONFLICT` is needed because
+nothing is inserted. `set_number`, `kind`, `parent_set_id`, and `logged_at` are
+untouched: an edit corrects what was lifted, it does not move the set. The unit
+was stamped when the set was logged (§4.3); an edit that sends no unit keeps it,
+and one that does send a unit is the device's resolved choice, as in §4.3.
+`weight_kg` regenerates on its own.
+
+An id that matches no row the user owns — missing, or someone else's, which look
+the same — updates nothing and is answered `404`. That is a rejection (the
+queue stops and shows it), not a no-op: an edit of a set that does not exist is
+a bug on the client, and silently dropping it would hide one. The serial queue
+(§0.3) makes this unreachable in normal use, since an edit is only sent after the
+log that created its set has been acknowledged.
+
+### 4.16 Delete a logged set
+
+**Writes:** `session_sets` −1 (plus any `DROP` children, via
+`ON DELETE CASCADE`), `session_sets.set_number` on the survivors, and
+`session_exercises` −1 when that was its last set
+
+Deleting the set leaves a gap in `set_number`, and §8.2 of the data model says
+not to leave one. The delete, the renumber, and the emptied-parent cleanup are
+**one transaction**; the client sends one request (`DELETE /sets/:id`), never a
+delete followed by N renumbering updates.
+
+```sql
+BEGIN;
+
+-- Lock the parent so two deliveries for one exercise serialize, and find it.
+-- Zero rows here means the set is already gone: COMMIT and answer success.
+SELECT se.id
+FROM session_sets ss
+JOIN session_exercises se ON se.id = ss.session_exercise_id
+JOIN workout_sessions  s  ON s.id  = se.session_id
+WHERE ss.id = $set_id AND s.user_id = $user
+FOR UPDATE OF se;
+
+DELETE FROM session_sets WHERE id = $set_id;
+
+-- Renumber the survivors 1..n in their existing order. The UNIQUE on
+-- (session_exercise_id, set_number) is DEFERRABLE INITIALLY DEFERRED (§3.6 of
+-- the data model), so the intermediate states inside this one statement and
+-- transaction are not checked; only the final state is.
+UPDATE session_sets ss
+SET set_number = r.n
+FROM (
+  SELECT id, row_number() OVER (ORDER BY set_number) AS n
+  FROM session_sets
+  WHERE session_exercise_id = $se
+) r
+WHERE ss.id = r.id
+  AND ss.set_number <> r.n;
+
+-- The last set is gone: remove the exercise row, so "skipped = no row" (§4.7)
+-- is still true after an undo.
+DELETE FROM session_exercises se
+WHERE se.id = $se
+  AND NOT EXISTS (
+    SELECT 1 FROM session_sets WHERE session_exercise_id = se.id
+  );
+
+COMMIT;
+```
+
+`row_number()` over the survivors, rather than `set_number - 1` for those above
+the deleted one, is what keeps numbering contiguous when the deleted set was a
+drop-set parent whose children cascaded away with it (§4.11): the numbers are
+one flat sequence, and every one after the removed block shifts down together.
+Only rows whose number actually changes are written.
+
+Removing the emptied `session_exercises` row restores the state before §4.3: no
+exercise row, no sets. The next log for that exercise is an ordinary §4.3
+first-contact pair. Without the cleanup the exercise would read as "performed
+with zero sets", which no query expects.
+
+**Idempotent by outcome.** A set that no longer exists — a replayed delete, or
+an id that was never the user's — makes the transaction find nothing, change
+nothing, and return success. Deletion is "make this id absent", and it already
+is. There is no `ON CONFLICT` because there is nothing to insert. A replay can
+never delete a *different* set after the renumber, because the delete is by
+primary key, not by `set_number`.
 
 ---
 
@@ -833,15 +948,15 @@ transaction and what a repository layer should own.
 | `planned_exercises` | 3.3, 3.5, 3.6, 3.7, 3.8, 3.9, 3.12, 3.13 |
 | `planned_sets` | 3.4, 3.7, 3.8, 3.9, 3.12, 3.13 |
 | `workout_sessions` | 4.2 start, 4.13 finish, 4.14 skip |
-| `session_exercises` | 4.3, 4.5, 4.6, 4.8 |
-| `session_sets` | 4.3, 4.4, 4.10, 4.11, 4.12 |
+| `session_exercises` | 4.3, 4.5, 4.6, 4.8, 4.16 delete (when its last set goes) |
+| `session_sets` | 4.3, 4.4, 4.10, 4.11, 4.12, 4.15 edit, 4.16 delete and renumber |
 | `processed_stripe_events` | Stripe webhook handler (§3.8 of the data model) |
 
 Operations that must be one transaction: **3.1** (create program), **3.8**
 (apply to remaining cycles), **3.9** (copy program), **3.10** (activate),
 **3.12** (extend), **3.13** (import — validation and preview happen before the
 transaction; the confirmed create is one), **4.3** (session exercise + first
-set), **4.11** (drop set parent + children), and **4.13** (finish, which may
+set), **4.11** (drop set parent + children), **4.16** (delete a set: delete, renumber, and drop an emptied exercise row), and **4.13** (finish, which may
 extend the program).
 
 Several of those are genuinely *interactive* transactions — the clone reads a
