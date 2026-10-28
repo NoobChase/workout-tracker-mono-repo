@@ -1,8 +1,8 @@
 // The user-scoping primitives against a real database (spec step 2, decision
 // 9; root CLAUDE.md requires a real Neon branch here, not mocks). Two users,
-// each with a full plan tree, a private exercise and a settings row; every
-// test asks user A's scope for user B's rows and expects nothing back. With no
-// production call sites yet, this file is the call site.
+// each with a full plan tree, a logged session (session, exercise, set), a
+// private exercise and a settings row; every test asks user A's scope for
+// user B's rows and expects nothing back.
 import assert from "node:assert/strict";
 import { after, describe, it } from "node:test";
 import { and, eq, inArray } from "drizzle-orm";
@@ -14,10 +14,13 @@ import {
   exercises,
   plannedExercises,
   plannedSets,
+  sessionExercises,
+  sessionSets,
   userExerciseSettings,
   userScope,
   workoutPlans,
   workoutPrograms,
+  workoutSessions,
   workouts,
   type Db,
   type OwnedTable,
@@ -42,6 +45,9 @@ function idsFor(n: 1 | 2) {
     workout: id(5),
     plannedExercise: id(6),
     plannedSet: id(7),
+    session: id(8),
+    sessionExercise: id(9),
+    sessionSet: id(10),
   };
 }
 const A = idsFor(1);
@@ -85,6 +91,26 @@ async function seed(db: Db, ids: ReturnType<typeof idsFor>, n: number) {
     setNumber: 1,
     targetRepsMin: 5,
   });
+  await db.insert(workoutSessions).values({
+    id: ids.session,
+    userId: ids.user,
+    workoutId: ids.workout,
+  });
+  await db.insert(sessionExercises).values({
+    id: ids.sessionExercise,
+    sessionId: ids.session,
+    exerciseId: ids.exercise,
+    plannedExerciseId: ids.plannedExercise,
+    position: 0,
+  });
+  await db.insert(sessionSets).values({
+    id: ids.sessionSet,
+    sessionExerciseId: ids.sessionExercise,
+    setNumber: 1,
+    reps: 5,
+    weight: "100",
+    weightUnit: "LB",
+  });
 }
 
 /** Runs `fn` against two seeded users inside a rolled-back transaction. */
@@ -107,6 +133,9 @@ const tables = {
   workouts: [workouts, "workout"],
   plannedExercises: [plannedExercises, "plannedExercise"],
   plannedSets: [plannedSets, "plannedSet"],
+  workoutSessions: [workoutSessions, "session"],
+  sessionExercises: [sessionExercises, "sessionExercise"],
+  sessionSets: [sessionSets, "sessionSet"],
   userExerciseSettings: [userExerciseSettings, "settings"],
 } as const satisfies Record<OwnedTable, readonly [unknown, keyof typeof A]>;
 
@@ -170,6 +199,81 @@ describe("userScope", () => {
     });
   });
 
+  it("session tables: B's session, exercises and sets are unwritable through A's scope", async () => {
+    await withTwoUsers(async (db) => {
+      const scope = userScope(A.user);
+
+      const sessions = await db
+        .update(workoutSessions)
+        .set({ status: "COMPLETED" })
+        .where(and(scope.workoutSessions, eq(workoutSessions.id, B.session)))
+        .returning({ id: workoutSessions.id });
+      const edited = await db
+        .update(sessionSets)
+        .set({ reps: 99 })
+        .where(and(scope.sessionSets, eq(sessionSets.id, B.sessionSet)))
+        .returning({ id: sessionSets.id });
+      const removedSets = await db
+        .delete(sessionSets)
+        .where(and(scope.sessionSets, eq(sessionSets.id, B.sessionSet)))
+        .returning({ id: sessionSets.id });
+      const removedExercises = await db
+        .delete(sessionExercises)
+        .where(
+          and(
+            scope.sessionExercises,
+            eq(sessionExercises.id, B.sessionExercise),
+          ),
+        )
+        .returning({ id: sessionExercises.id });
+      assert.deepEqual(
+        [sessions, edited, removedSets, removedExercises].map((r) => r.length),
+        [0, 0, 0, 0],
+      );
+
+      const [session] = await db
+        .select({ status: workoutSessions.status })
+        .from(workoutSessions)
+        .where(eq(workoutSessions.id, B.session));
+      const [set] = await db
+        .select({ reps: sessionSets.reps })
+        .from(sessionSets)
+        .where(eq(sessionSets.id, B.sessionSet));
+      assert.equal(session?.status, "IN_PROGRESS");
+      assert.equal(set?.reps, 5, "B's set exists and is unedited");
+
+      // ...while A's own rows are writable through the same scope.
+      const mine = await db
+        .update(sessionSets)
+        .set({ reps: 6 })
+        .where(and(scope.sessionSets, eq(sessionSets.id, A.sessionSet)))
+        .returning({ id: sessionSets.id });
+      assert.equal(mine.length, 1);
+    });
+  });
+
+  it("an ON CONFLICT DO NOTHING replay onto B's id is caught by the scoped re-read", async () => {
+    // A client-minted id that happens to be (or is forged as) B's: the insert
+    // reports nothing wrong, and only reading back through the scope shows
+    // the row is not A's. The pattern scope.ts asks every replayed write for.
+    await withTwoUsers(async (db) => {
+      await db
+        .insert(workoutSessions)
+        .values({ id: B.session, userId: A.user, workoutId: A.workout })
+        .onConflictDoNothing({ target: workoutSessions.id });
+      const visible = await db
+        .select({ id: workoutSessions.id })
+        .from(workoutSessions)
+        .where(
+          and(
+            userScope(A.user).workoutSessions,
+            eq(workoutSessions.id, B.session),
+          ),
+        );
+      assert.deepEqual(visible, []);
+    });
+  });
+
   it("exercises: visible is standard plus own; owned is own only", async () => {
     await withTwoUsers(async (db) => {
       const scope = userScope(A.user);
@@ -206,6 +310,26 @@ describe("assertOwned", () => {
       });
     });
   }
+
+  it("refuses each cross-tenant reference a session write can make", async () => {
+    // data-model.md 3.6: nothing in the schema stops these pointing at B.
+    await withTwoUsers(async (db) => {
+      const refused = async (table: OwnedTable, id: string) =>
+        assert.rejects(
+          assertOwned(db, A.user, table, [id]),
+          CrossTenantReferenceError,
+        );
+      await refused("workouts", B.workout); // a session at B's workout
+      await refused("workoutSessions", B.session); // logging into B's session
+      await refused("plannedExercises", B.plannedExercise); // against B's plan
+      await refused("sessionExercises", B.sessionExercise); // a set under B's
+      await refused("sessionSets", B.sessionSet); // a drop off B's set
+      await assert.rejects(
+        assertExercisesUsable(db, A.user, [B.exercise]),
+        CrossTenantReferenceError,
+      );
+    });
+  });
 
   it("names only the failing ids, and treats a missing id like a foreign one", async () => {
     await withTwoUsers(async (db) => {

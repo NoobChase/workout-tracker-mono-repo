@@ -14,6 +14,7 @@
     "@clerk/backend": "^3.26.2",
     "@neondatabase/serverless": "^1.0.1",
     "@workout-tracker/db": "^0.0.0",
+    "@workout-tracker/services": "*",
     "@workout-tracker/shared": "*",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.9.6",

@@ -1,41 +1,100 @@
-import { getToken } from "@clerk/react";
+import { errorResponse } from "@workout-tracker/shared";
 import type { z } from "zod";
+import { getAuthToken } from "./auth.js";
 
-/** A non-2xx response from the API. `status` is what callers branch on. */
+export { AuthNotReadyError, OfflineError } from "./auth.js";
+
+export type ApiPath = `/api/${string}`;
+
+/**
+ * A non-2xx response from the API. `status` is what callers branch on;
+ * `reason` is the server's `{ ok: false, error }` message, written to be shown
+ * to the lifter verbatim, when the body carried one.
+ */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly path: string,
+    readonly reason: string | null,
   ) {
-    super(`${path} returned ${status}`);
+    super(reason ?? `${path} returned ${status}`);
     this.name = "ApiError";
   }
 }
 
+/** `fetch` itself failed: no route to the API, though the browser says online. */
+export class NetworkError extends Error {
+  constructor(
+    readonly path: string,
+    cause: unknown,
+  ) {
+    super(`Couldn't reach the server (${path})`, { cause });
+    this.name = "NetworkError";
+  }
+}
+
+export interface ApiInit {
+  method?: "GET" | "PUT" | "POST" | "PATCH" | "DELETE";
+  /** Sent as JSON. Already validated against its `packages/shared` schema. */
+  body?: unknown;
+  /** Ask Clerk for a fresh token instead of a cached one (after a `401`). */
+  refreshToken?: boolean;
+  signal?: AbortSignal;
+}
+
 /**
  * The one way the web app calls the API, and the only code that sets the
- * `Authorization` header (spec step 2, decision 12). Step 3's offline mutation
- * queue wraps this rather than re-implementing auth, so there is never a
- * second path that can disagree about it.
+ * `Authorization` header. Screens read through `apiFetch`; the offline
+ * mutation queue sends through `apiRequest`. Neither waits for Clerk to load
+ * (design D10): the token comes from `getAuthToken`, which throws
+ * `OfflineError` or `AuthNotReadyError` instead.
  *
  * Same origin: CloudFront's /api/* behaviour forwards to the Lambda, so there
- * is no CORS and no API hostname to configure.
- *
- * Clerk's standalone `getToken` waits for Clerk to load, returns a fresh token
- * (session tokens live 60 seconds; it refreshes them), and `null` when signed
- * out -- in which case the request goes without a header and the API decides.
- * Every response is validated against the shared schema the API produces.
+ * is no CORS and no API hostname to configure. A signed-out caller sends no
+ * header and the API decides.
  */
-export async function apiFetch<T>(
-  path: `/api/${string}`,
-  schema: z.ZodType<T>,
-  init: RequestInit = {},
-): Promise<T> {
-  const headers = new Headers(init.headers);
-  const token = await getToken();
+export async function apiRequest(
+  path: ApiPath,
+  init: ApiInit = {},
+): Promise<Response> {
+  const token = await getAuthToken({ skipCache: init.refreshToken });
+  const headers = new Headers();
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (init.body !== undefined) headers.set("Content-Type", "application/json");
 
-  const response = await fetch(path, { ...init, headers });
-  if (!response.ok) throw new ApiError(response.status, path);
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      method: init.method ?? "GET",
+      headers,
+      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      signal: init.signal,
+    });
+  } catch (error) {
+    if (init.signal?.aborted) throw error;
+    throw new NetworkError(path, error);
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, path, await readReason(response));
+  }
+  return response;
+}
+
+/** `apiRequest`, then the body validated against the shared response schema. */
+export async function apiFetch<T>(
+  path: ApiPath,
+  schema: z.ZodType<T>,
+  init: ApiInit = {},
+): Promise<T> {
+  const response = await apiRequest(path, init);
   return schema.parse(await response.json());
+}
+
+async function readReason(response: Response): Promise<string | null> {
+  try {
+    const parsed = errorResponse.safeParse(await response.json());
+    return parsed.success ? parsed.data.error : null;
+  } catch {
+    return null;
+  }
 }

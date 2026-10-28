@@ -9,10 +9,9 @@ description: Change the database schema — add or alter a table, column, index,
 
 **`packages/db/src/schema.ts`** is the source of truth for every table that
 exists. `docs/data-model.md` §3 holds the *reasoning* behind each table, not its
-DDL — with two marked exceptions that are still spec because their tables do not
-exist yet: the session tables (§3.6, step 3) and `processed_stripe_events`
-(§3.8, step 5). The change that adds either to `schema.ts` deletes its block from
-the doc. Never re-add DDL to the doc for a table that is in the schema file.
+DDL — with one marked exception that is still spec because its table does not
+exist yet: `processed_stripe_events` (§3.8, step 5). The change that adds it to
+`schema.ts` deletes its block from the doc. Never re-add DDL to the doc for a table that is in the schema file.
 
 ## The loop
 

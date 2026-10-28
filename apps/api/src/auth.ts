@@ -70,8 +70,9 @@ export function requireAuth(deps: AuthDeps): MiddlewareHandler<AuthEnv> {
 }
 
 /**
- * Gates the Pro route groups -- progression analytics and MCP tools, nothing
- * else (data-model.md 3.8). Reads the `sub_status` `requireAuth` just loaded,
+ * Gates the Pro routes: every mutating route, progression analytics and the
+ * MCP tools (data-model.md 3.8). Lapsed accounts stay read-only, so reads
+ * never carry it. Reads the `sub_status` `requireAuth` just loaded,
  * so it costs no query. `bypass` exists so tests can exercise the real rule
  * while billing is not live; production code never passes it.
  */

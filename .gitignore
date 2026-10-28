@@ -45,3 +45,6 @@ docs/legacy-*
 # detector's deliberate ignore rules.
 .impeccable/hook.cache.json
 .impeccable/review/
+
+# Agent worktrees (Claude Code isolation).
+.claude/worktrees/

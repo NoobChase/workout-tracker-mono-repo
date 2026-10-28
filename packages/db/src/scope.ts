@@ -14,9 +14,12 @@ import {
   exercises,
   plannedExercises,
   plannedSets,
+  sessionExercises,
+  sessionSets,
   userExerciseSettings,
   workoutPlans,
   workoutPrograms,
+  workoutSessions,
   workouts,
 } from "./schema";
 
@@ -27,12 +30,15 @@ import {
  */
 export type UserId = string & { readonly __brand: "UserId" };
 
+/** An open transaction, for helpers that must not run outside one. */
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
 /** A database handle or an open transaction: scoping must work inside both. */
-export type Executor = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];
+export type Executor = Db | Tx;
 
 // The ownership chain, one level per function, each the ids of that table the
-// user owns. Programs carry user_id; everything below reaches it through its
-// parent (data-model.md 3.5).
+// user owns. Programs and sessions carry user_id; everything below reaches it
+// through its parent (data-model.md 3.5, 3.6).
 const programIds = (u: UserId) =>
   sql`SELECT ${workoutPrograms.id} FROM ${workoutPrograms} WHERE ${workoutPrograms.userId} = ${u}`;
 const planIds = (u: UserId) =>
@@ -41,6 +47,10 @@ const workoutIds = (u: UserId) =>
   sql`SELECT ${workouts.id} FROM ${workouts} WHERE ${workouts.planId} IN (${planIds(u)})`;
 const plannedExerciseIds = (u: UserId) =>
   sql`SELECT ${plannedExercises.id} FROM ${plannedExercises} WHERE ${plannedExercises.workoutId} IN (${workoutIds(u)})`;
+const sessionIds = (u: UserId) =>
+  sql`SELECT ${workoutSessions.id} FROM ${workoutSessions} WHERE ${workoutSessions.userId} = ${u}`;
+const sessionExerciseIds = (u: UserId) =>
+  sql`SELECT ${sessionExercises.id} FROM ${sessionExercises} WHERE ${sessionExercises.sessionId} IN (${sessionIds(u)})`;
 
 export interface UserScope {
   readonly userId: UserId;
@@ -49,6 +59,9 @@ export interface UserScope {
   readonly workouts: SQL;
   readonly plannedExercises: SQL;
   readonly plannedSets: SQL;
+  readonly workoutSessions: SQL;
+  readonly sessionExercises: SQL;
+  readonly sessionSets: SQL;
   readonly userExerciseSettings: SQL;
   /** Custom exercises this user created: what they may edit or retire. */
   readonly ownedExercises: SQL;
@@ -75,6 +88,9 @@ export function userScope(userId: UserId): UserScope {
     workouts: sql`${workouts.planId} IN (${planIds(u)})`,
     plannedExercises: sql`${plannedExercises.workoutId} IN (${workoutIds(u)})`,
     plannedSets: sql`${plannedSets.plannedExerciseId} IN (${plannedExerciseIds(u)})`,
+    workoutSessions: eq(workoutSessions.userId, u),
+    sessionExercises: sql`${sessionExercises.sessionId} IN (${sessionIds(u)})`,
+    sessionSets: sql`${sessionSets.sessionExerciseId} IN (${sessionExerciseIds(u)})`,
     userExerciseSettings: eq(userExerciseSettings.userId, u),
     ownedExercises: eq(exercises.ownerUserId, u),
     // `or` of two defined conditions is never undefined.
@@ -102,15 +118,33 @@ const ownedTables = {
   workouts,
   plannedExercises,
   plannedSets,
+  workoutSessions,
+  sessionExercises,
+  sessionSets,
   userExerciseSettings,
 } as const;
 
 export type OwnedTable = keyof typeof ownedTables;
 
 /**
- * The write-side invariant: before inserting a row that points at a parent --
- * a planned exercise into a workout, a session at a workout (step 3) -- prove
- * the parent is the user's. A foreign key only proves it exists. Throws
+ * The write-side invariant: before inserting a row that points at a parent,
+ * prove the parent is the user's. A foreign key only proves it exists. The
+ * references the schema leaves unguarded (data-model.md 3.6), and the check
+ * each needs before the write:
+ *
+ * | Writing                               | Check                                     |
+ * |---------------------------------------|-------------------------------------------|
+ * | workout_sessions.workout_id           | `assertOwned(.., "workouts", ..)`         |
+ * | session_exercises.session_id          | `assertOwned(.., "workoutSessions", ..)`  |
+ * | session_exercises.planned_exercise_id | `assertOwned(.., "plannedExercises", ..)` |
+ * | session_exercises.exercise_id         | `assertExercisesUsable`                   |
+ * | session_sets.session_exercise_id      | `assertOwned(.., "sessionExercises", ..)` |
+ * | session_sets.parent_set_id            | `assertOwned(.., "sessionSets", ..)`      |
+ * | anything under a plan                 | `assertOwned` on its parent's table       |
+ *
+ * And after an `ON CONFLICT (id) DO NOTHING` insert, re-read the row through
+ * `userScope`: a client-minted id that collides with another user's row is
+ * silently "done" by the insert, and only the scoped read reveals it. Throws
  * `CrossTenantReferenceError` naming the ids that failed, which is also what
  * an id that does not exist at all gets: the two are deliberately the same.
  *

@@ -248,7 +248,7 @@ export function LiveSetDemo() {
         className="flex flex-col"
       >
         <div className="flex min-h-[46px] flex-wrap items-center justify-between gap-3 pb-3">
-          <h2 id="log-title" className="sc text-muted-foreground">
+          <h2 id="log-title" className="text-[17px] leading-snug font-semibold">
             Today’s log
           </h2>
           <SyncStatus state={sync.state} pending={sync.pending} />

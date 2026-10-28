@@ -5,69 +5,18 @@
 import assert from "node:assert/strict";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { describe, it } from "node:test";
-import type { ResolvedUser, SubStatus, UserId } from "@workout-tracker/db";
+import type { SubStatus, UserId } from "@workout-tracker/db";
 import { Hono } from "hono";
-import { createApp, type AppDeps } from "../src/app";
+import { createApp } from "../src/app";
 import { requireAuth, requirePro, type AuthEnv } from "../src/auth";
 import { ORIGIN_VERIFY_HEADER } from "../src/origin";
-
-const SIGNING_SECRET = `whsec_${randomBytes(24).toString("base64")}`;
-const ORIGIN_SECRET = randomBytes(24).toString("base64");
-
-interface Fakes {
-  deps: AppDeps;
-  users: Map<string, ResolvedUser>;
-  softDeleted: string[];
-}
-
-/** Tokens are `valid:<clerk id>`; anything else fails verification. */
-function fakes(): Fakes {
-  const users = new Map<string, ResolvedUser>();
-  const softDeleted: string[] = [];
-  const deps: AppDeps = {
-    originVerifySecret: () => Promise.resolve(ORIGIN_SECRET),
-    verifySessionToken: (token) =>
-      token.startsWith("valid:")
-        ? Promise.resolve(token.slice("valid:".length))
-        : Promise.reject(new Error("bad token")),
-    resolveUser(clerkUserId) {
-      let user = users.get(clerkUserId);
-      if (!user) {
-        user = {
-          id: randomUUID() as UserId,
-          subStatus: "NONE",
-          deletedAt: null,
-        };
-        users.set(clerkUserId, user);
-      }
-      return Promise.resolve(user);
-    },
-    softDeleteUser(clerkUserId) {
-      softDeleted.push(clerkUserId);
-      return Promise.resolve(true);
-    },
-    clerkWebhookSigningSecret: () => Promise.resolve(SIGNING_SECRET),
-    databaseHealth: () =>
-      Promise.resolve({ now: new Date(), version: "PostgreSQL 18.6 on x" }),
-  };
-  return { deps, users, softDeleted };
-}
-
-/** The app as CloudFront reaches it: every request carries the origin secret. */
-function viaCloudFront(deps: AppDeps) {
-  const app = createApp(deps);
-  return {
-    request(path: string, init: RequestInit = {}) {
-      const headers = new Headers(init.headers);
-      headers.set(ORIGIN_VERIFY_HEADER, ORIGIN_SECRET);
-      return app.request(path, { ...init, headers });
-    },
-  };
-}
-
-const bearer = (token: string) => ({
-  headers: { Authorization: `Bearer ${token}` },
-});
+import {
+  ORIGIN_SECRET,
+  SIGNING_SECRET,
+  bearer,
+  fakes,
+  viaCloudFront,
+} from "./support";
 
 describe("requireCloudFront", () => {
   const direct = () => createApp(fakes().deps);
@@ -91,6 +40,13 @@ describe("requireCloudFront", () => {
       headers: { [ORIGIN_VERIFY_HEADER]: `${ORIGIN_SECRET}x` },
     });
     assert.equal(res.status, 403);
+  });
+
+  it("refuses in plain text, not the API's error JSON, so clients retry it", async () => {
+    const res = await direct().request("/api/hello");
+    assert.equal(res.status, 403);
+    assert.match(res.headers.get("content-type") ?? "", /^text\/plain/);
+    assert.equal(await res.text(), "Forbidden");
   });
 
   it("lets the right secret through", async () => {

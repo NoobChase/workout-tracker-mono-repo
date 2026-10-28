@@ -282,4 +282,69 @@ describe("WorkoutTrackerStack", () => {
       },
     });
   });
+
+  // Installed PWAs only learn about a deploy by revalidating the shell, so
+  // sw.js and index.html must never be served from a browser cache. The shell
+  // deployment is "everything except assets/", which covers both (and the
+  // manifest and workbox runtime). Hashed assets keep long immutable caching.
+  describe("site cache headers", () => {
+    const deployments = Object.values(
+      template.findResources("Custom::CDKBucketDeployment"),
+    ).map((resource) => resource.Properties as Record<string, unknown>);
+    const byCache = (value: string) =>
+      deployments.filter(
+        (d) =>
+          (d.SystemMetadata as Record<string, string>)["cache-control"] ===
+          value,
+      );
+
+    it("serves the shell (index.html, sw.js, ...) with no-cache", () => {
+      const shell = byCache("no-cache");
+      assert.equal(shell.length, 1);
+      // Exclusion is by negation only: sw.js and index.html are not excluded.
+      assert.deepEqual(shell[0]?.Exclude, ["assets/*"]);
+      assert.equal(shell[0]?.Include, undefined);
+      assert.ok(
+        shell[0]?.DistributionId,
+        "the shell deployment owns the CloudFront invalidation",
+      );
+    });
+
+    it("serves hashed assets/ with a year-long immutable cache", () => {
+      const assets = byCache("public, max-age=31536000, immutable");
+      assert.equal(assets.length, 1);
+      assert.deepEqual(assets[0]?.Exclude, ["*"]);
+      assert.deepEqual(assets[0]?.Include, ["assets/*"]);
+      assert.equal(
+        assets[0]?.DistributionId,
+        undefined,
+        "invalidating before the shell lands could re-cache the old index.html",
+      );
+    });
+
+    it("has exactly the two deployments, so no file is uncovered", () => {
+      assert.equal(deployments.length, 2);
+    });
+
+    it("cannot prune across deployments: their key filters are disjoint", () => {
+      // `sync --delete` skips keys its filters exclude, so disjoint filters
+      // mean neither deployment deletes the other's objects.
+      for (const d of deployments) {
+        assert.ok(d.Exclude, "every deployment filters its keys");
+      }
+    });
+
+    it("invalidates only after both deployments have uploaded", () => {
+      const resources = template.findResources("Custom::CDKBucketDeployment");
+      const shell = Object.values(resources).find(
+        (r) => r.Properties.DistributionId,
+      );
+      assert.ok(
+        (shell?.DependsOn as string[] | undefined)?.some((d) =>
+          d.startsWith("SiteAssetsDeployment"),
+        ),
+        "shell deployment must depend on the assets deployment",
+      );
+    });
+  });
 });

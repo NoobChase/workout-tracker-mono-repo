@@ -57,6 +57,9 @@ const SYNCED = {
   title: "2 sets synced",
   description: "Saved to your log, in the order you lifted them.",
 };
+const EDIT_NOTE = {
+  description: "In the app this opens the set in a sheet, to edit or delete.",
+};
 const NO_SIGNAL = {
   title: "No signal",
   description: "Sets you log will queue in order and sync later.",
@@ -193,6 +196,41 @@ export function Specimens({ theme }: { theme: Theme }) {
           Signal back, a send failing: the set retries, and the ones after it
           wait their turn.
         </Note>
+        <SetLog aria-label="Set row states, rejected and editable">
+          <SetRow
+            index={1}
+            weight={225}
+            reps={5}
+            unit="lb"
+            status="logged"
+            onPress={() => toast("Edit set 1", EDIT_NOTE)}
+          />
+          <SetRow
+            index={2}
+            weight={2250}
+            reps={5}
+            unit="lb"
+            status="rejected"
+            reason="That weight is more than 2,000 lb, so it wasn’t saved."
+            onPress={() => toast("Edit set 2", EDIT_NOTE)}
+          />
+          <SetRow
+            index={3}
+            weight={225}
+            reps={5}
+            unit="lb"
+            status="queued"
+            queuedReason="in-order"
+            onPress={() => toast("Edit set 3", EDIT_NOTE)}
+          />
+          <SetRow index={4} weight={null} reps={8} unit="lb" status="live" />
+        </SetLog>
+        <Note>
+          The server refused a set for good: it says rejected, with the server’s
+          reason on the line, and the sets behind it wait. Logged rows are one
+          button each, to edit. The live row of a first-time exercise leaves the
+          weight as a blank to fill.
+        </Note>
       </Specimen>
 
       <Specimen title="Sync status">
@@ -200,8 +238,17 @@ export function Specimens({ theme }: { theme: Theme }) {
           <SyncStatus state="synced" />
           <SyncStatus state="syncing" pending={2} />
           <SyncStatus state="offline" pending={3} />
+          <SyncStatus state="offline" workout />
           <SyncStatus state="retrying" pending={1} />
+          <SyncStatus state="rejected" pending={1} />
+          <SyncStatus state="held" pending={2} />
         </div>
+        <Note>
+          Counted in sets, never raw writes; a start or finish waiting alone is
+          the workout. Rejected stops the queue; on hold waits for the right
+          account to sign in. The app adds a band under the header with the
+          reason and what to do.
+        </Note>
       </Specimen>
 
       <Specimen title="Toast">
@@ -300,6 +347,7 @@ function StepperSpecimens() {
   const [reps, setReps] = useState(5);
   const [floor, setFloor] = useState(0);
   const [ceiling, setCeiling] = useState(100);
+  const [blank, setBlank] = useState<number | null>(null);
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <NumberStepper
@@ -343,6 +391,15 @@ function StepperSpecimens() {
         max={100}
         value={ceiling}
         onValueChange={setCeiling}
+      />
+      <NumberStepper
+        label="Weight, first time"
+        unit="lb"
+        decimal
+        step={5}
+        max={2000}
+        value={blank}
+        onValueChange={setBlank}
       />
       <NumberStepper
         label="Weight, disabled"
@@ -576,7 +633,9 @@ function Stage({
 function Specimen({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-4 border-t border-line pt-5 pb-9">
-      <h3 className="sc text-muted-foreground">{title}</h3>
+      <h3 className="text-[15px] font-semibold text-muted-foreground">
+        {title}
+      </h3>
       {children}
     </section>
   );
