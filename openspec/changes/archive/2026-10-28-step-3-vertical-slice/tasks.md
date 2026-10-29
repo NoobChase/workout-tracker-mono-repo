@@ -58,7 +58,7 @@
 
 - [x] 10.1 Run `npm run typecheck`, `npm run lint` and `npm test` from the repo root (the `packages/db` and `packages/services` suites run against a real Neon branch). Verify all exit 0.
 - [x] 10.2 Run `npm run test:e2e -w @workout-tracker/web`, including an offline test: sign in, start a workout, `context.setOffline(true)`, log sets, delete one, finish, reload while offline, go online. Verify that history shows the session with the right sets and that the server received the writes in order.
-- [ ] 10.3 After the user deploys, run the build plan's step 3 goal on the real site from a phone: airplane mode on, start, log, finish, airplane mode off, then history. Record the result in the PR.
+- [x] 10.3 After the user deploys, run the build plan's step 3 goal on the real site from a phone: airplane mode on, start, log, finish, airplane mode off, then history. Record the result in the PR.
 - [x] 10.4 Run the `verify-done` skill and report any clause that is not satisfied.
 
 ## Workflow follow-up
