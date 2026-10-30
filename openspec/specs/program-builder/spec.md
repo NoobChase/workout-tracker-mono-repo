@@ -1,4 +1,4 @@
-# Spec Delta
+# program-builder Specification
 
 ## Purpose
 
@@ -6,7 +6,7 @@ Creating a program from nothing and editing its cycles afterwards, including
 carrying an edit into the cycles that follow without destroying ones the user
 made different on purpose.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: A program is created from its first cycle in one step
 A user SHALL create a program by giving a name, a length (a number of cycles, or open-ended) and cycle 1's content. The program and every row of every materialized cycle SHALL be written in one transaction. A new program SHALL be a DRAFT.
@@ -64,7 +64,7 @@ A prescribed set MAY carry one effort target: reps in reserve (RIR, 0–10) or r
 
 #### Scenario: RIR target
 - **WHEN** a user prescribes Back Squat set 3 as 5 reps at 225 lb, RIR 2
-- **THEN** the builder and the workout screen show "5 × 225 lb · RIR 2" for that set
+- **THEN** the builder shows RIR 2 on set 3, and the workout screen shows "225 lb × 5 · RIR 2" for that set
 
 #### Scenario: Both targets
 - **WHEN** a prescribed set carries both an RIR and an RPE
