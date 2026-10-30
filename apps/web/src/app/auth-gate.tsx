@@ -56,7 +56,7 @@ export function AuthGate() {
   if (pathname === "/") {
     return (
       <Suspense fallback={null}>
-        <Landing onAuth={(path) => void navigate(path)} />
+        <Landing onEnter={(path) => void navigate(path)} />
       </Suspense>
     );
   }
@@ -65,6 +65,28 @@ export function AuthGate() {
     [REDIRECT_PARAM]: pathname + search + hash,
   });
   return <Navigate to={`/sign-in?${back.toString()}`} replace />;
+}
+
+/**
+ * `/about`: the landing page for everyone, reached from the account menu
+ * (or typed). It never sends anyone anywhere; signed in (the device record
+ * or Clerk's session), its calls to action read "Open app" and go home.
+ * A hard load of `/about` is the bootstrap's landing branch instead, with
+ * no app chunk before first paint (`main.tsx`); this is the same page once
+ * the app is running.
+ */
+export function AboutPage() {
+  const lastUser = useLastUser();
+  const { isSignedIn } = useAuth();
+  const navigate = useNavigate();
+  return (
+    <Suspense fallback={null}>
+      <Landing
+        onEnter={(path) => void navigate(path)}
+        signedIn={Boolean(lastUser) || isSignedIn === true}
+      />
+    </Suspense>
+  );
 }
 
 /** The app's frame while Clerk decides who this is: nothing to act on yet. */

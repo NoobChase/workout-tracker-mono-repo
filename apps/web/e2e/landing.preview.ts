@@ -166,3 +166,85 @@ test("Log in opens sign-in at /sign-in and lands on home; after that, / goes str
   await expect(landingHeading(next)).toBeVisible();
   await expect(next.getByRole("link", { name: "Tanren, home" })).toHaveCount(0);
 });
+
+/** Resources fetched before the first contentful paint. */
+function fetchedBeforePaint(page: Page) {
+  return page.evaluate(() => {
+    const paint = performance.getEntriesByName("first-contentful-paint")[0];
+    if (!paint) throw new Error("no first-contentful-paint entry");
+    return performance
+      .getEntriesByType("resource")
+      .filter((entry) => entry.startTime < paint.startTime)
+      .map((entry) => entry.name);
+  });
+}
+
+test("/about signed out is the landing page, painted without the app chunk, with Log in", async ({
+  page,
+}) => {
+  await page.goto("/about");
+  await expect(landingHeading(page)).toBeVisible();
+  const banner = page.getByRole("banner");
+  await expect(banner.getByRole("link", { name: "Log in" })).toBeVisible();
+  await expect(banner.getByRole("link", { name: "Open app" })).toHaveCount(0);
+  const beforePaint = await fetchedBeforePaint(page);
+  expect(beforePaint.some((url) => LANDING_CHUNK.test(url))).toBe(true);
+  expect(beforePaint.filter((url) => APP_CHUNK.test(url))).toEqual([]);
+  // Clerk loads behind it and finds nobody: the page stays at /about.
+  await page.waitForTimeout(1_000);
+  await expect(page).toHaveURL(/\/about$/);
+});
+
+test("signed in, About Tanren in the account menu opens /about with Open app; a hard load of /about paints it without the app chunk", async ({
+  page,
+  context,
+}) => {
+  const api = new FakeApi();
+  await api.install(context);
+  await page.goto("/sign-in");
+  await signInHere(page);
+  await expect(
+    page.getByRole("heading", { name: "Start your first program" }),
+  ).toBeVisible();
+
+  // The account menu, once Clerk has loaded.
+  const about = page.getByText("About Tanren", { exact: true });
+  await expect(async () => {
+    await page.getByRole("button", { name: "Open user menu" }).click();
+    await expect(about).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+  await about.click();
+  await expect(page).toHaveURL(/\/about$/);
+  await expect(landingHeading(page)).toBeVisible();
+  const banner = page.getByRole("banner");
+  await expect(banner.getByRole("link", { name: "Log in" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Get started" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Start training" })).toHaveCount(
+    0,
+  );
+  await banner.getByRole("link", { name: "Open app" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(
+    page.getByRole("heading", { name: "Start your first program" }),
+  ).toBeVisible();
+
+  // A hard load of /about on this device: the landing chunk, "Open app"
+  // from the first paint (the device record), nothing of the app before it.
+  const next = await context.newPage();
+  await next.goto("/about");
+  await expect(landingHeading(next)).toBeVisible();
+  await expect(
+    next.getByRole("banner").getByRole("link", { name: "Open app" }),
+  ).toBeVisible();
+  const beforePaint = await fetchedBeforePaint(next);
+  expect(beforePaint.filter((url) => APP_CHUNK.test(url))).toEqual([]);
+  expect(beforePaint.filter((url) => CLERK_API.test(url))).toEqual([]);
+  await next
+    .getByRole("region", { name: "Tanren, defined" })
+    .getByRole("link", { name: "Open app" })
+    .click();
+  await expect(next).toHaveURL(/\/$/);
+  await expect(
+    next.getByRole("heading", { name: "Start your first program" }),
+  ).toBeVisible();
+});

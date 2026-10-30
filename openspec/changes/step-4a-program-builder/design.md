@@ -81,6 +81,17 @@ from IndexedDB, which takes milliseconds.
 
 The service worker already precaches every chunk, so this doesn't change
 offline behaviour.
+*Added after the 4a deploy:* `/about` is the landing page for everyone. The
+bootstrap picks the landing chunk there whatever the device record says,
+and passes the record as `signedIn`, so the calls to action read "Open app"
+(home) from the first paint without Clerk. The idle-time session check
+still runs behind it, but at `/about` a session only turns the calls to
+action to "Open app"; it never swaps the page for home. Once the app is
+running, `/about` is a route outside `AuthGate` rendering the same lazy
+chunk, reached from "About Tanren" in the account menu (Clerk's
+`UserButton` menu, between Manage account and Sign out), so the header's
+two links stay the daily ones.
+
 *Rejected: a static `landing.html` served at `/` by CloudFront.* That needs a
 second build entry and CloudFront and S3 routing changes, and it splits the
 theme tokens across two pages.
@@ -444,6 +455,50 @@ online-only requests are retries seconds later, not after further edits.
 *Rejected: a request-id table for exact replay detection.* D7 already chose
 fingerprints over stored request ids.
 
+### D18. Updates install themselves when it is safe (amends step 3's D13)
+
+Step 3 kept `registerType: "prompt"` and always asked: a new version waited
+for "Reload" so nobody lost their place mid-set. After the 4a deploy, that
+left a signed-out visitor on the old landing page indefinitely (the landing
+branch registered the worker with no prompt at all), and a signed-in lifter
+on an old build until they happened to answer the toast. The worker stays
+`prompt` (it never activates by itself); the page now decides, with one
+pure function, `updatePolicy` (`apps/web/src/boot/updates.ts`):
+
+| Where the page is | Policy |
+|---|---|
+| Landing, `/about`, sign-in, sign-up, nobody signed in | `now`: skip-waiting and reload |
+| Signed in, no `IN_PROGRESS` session record on this device | `at-safe-moment`: the next route change, or the page going hidden or visible |
+| A workout in progress on this device | `prompt`: today's toast, "Reload" and "Later" |
+
+- **One registration per page.** The bootstrap calls `registerSW` once for
+  both chunks (`updates.start()` in `main.tsx`); the app's `UpdatePolicy`
+  sets the context (route, record, sessions) and reports route changes,
+  and `UpdatePrompt` only renders the controller's prompt. Two Workbox
+  instances (landing plus app) would each reload the page.
+- **Nothing is lost.** The queue and the session records are written in one
+  IndexedDB transaction before a write is sent, and an item leaves the
+  queue only on its ack, so a reload mid-send resends it (`ON CONFLICT (id)
+  DO NOTHING`). Builder drafts flush before the reload (`beforeUpdate`, and
+  `hold` on the write in flight). The apply waits while a dialog is open, a
+  text field has focus, or a plan-side mutation is in flight; on a public
+  page those defer `now` to the next safe moment. A step inside Clerk's flow
+  (`/sign-in` to `/sign-in/factor-one`) is not a safe moment.
+- **Another tab** that activates the new worker, or upgrades the database
+  under this one (`replaced`), goes through the same policy as "updated in
+  another tab": a reload at once or at a safe moment, a prompt mid-workout.
+- **A page left open** asks for a new worker when it becomes visible, at
+  most every ten minutes, so a long-lived tab finds a deploy without a
+  navigation.
+
+*Rejected: `registerType: "autoUpdate"`* (the plugin reloads every client
+as soon as the new worker activates). It reloads mid-set, the one thing
+D13 existed to prevent, and a waiting worker activated by one tab would
+reload a workout in progress in another.
+*Rejected: keep prompting everywhere, adding the prompt to the landing
+page.* A visitor to a marketing page shouldn't be asked to manage versions,
+and a prompt the visitor ignores keeps them on stale copy and stale code.
+
 ## Risks / Trade-offs
 
 - **The fingerprint misses a column that later starts to matter, so a cycle
@@ -453,6 +508,11 @@ fingerprints over stored request ids.
 - **The landing page promises something that isn't built.** → The spec
   forbids it, and the design session decides how analytics, the AI connector
   and pricing appear before steps 4d, 5 and 6 ship them.
+- **An update reloads a page under someone (D18).** → Only where nothing
+  can be lost: never mid-workout, never with a dialog open or a field
+  focused, never with a plan-side write on the wire, and drafts flush
+  first. The first deploy of D18 still reaches old clients the old way
+  (their code has no policy); from then on, updates install themselves.
 - **The code split leaves the logger without its chunk offline.** → The
   service worker precaches all chunks. The offline e2e test (step 3's
   `offline.preview.ts`) runs against the split build.

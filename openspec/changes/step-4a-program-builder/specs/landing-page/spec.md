@@ -54,3 +54,29 @@ The landing page SHALL NOT present unbuilt features as available, SHALL NOT show
 #### Scenario: Stroke-order attribution
 - **WHEN** the page uses KanjiVG stroke data
 - **THEN** the page credits KanjiVG and its CC BY-SA 3.0 license
+
+### Requirement: The landing page is at /about for everyone
+`/about` SHALL show the landing page to every visitor, signed in or not, and SHALL NOT send a signed-in visitor to the app's home on its own. `/` keeps its behaviour: the landing page signed out, the app's home signed in. A hard load of `/about` SHALL paint without first downloading the app bundle or Clerk, like `/` signed out (design D2). Signed in, the app's account menu SHALL offer "About Tanren", which opens `/about`.
+
+#### Scenario: Signed out at /about
+- **WHEN** a visitor with no session opens `/about`
+- **THEN** they see the landing page with "Log in" and "Get started", painted before the app and Clerk code has loaded
+
+#### Scenario: Signed in, from the account menu
+- **WHEN** a signed-in user opens the account menu and selects "About Tanren"
+- **THEN** the landing page shows at `/about` and stays there
+
+#### Scenario: Signed in, a hard load of /about
+- **WHEN** a signed-in user whose device holds the last-user record loads `/about`
+- **THEN** the landing page paints before the app and Clerk code has loaded, and it is not replaced by the app's home
+
+### Requirement: A signed-in visitor's calls to action open the app
+When the visitor is signed in (the device's last-user record, or a session Clerk reports once it has loaded behind the page), every call to action on the landing page that leads to sign-up SHALL read "Open app" and lead to `/`, the app's home, and "Log in" SHALL NOT show. The page SHALL know this from the device record before first paint, without loading Clerk.
+
+#### Scenario: Open app from /about
+- **WHEN** a signed-in user on `/about` selects "Open app" in the header or the hero
+- **THEN** they arrive at the app's home screen
+
+#### Scenario: Session found after paint
+- **WHEN** a visitor with no device record but a Clerk session loads `/about`
+- **THEN** the page first shows "Log in" and "Get started", and once Clerk reports the session they read "Open app" without the page changing

@@ -10,7 +10,9 @@ export default defineConfig({
     tailwindcss(),
     // The service worker (design D13): precache the build, serve /index.html
     // for client routes, never answer /api/*. `prompt`: a new version waits
-    // for the lifter (src/app/update-prompt.tsx) instead of reloading mid-set.
+    // until the page says so (src/boot/updates.ts, step 4a D18): at once on
+    // public pages, at a safe moment in the app, and only on the lifter's
+    // "Reload" mid-workout, never mid-set.
     VitePWA({
       strategies: "generateSW",
       registerType: "prompt",

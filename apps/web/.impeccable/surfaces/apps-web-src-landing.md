@@ -39,6 +39,7 @@ Visual authority: mockup 7 "Stroke Order" (`design/mockups/7-stroke-order.html`)
 
 - "Get started", "Start training" and the trial card open Clerk sign-up at `/sign-up`.
 - "Log in" opens sign-in at `/sign-in`.
+- Signed in (the page at `/about`, reached from "About Tanren" in the account menu), each of those reads "Open app" and leads to `/`, and "Log in" is not shown; the header keeps its small primary "Open app" at every width.
 - "How it works" scrolls to the "Three things" section.
 - After either flow, the visitor lands on the app home.
 

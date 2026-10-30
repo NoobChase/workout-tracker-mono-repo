@@ -248,6 +248,26 @@ describe("mutation queue", () => {
     expect(reopened.layer.queue.getState().items).toEqual([]);
   });
 
+  it("a reload with a send on the wire (an update installing itself) keeps the write and resends it", async () => {
+    const first = await harness();
+    first.server.apply = () => undefined;
+    first.server.holdNext = true; // the request never answers: the page goes
+    await first.layer.queue.enqueue(item(1));
+    await first.layer.queue.enqueue(item(2));
+    await waitFor(() => expect(first.server.calls).toHaveLength(1));
+    first.layer.close();
+    harnesses = harnesses.filter((h) => h !== first);
+
+    const server = new FakeServer();
+    server.apply = () => undefined;
+    const reopened = await harness({ dbName: first.dbName, server });
+    await reopened.layer.queue.settled();
+    // The write on the wire was never acknowledged, so it is sent again
+    // (the server's ON CONFLICT (id) DO NOTHING makes that safe), in order.
+    expect(paths(reopened)).toEqual(["/api/sets/item-1", "/api/sets/item-2"]);
+    expect(reopened.layer.queue.getState().items).toEqual([]);
+  });
+
   it("holds writes made by another account instead of sending them", async () => {
     let current: string | null = "someone_else";
     const h = await harness({ currentUserId: () => current });

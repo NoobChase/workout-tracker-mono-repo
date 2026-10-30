@@ -3,10 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Landing } from "./landing.js";
 
-function renderLanding() {
-  const onAuth = vi.fn();
-  render(<Landing onAuth={onAuth} />);
-  return onAuth;
+function renderLanding(signedIn = false) {
+  const onEnter = vi.fn();
+  render(<Landing onEnter={onEnter} signedIn={signedIn} />);
+  return onEnter;
 }
 
 describe("Landing", () => {
@@ -31,6 +31,30 @@ describe("Landing", () => {
       expect(onAuth).toHaveBeenLastCalledWith("/sign-up");
     }
     expect(onAuth).toHaveBeenCalledTimes(5);
+  });
+
+  it("signed in, every call to action is Open app, home, and Log in is gone", async () => {
+    const onEnter = renderLanding(true);
+    const user = userEvent.setup();
+
+    expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: /Get started|Start training/ }),
+    ).toBeNull();
+    const open = screen.getAllByRole("link", { name: "Open app" });
+    // Header, hero, trial card and closing.
+    expect(open).toHaveLength(4);
+    expect(
+      within(screen.getByRole("banner")).getByRole("link", {
+        name: "Open app",
+      }),
+    ).toBeVisible();
+    for (const link of open) {
+      expect(link).toHaveAttribute("href", "/");
+      await user.click(link);
+      expect(onEnter).toHaveBeenLastCalledWith("/");
+    }
+    expect(onEnter).toHaveBeenCalledTimes(4);
   });
 
   it("How it works leads to the three things", () => {

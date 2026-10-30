@@ -70,22 +70,40 @@ numbers are demo data and say so.
 
 ## Bootstrap and chunks (design D2)
 
-- **`main.tsx` is the bootstrap**: React, the tokens and one IndexedDB read
+- **`main.tsx` is the bootstrap**: React, the tokens, the service worker's
+  one registration (`updates.start()`, below) and one IndexedDB read
   (`boot/last-user-hint.ts`, the data layer's `meta.lastUser`, connection
-  closed at once). Path `/` with no record: the **landing chunk**
-  (`src/landing/`, no Clerk, no data layer, never import `data/` or `@clerk`
-  there). Anything else: the **app chunk** (`app/app-root.tsx`: Clerk, the
-  data layer, the router). The kit branch (`/design`, dev only) sits before
+  closed at once). Path `/` with no record, and `/about` always: the
+  **landing chunk** (`src/landing/`, no Clerk, no data layer, never import
+  `data/` or `@clerk` there; at `/about` the record is its `signedIn`, so
+  every sign-up call to action reads "Open app", home, and "Log in" hides).
+  Anything else: the **app chunk** (`app/app-root.tsx`: Clerk, the data
+  layer, the router). The kit branch (`/design`, dev only) sits before
   both.
 - **`boot/shell.tsx`** shows the landing page and, after the stroke intro
   (3.5s) and idle time, loads the app chunk behind it; its `AppRoot`
   (`active: false`) only asks Clerk for a session and swaps to the app if one
-  exists. A call to action pushes `/sign-in` or `/sign-up` and shows the app
-  once its chunk is here. `AppRoot` is always the second child, so its one
-  `ClerkProvider` survives the handover.
-- The landing branch registers the service worker itself
-  (`virtual:pwa-register`), since a visit may never mount the app's
-  `UpdatePrompt`; the precache covers every chunk either way.
+  exists (at `/about` (`about`), a session only turns the calls to action to
+  "Open app"; the page stays). A call to action (`onEnter`) pushes
+  `/sign-in`, `/sign-up` or `/` and shows the app once its chunk is here.
+  `AppRoot` is always the second child, so its one `ClerkProvider` survives
+  the handover.
+- **Updates** (`boot/updates.ts`, step 4a D18): the bootstrap registers the
+  worker once for both chunks (`virtual:pwa-register`, `registerType:
+  "prompt"`); `updatePolicy(context)` decides: `now` on a public page
+  (landing, `/about`, sign-in and sign-up, nobody signed in),
+  `at-safe-moment` signed in with no `IN_PROGRESS` session record on the
+  device (the next route change, or the page hidden or shown), `prompt`
+  mid-workout (the toast). Never while `pageIsBusy` (a dialog open, a text
+  field focused) or a plan-side mutation is in flight, and never on a step
+  inside Clerk's flow (`isSafeMove`). The app's `UpdatePolicy`
+  (`app/update-prompt.tsx`) sets the context (`appUpdateContext`) and
+  reports route changes; `UpdatePrompt` only shows the controller's prompt.
+  Anything a reload must not lose registers with it: `beforeUpdate(flush)`
+  and `hold(write)` (the builder's draft autosave does both). Another tab's
+  activation or storage upgrade (`replaced`) takes the same policy as
+  "updated in another tab". A page shown again asks for a new worker at
+  most every 10 minutes.
 - `e2e/landing.preview.ts` proves the split on a build: nothing from the app
   chunk or Clerk before first paint, the prefetch after it, a recorded user
   never fetching the landing chunk.
@@ -94,7 +112,10 @@ numbers are demo data and say so.
 
 - **Routes** (`src/App.tsx`, React Router library mode): `/sign-in/*` and
   `/sign-up/*` (Clerk's forms, path routing, `AuthPage` in
-  `app/auth-gate.tsx`; signed in, they go to `/`), then behind `AuthGate`:
+  `app/auth-gate.tsx`; signed in, they go to `/`), `/about` (`AboutPage`:
+  the landing page for everyone, never redirecting; "Open app" when the
+  record or Clerk's session says someone is signed in), then behind
+  `AuthGate`:
   `/`, `/workout/:sessionId`, `/history`, `/history/:sessionId`, `/programs`,
   `/programs/:id` (`screens/program-detail.tsx`), the builder's
   `/programs/new` and `/programs/:id/cycles/:n` (`screens/builder/`), and the
@@ -109,8 +130,10 @@ numbers are demo data and say so.
   router (`app/clerk-navigation.ts` lends it `navigate`), and both flows and
   sign-out end on `/`. Screens live in
   `src/screens/`, each under `AppHeader` (`src/app/app-header.tsx`: wordmark,
-  the Programs and History links, sync line, theme, account; on a phone the
-  sync line takes its own row and the theme toggle shows its glyph alone).
+  the Programs and History links, sync line, theme, account, whose Clerk
+  menu holds Manage account, "About Tanren" (`/about`) and Sign out; on a
+  phone the sync line takes its own row and the theme toggle shows its
+  glyph alone).
   `SyncAlert` under it explains a rejected or held lane in the server's
   words, naming the workout from `useSyncStatus().sessionId` (only that
   workout waits; others still sync); "Try again" is its lead action
@@ -118,7 +141,7 @@ numbers are demo data and say so.
   D7), and a not-entitled refusal says billing is coming rather than
   showing a Subscribe control. `not-signed-in` from an action reads as
   "Sign in to start / continue …" (`screens/errors.ts`). Toasts land at the top (`Toaster` in `App.tsx`); the update prompt
-  is one.
+  (mid-workout only) is one.
 - **The workout screen** keeps its current exercise in the URL (`?ex=`,
   pinned on arrival so reaching the target never moves the screen) and
   opens a named set with `?set=` (the sync band's "Show set"). Skipping is
@@ -227,7 +250,7 @@ numbers are demo data and say so.
   `navigator.onLine` is false (`OfflineError`; Clerk's `clerk_offline` maps
   to it too). Errors: `ApiError` (`status`, server `reason`), `NetworkError`.
 - **Service worker**: `vite-plugin-pwa` `generateSW`, `registerType:
-  "prompt"` (`src/app/update-prompt.tsx`), navigation fallback to
+  "prompt"` (the page decides when: `boot/updates.ts`), navigation fallback to
   `/index.html` except `/api/*`, 8 MiB precache limit for the app chunk
   (Clerk is most of it).
 
@@ -240,7 +263,7 @@ numbers are demo data and say so.
   a version-1 device holds. Every connection closes itself on
   `versionchange` (`blocking`) and reports `replaced`, so a tab left open
   across a deploy never holds a new version's upgrade: the data layer
-  closes and `UpdatePrompt` asks for a reload. An open that waits on an
+  closes and the update policy reloads (or, mid-workout, asks). An open that waits on an
   older tab reports `blocked` (`onLocalDbEvent`), and the bootstrap and
   `AppWithData` show `boot/upgrade-blocked.tsx` until it goes. Bump the
   version only with an upgrade step for every older one.
@@ -346,7 +369,9 @@ numbers are demo data and say so.
   for Clerk's development key; still a production bundle), because only a
   build has the service worker an offline reload needs and the real chunks:
   `offline.preview.ts` is task 10.2 (it enters through the landing page's
-  "Log in"), `landing.preview.ts` the chunk split. Needs `npx playwright install chromium`
+  "Log in"), `landing.preview.ts` the chunk split and `/about`,
+  `update.preview.ts` the update policy (build A, then a build B derived
+  from it, from its own switchable static server). Needs `npx playwright install chromium`
   once; not part of CI's `npm test`. The screen specs fake the API in the
   browser (`e2e/support/fake-api/`: `router.ts` is `FakeApi`; in-memory,
   applies writes like the services, with their replay rules and words and

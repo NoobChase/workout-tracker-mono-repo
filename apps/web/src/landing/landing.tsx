@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
-import type { AuthPath, LandingProps } from "../boot/shell.js";
+import type { EntryPath, LandingProps } from "../boot/shell.js";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -12,11 +12,12 @@ import { OfflineDemo } from "./offline-demo.js";
 import "./landing.css";
 
 /*
- * The signed-out `/` (surface brief `.impeccable/surfaces/apps-web-src-landing.md`,
- * from mockup 7 "Stroke Order"). Its own chunk: no Clerk and no data layer,
- * so it paints before either has loaded (design D2). Calls to action hand
- * over to the app through `onAuth`; they are real links too, so a new tab
- * opens the same page.
+ * The signed-out `/`, and `/about` for everyone (surface brief
+ * `.impeccable/surfaces/apps-web-src-landing.md`, from mockup 7 "Stroke
+ * Order"). Its own chunk: no Clerk and no data layer, so it paints before
+ * either has loaded (design D2). Calls to action hand over to the app
+ * through `onEnter`; they are real links too, so a new tab opens the same
+ * page. Signed in, every one of them is "Open app", home.
  */
 
 const WRAP = "mx-auto w-full max-w-[1280px] px-4 md:px-9";
@@ -24,9 +25,9 @@ const WRAP = "mx-auto w-full max-w-[1280px] px-4 md:px-9";
 /** The landing page's small-caps label: copper, 12px, tracked. */
 const LABEL = "sc text-copper";
 
-export function Landing({ onAuth }: LandingProps) {
+export function Landing({ onEnter, signedIn = false }: LandingProps) {
   /** A plain click hands over in the page; a modified one opens a tab. */
-  const to = (path: AuthPath) => ({
+  const to = (path: EntryPath) => ({
     href: path,
     onClick(event: MouseEvent<HTMLAnchorElement>) {
       if (
@@ -39,9 +40,17 @@ export function Landing({ onAuth }: LandingProps) {
         return;
       }
       event.preventDefault();
-      onAuth(path);
+      onEnter(path);
     },
   });
+  /** A sign-up call to action, or "Open app" for someone signed in. */
+  const start = (label: string) =>
+    signedIn
+      ? { link: to("/"), label: "Open app" }
+      : { link: to("/sign-up"), label };
+  const headerStart = start("Get started");
+  const heroStart = start("Start training");
+  const trialStart = start("Get started");
 
   return (
     <div className="lp flex min-h-dvh flex-col">
@@ -65,22 +74,26 @@ export function Landing({ onAuth }: LandingProps) {
                 {label}
               </a>
             ))}
-            <a
-              {...to("/sign-in")}
-              className="inline-flex h-11 items-center rounded-sm px-2 font-medium text-foreground no-underline transition-colors duration-150 hover:text-muted-foreground"
-            >
-              Log in
-            </a>
+            {signedIn ? null : (
+              <a
+                {...to("/sign-in")}
+                className="inline-flex h-11 items-center rounded-sm px-2 font-medium text-foreground no-underline transition-colors duration-150 hover:text-muted-foreground"
+              >
+                Log in
+              </a>
+            )}
           </nav>
           <div className="flex items-center gap-2.5 min-[860px]:ml-3">
             <ThemeToggle />
+            {/* Signed in, "Open app" replaces "Log in" too, so it shows at
+                every width; signed out, a phone keeps "Log in" alone. */}
             <Button
               asChild
               variant="primary"
               size="sm"
-              className="hidden min-[480px]:inline-flex"
+              className={cn(!signedIn && "hidden min-[480px]:inline-flex")}
             >
-              <a {...to("/sign-up")}>Get started</a>
+              <a {...headerStart.link}>{headerStart.label}</a>
             </Button>
           </div>
         </div>
@@ -138,7 +151,7 @@ export function Landing({ onAuth }: LandingProps) {
                 variant="primary"
                 className="max-[519px]:flex-1 max-[519px]:px-4"
               >
-                <a {...to("/sign-up")}>Start training</a>
+                <a {...heroStart.link}>{heroStart.label}</a>
               </Button>
               <Button asChild className="max-[519px]:flex-1 max-[519px]:px-4">
                 <a href="#usage">How it works</a>
@@ -252,7 +265,7 @@ export function Landing({ onAuth }: LandingProps) {
                   variant="primary"
                   className="mt-auto self-start"
                 >
-                  <a {...to("/sign-up")}>Get started</a>
+                  <a {...trialStart.link}>{trialStart.label}</a>
                 </Button>
               </div>
               <div className="flex flex-col border-t border-line-2 bg-card px-[22px] py-[26px] min-[820px]:border-t-0 min-[820px]:border-l">
@@ -305,7 +318,7 @@ export function Landing({ onAuth }: LandingProps) {
               Deliberate. Repeated. Recorded.
             </p>
             <Button asChild variant="primary">
-              <a {...to("/sign-up")}>Start training</a>
+              <a {...heroStart.link}>{heroStart.label}</a>
             </Button>
           </div>
         </section>

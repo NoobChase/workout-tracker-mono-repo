@@ -1,11 +1,22 @@
 import { useCallback, useEffect, useState, type ComponentType } from "react";
 
-/** Where the landing page's calls to action lead (Clerk, in the app chunk). */
-export type AuthPath = "/sign-in" | "/sign-up";
+/**
+ * Where the landing page's calls to action lead, all in the app chunk:
+ * Clerk's forms, or the app's home for someone signed in ("Open app").
+ */
+export type EntryPath = "/sign-in" | "/sign-up" | "/";
 
 export interface LandingProps {
-  /** "Log in" passes `/sign-in`; "Get started" and the trial, `/sign-up`. */
-  onAuth: (path: AuthPath) => void;
+  /**
+   * "Log in" passes `/sign-in`; "Get started" and the trial, `/sign-up`;
+   * "Open app", `/`.
+   */
+  onEnter: (path: EntryPath) => void;
+  /**
+   * Someone is signed in on this device (its record, or Clerk's session):
+   * every call to action reads "Open app" and leads home.
+   */
+  signedIn?: boolean;
 }
 
 export interface AppRootProps {
@@ -51,10 +62,12 @@ export function whenIdleAfterIntro(task: () => void): () => void {
  * picked from the device's last-user record, and moves from the landing page
  * to the app at most once:
  *
- * - on a call to action, which pushes `/sign-in` or `/sign-up` and shows the
- *   app (Clerk's form) as soon as its chunk is here;
- * - when Clerk, loaded in idle time behind the landing page, reports a
- *   session (a signed-in lifter whose device record was cleared).
+ * - on a call to action, which pushes `/sign-in`, `/sign-up` or `/` and
+ *   shows the app (Clerk's form, or home) as soon as its chunk is here;
+ * - at `/`, when Clerk, loaded in idle time behind the landing page, reports
+ *   a session (a signed-in lifter whose device record was cleared). At
+ *   `/about` the page stays (the visitor asked for it) and its calls to
+ *   action turn to "Open app" instead.
  *
  * The app root is always the second child, so it keeps its place (and its
  * one Clerk instance) when the landing page before it goes away.
@@ -64,6 +77,8 @@ export function Shell({
   app: initialApp,
   loadApp,
   whenIdle = whenIdleAfterIntro,
+  about = false,
+  signedIn: recorded = false,
 }: {
   /** The landing page when the bootstrap picked it, else null. */
   Landing: ComponentType<LandingProps> | null;
@@ -71,10 +86,15 @@ export function Shell({
   app: AppModule | null;
   loadApp: () => Promise<AppModule>;
   whenIdle?: (task: () => void) => () => void;
+  /** The landing page at `/about`: a session never swaps it for the app. */
+  about?: boolean;
+  /** The device records a signed-in user (the bootstrap's hint). */
+  signedIn?: boolean;
 }) {
   const [app, setApp] = useState<AppModule | null>(initialApp);
   const [entered, setEntered] = useState(Landing === null);
-  const [pending, setPending] = useState<AuthPath | null>(null);
+  const [pending, setPending] = useState<EntryPath | null>(null);
+  const [session, setSession] = useState(false);
 
   // Behind the landing page, fetch the app chunk once nothing else is going on.
   useEffect(() => {
@@ -94,8 +114,8 @@ export function Shell({
     setEntered(true);
   }, [app, pending]);
 
-  const onAuth = useCallback(
-    (path: AuthPath) => {
+  const onEnter = useCallback(
+    (path: EntryPath) => {
       if (app) {
         window.history.pushState(null, "", path);
         setEntered(true);
@@ -111,11 +131,16 @@ export function Shell({
     [app, loadApp],
   );
 
-  const onSignedIn = useCallback(() => setEntered(true), []);
+  const onSignedIn = useCallback(() => {
+    if (about) setSession(true);
+    else setEntered(true);
+  }, [about]);
 
   return (
     <>
-      {!entered && Landing ? <Landing onAuth={onAuth} /> : null}
+      {!entered && Landing ? (
+        <Landing onEnter={onEnter} signedIn={recorded || session} />
+      ) : null}
       {app ? <app.AppRoot active={entered} onSignedIn={onSignedIn} /> : null}
     </>
   );
