@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { z } from "zod";
 import { useDrafts } from "../../data/hooks.js";
 import { keys } from "../../data/queries.js";
+import { updates } from "../../boot/updates.js";
 import type { BuilderModel } from "./reducer.js";
 import type { BuilderState, CreateState, EditState } from "./tree.js";
 
@@ -112,7 +113,7 @@ export function useDraft(programId: string | null, cycleNumber: number) {
 /**
  * Keeps the builder's state as the owner's draft (D14): every change lands
  * on the device a beat after it is made, and at once when the page is
- * hidden or the builder closes. `forget` drops the draft (saved or
+ * hidden, the builder closes, or an update is about to reload the page. `forget` drops the draft (saved or
  * discarded), along with any write still waiting.
  */
 export function useDraftAutosave(
@@ -127,11 +128,14 @@ export function useDraftAutosave(
     const tree = pending.current;
     pending.current = null;
     if (!tree) return;
-    void drafts
+    const write = drafts
       .put(owner, programId, cycleNumber, { version: DRAFT_VERSION, tree })
       .catch((e: unknown) => {
         console.warn("Keeping the draft on this device failed", e);
       });
+    // An update that installs itself (design D18) reloads only once this
+    // write has landed.
+    updates.hold(write);
   }, [drafts, owner, programId, cycleNumber]);
 
   const { tree, dirty } = model;
@@ -143,8 +147,10 @@ export function useDraftAutosave(
   }, [tree, dirty, flush]);
   useEffect(() => {
     window.addEventListener("pagehide", flush);
+    const offUpdate = updates.beforeUpdate(flush);
     return () => {
       window.removeEventListener("pagehide", flush);
+      offUpdate();
       flush();
     };
   }, [flush]);

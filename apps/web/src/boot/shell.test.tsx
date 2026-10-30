@@ -8,12 +8,18 @@ import {
   type LandingProps,
 } from "./shell.js";
 
-function FakeLanding({ onAuth }: LandingProps) {
+function FakeLanding({ onEnter, signedIn }: LandingProps) {
   return (
     <main>
       <h1>Landing</h1>
-      <button onClick={() => onAuth("/sign-up")}>Get started</button>
-      <button onClick={() => onAuth("/sign-in")}>Log in</button>
+      {signedIn ? (
+        <button onClick={() => onEnter("/")}>Open app</button>
+      ) : (
+        <>
+          <button onClick={() => onEnter("/sign-up")}>Get started</button>
+          <button onClick={() => onEnter("/sign-in")}>Log in</button>
+        </>
+      )}
     </main>
   );
 }
@@ -161,5 +167,57 @@ describe("Shell", () => {
     expect(mounts.every((m) => m.active)).toBe(true);
     expect(idle.pending()).toBe(0);
     expect(loadApp).not.toHaveBeenCalled();
+  });
+
+  describe("at /about", () => {
+    it("a recorded user sees Open app from the first paint, and it opens home", async () => {
+      window.history.replaceState(null, "", "/about");
+      const { app } = fakeApp();
+      const idle = manualIdle();
+      render(
+        <Shell
+          Landing={FakeLanding}
+          app={null}
+          loadApp={() => Promise.resolve(app)}
+          whenIdle={idle.whenIdle}
+          about
+          signedIn
+        />,
+      );
+      expect(screen.queryByRole("button", { name: "Log in" })).toBeNull();
+      await act(() => {
+        idle.run();
+        return Promise.resolve();
+      });
+      await userEvent.click(screen.getByRole("button", { name: "Open app" }));
+      expect(window.location.pathname).toBe("/");
+      expect(screen.getByText("App at /")).toBeVisible();
+    });
+
+    it("a session Clerk reports turns the calls to action to Open app, and the page stays", async () => {
+      window.history.replaceState(null, "", "/about");
+      const { app, signedIn } = fakeApp();
+      const idle = manualIdle();
+      render(
+        <Shell
+          Landing={FakeLanding}
+          app={null}
+          loadApp={() => Promise.resolve(app)}
+          whenIdle={idle.whenIdle}
+          about
+        />,
+      );
+      expect(screen.getByRole("button", { name: "Log in" })).toBeVisible();
+      await act(() => {
+        idle.run();
+        return Promise.resolve();
+      });
+
+      act(() => signedIn());
+      expect(screen.getByRole("heading", { name: "Landing" })).toBeVisible();
+      expect(screen.getByRole("button", { name: "Open app" })).toBeVisible();
+      expect(screen.queryByText(/App at/)).toBeNull();
+      expect(window.location.pathname).toBe("/about");
+    });
   });
 });

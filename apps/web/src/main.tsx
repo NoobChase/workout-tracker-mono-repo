@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { hasLastUser } from "./boot/last-user-hint.js";
 import { Shell, type AppModule } from "./boot/shell.js";
 import { UpgradeBlocked } from "./boot/upgrade-blocked.js";
+import { updates } from "./boot/updates.js";
 import { onLocalDbEvent } from "./local/db.js";
 import "./index.css";
 
@@ -11,11 +12,13 @@ import "./index.css";
  * IndexedDB read. Everything else is a chunk it picks:
  *
  * - the landing page (`landing/`): no Clerk, no data layer, for a visitor at
- *   `/` on a device nobody has signed in on;
+ *   `/` on a device nobody has signed in on, and for everyone at `/about`
+ *   (signed in, by the device record, its calls to action read "Open app");
  * - the app (`app/app-root.tsx`): Clerk, the data layer and the router, for
  *   everyone else, and for the landing page's calls to action.
  *
- * The service worker precaches every chunk, so either works offline.
+ * The service worker precaches every chunk, so either works offline. The
+ * bootstrap registers it once for both (`boot/updates.ts`, design D18).
  */
 
 const element = document.getElementById("root");
@@ -61,19 +64,28 @@ async function sayIfBlocked<T>(work: Promise<T>): Promise<T> {
 }
 
 async function boot() {
+  // One registration for whichever chunk shows (design D18). A public page
+  // takes a new version at once; the app sets its own context once it knows
+  // where it is and whether a workout is in progress.
+  updates.start();
   try {
-    if (
-      window.location.pathname === "/" &&
-      !(await sayIfBlocked(hasLastUser()))
-    ) {
+    const path = window.location.pathname.replace(/(.)\/$/, "$1");
+    const about = path === "/about";
+    // The device record only decides the two landing paths; every other
+    // path is the app's (its gate sends a signed-out visitor to sign in).
+    const signedIn =
+      about || path === "/" ? await sayIfBlocked(hasLastUser()) : null;
+    if (about || signedIn === false) {
+      updates.setContext({ page: "public" });
       const { Landing } = await import("./landing/landing.js");
-      render(<Shell Landing={Landing} app={null} loadApp={loadApp} />);
-      // The app chunk registers the service worker (app/update-prompt.tsx),
-      // but a visit can stay on the landing page: register here too, so the
-      // precache (every chunk) is in place before the first offline open.
-      // Registering the same worker twice is a no-op.
-      void import("virtual:pwa-register").then(({ registerSW }) =>
-        registerSW(),
+      render(
+        <Shell
+          Landing={Landing}
+          app={null}
+          loadApp={loadApp}
+          about={about}
+          signedIn={signedIn === true}
+        />,
       );
     } else {
       render(<Shell Landing={null} app={await loadApp()} loadApp={loadApp} />);

@@ -1,9 +1,9 @@
 import { BrowserRouter, Link, Route, Routes } from "react-router";
 import { AppHeader } from "./app/app-header.js";
-import { AuthGate, AuthPage } from "./app/auth-gate.js";
+import { AboutPage, AuthGate, AuthPage } from "./app/auth-gate.js";
 import { ClerkBridge } from "./app/clerk-bridge.js";
 import { ClerkNavigation } from "./app/clerk-navigation.js";
-import { UpdatePrompt } from "./app/update-prompt.js";
+import { UpdatePolicy, UpdatePrompt } from "./app/update-prompt.js";
 import { HomeScreen } from "./screens/home.js";
 import {
   CycleEditorScreen,
@@ -24,7 +24,8 @@ import { Toaster } from "@/ui/toaster";
  * sign-up in front of it, React Router in library mode. `/design` is not
  * here: the kit is development only and mounts outside the router
  * (main.tsx). CloudFront and the service worker both serve `/index.html` for
- * these paths. Signed out, `/` is the landing page (`AuthGate`).
+ * these paths. Signed out, `/` is the landing page (`AuthGate`); `/about`
+ * is the landing page for everyone, signed in or not.
  */
 export function App() {
   return (
@@ -34,6 +35,7 @@ export function App() {
       <Routes>
         <Route path="/sign-in/*" element={<AuthPage mode="sign-in" />} />
         <Route path="/sign-up/*" element={<AuthPage mode="sign-up" />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route element={<AuthGate />}>
           <Route path="/" element={<HomeScreen />} />
           <Route path="/workout/:sessionId" element={<WorkoutScreen />} />
@@ -50,6 +52,7 @@ export function App() {
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
+      <UpdatePolicy />
       <UpdatePrompt />
       <Toaster />
     </BrowserRouter>

@@ -1,4 +1,5 @@
 import { UserButton } from "@clerk/react";
+import { BookOpen } from "lucide-react";
 import { Link, NavLink } from "react-router";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/ui/theme-toggle";
@@ -9,7 +10,8 @@ import { SyncAlert, SyncLine } from "./sync-line.js";
 /**
  * Every signed-in screen's header (DESIGN.md, Navigation; brief
  * `apps-web-src-home`): the wordmark home, then the quiet text links
- * Programs and History, then the theme toggle and account, with the sync
+ * Programs and History, then the theme toggle and account (its menu:
+ * Manage account, About Tanren, Sign out), with the sync
  * line always in view. From `sm` up the line sits in the bar; on a phone it
  * takes its own row under it, because the bar can't hold "3 sets queued, no
  * signal" beside the links at 390px, and the theme toggle shows its glyph
@@ -39,7 +41,25 @@ export function AppHeader() {
         <div className="col-start-4 row-start-1 flex items-center gap-2">
           <ThemeToggle compactOnPhone />
           <span className="grid min-h-11 min-w-11 place-items-center">
-            <UserButton appearance={userButtonAppearance} />
+            {/* The account menu carries the way to the landing page, so the
+                header's links stay the two places a lifter goes daily. */}
+            <UserButton appearance={userButtonAppearance}>
+              <UserButton.MenuItems>
+                <UserButton.Action label="manageAccount" />
+                <UserButton.Link
+                  label="About Tanren"
+                  labelIcon={
+                    <BookOpen
+                      aria-hidden="true"
+                      strokeWidth={1.75}
+                      className="size-4"
+                    />
+                  }
+                  href="/about"
+                />
+                <UserButton.Action label="signOut" />
+              </UserButton.MenuItems>
+            </UserButton>
           </span>
         </div>
       </div>

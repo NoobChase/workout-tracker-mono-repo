@@ -67,7 +67,8 @@ deviations), 4d (history and progression), 4e (account and ops).
 ### New Capabilities
 
 - `landing-page`: what a signed-out visitor sees at `/` and how it leads to
-  sign-in or sign-up.
+  sign-in or sign-up; the same page at `/about` for everyone, with "Open
+  app" for someone signed in.
 - `exercise-catalog`: browsing, creating, annotating and retiring exercises.
 - `program-builder`: creating a program and editing its cycles, including
   apply to remaining cycles.
@@ -80,6 +81,9 @@ deviations), 4d (history and progression), 4e (account and ops).
   announcing it.
 - `workout-sessions`: the workout screen shows placeholders and exercises it
   can't log yet, instead of dropping or mis-rendering them.
+- `offline-logging`: a new version installs itself when that is safe (no
+  workout in progress on the device), and only prompts mid-workout (D18,
+  added after the 4a deploy).
 
 ## Out of scope
 
