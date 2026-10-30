@@ -44,16 +44,16 @@ When the user already has a program with the template's name, the new program SH
 - **WHEN** a user who already has "Push Pull Legs" starts that template again with a new id
 - **THEN** the second program is named "Push Pull Legs (2)" and both are ACTIVE
 
-### Requirement: Creating a program from scratch is announced, not built
-The template list SHALL show a "Create from scratch" entry. In this change it SHALL state that the program builder is not available yet, and it SHALL write nothing.
-
-#### Scenario: Choosing create from scratch
-- **WHEN** a user selects "Create from scratch"
-- **THEN** they see that the builder is coming, and no program is created
-
 ### Requirement: Starting a template requires an entitled account
 Starting a template is a write. It SHALL be refused for an account that is not entitled.
 
 #### Scenario: Lapsed account starts a template
 - **WHEN** an account whose subscription status is not TRIALING or ACTIVE starts a template
 - **THEN** the request is refused and no program is created
+
+### Requirement: Create from scratch opens the builder
+The template list SHALL show a "Create from scratch" entry that opens the program builder. Choosing it SHALL write nothing until the user creates the program.
+
+#### Scenario: Choosing create from scratch
+- **WHEN** a user selects "Create from scratch"
+- **THEN** the program builder opens with an empty first cycle, and no program exists yet

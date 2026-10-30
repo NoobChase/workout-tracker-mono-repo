@@ -269,6 +269,18 @@ adding `updated_at` is a migration rather than a rewrite.
 
 **Goal:** the rest of the app, against a schema you have now used in anger.
 
+**Delivered in slices**, one OpenSpec change each (`openspec/changes/archive/`):
+
+- **4a, shipped 2026-10-30.** The program builder (`operations.md` §3.1–3.12),
+  the exercise catalog (§2), skipping a workout (§4.14), RIR/RPE targets, and
+  the landing page.
+- **Next: a user-led design pass on the workout (logging) screen,** then:
+  - **4b** import/export;
+  - **4c** the remaining mid-workout deviations;
+  - **4d** history and progression;
+  - **4e** account and operations (unit settings, account deletion, the purge
+    job, observability, request rate limiting).
+
 **One named deliverable: program import/export** (`operations.md` §3.13, §5.4).
 This is the first half of the AI story, and it deliberately ships before — and
 independent of — the MCP server:

@@ -60,7 +60,7 @@
 
 - [x] 10.1 Run `npm run typecheck`, `npm run lint` and `npm test` from the repo root (the `packages/db` and `packages/services` suites run against a real Neon branch). Verify all exit 0.
 - [x] 10.2 Run `npm run test:e2e -w @workout-tracker/web`, including the offline preview test on the split build. Verify all pass.
-- [ ] 10.3 After the user deploys: on tanrenstrength.com, signed out, the landing page appears first. Signed in, create a fixed program from scratch, edit cycle 2 and apply it to later cycles with one cycle deliberately different, activate the program, and log one of its workouts. Record the result in the PR.
+- [x] 10.3 After the user deploys: on tanrenstrength.com, signed out, the landing page appears first. Signed in, create a fixed program from scratch, edit cycle 2 and apply it to later cycles with one cycle deliberately different, activate the program, and log one of its workouts. Record the result in the PR.
 - [x] 10.4 Run the `verify-done` skill and report any clause that is not satisfied.
 
 ## Workflow follow-up
