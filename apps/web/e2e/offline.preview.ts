@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { FakeApi } from "./support/fake-api.js";
+import { FakeApi } from "./support/fake-api/router.js";
 import { signInHere } from "./support/session.js";
 import {
   figures,
@@ -27,7 +27,8 @@ test("offline: start, log three, delete one, finish, reload offline, then sync i
   api.startTemplate("push-pull-legs");
   await api.install(context);
 
-  // First visit installs the service worker; a reload puts the page under it.
+  // First visit (the landing page) installs the service worker; a reload
+  // puts the page under it.
   await page.goto("/");
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
   await page.reload();
@@ -35,10 +36,15 @@ test("offline: start, log three, delete one, finish, reload offline, then sync i
     await page.evaluate(() => navigator.serviceWorker.controller !== null),
   ).toBe(true);
 
-  // Online: sign in, and what's next loads with Push's plan prefetched.
+  // Online: "Log in" loads the app chunk and Clerk's form; signing in lands
+  // on what's next, which loads with Push's plan prefetched.
+  await page.getByRole("banner").getByRole("link", { name: "Log in" }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
   await signInHere(page);
+  await expect(page).toHaveURL(/\/$/);
   await expect(
-    page.getByRole("list", { name: "Push exercises" }),
+    // Home previews a workout from its prefetched plan.
+    page.getByText(/5 exercises · Barbell Bench Press/),
   ).toBeVisible();
   expect(api.writes).toEqual([]);
 
@@ -69,8 +75,10 @@ test("offline: start, log three, delete one, finish, reload offline, then sync i
   await expect(syncLine(page)).toHaveText("3 sets queued, no signal");
   expect(api.writes).toEqual([]);
 
-  // Reload with no signal: the shell comes from the service worker and the
-  // record and queue from IndexedDB, without waiting for Clerk.
+  // Reload with no signal: the shell and both chunks come from the service
+  // worker; the bootstrap finds the recorded user and goes straight to the
+  // app, which renders the record and queue from IndexedDB without waiting
+  // for Clerk.
   await page.reload();
   await expect(page.getByRole("link", { name: "Tanren, home" })).toBeVisible({
     timeout: 15_000,

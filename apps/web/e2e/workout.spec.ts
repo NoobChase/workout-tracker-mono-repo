@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { FakeApi } from "./support/fake-api.js";
+import { FakeApi } from "./support/fake-api/router.js";
 import { signIn } from "./support/session.js";
 import {
   figures,
@@ -12,7 +12,7 @@ import {
 
 /*
  * Task 8.2: the workout-sessions scenarios, through the UI. The API is
- * faked in the browser (support/fake-api.ts); sign-in is the real Clerk
+ * faked in the browser (support/fake-api/); sign-in is the real Clerk
  * development instance. Assertions check both the screen and the rows the
  * fake server ended with.
  */
@@ -206,7 +206,8 @@ test("offline: the start and the sets queue, the line counts sets, and they sync
   await api.install(page);
   await signIn(page);
   await expect(
-    page.getByRole("list", { name: "Push exercises" }),
+    // Home previews a workout from its prefetched plan.
+    page.getByText(/5 exercises · Barbell Bench Press/),
   ).toBeVisible();
   // The prefetch has stored Push's plan; now the signal drops.
   await context.setOffline(true);
@@ -285,4 +286,63 @@ test("a not-entitled rejection stops the queue, says so honestly, and goes throu
       [1, 225, "LB", 5],
       [2, 225, "LB", 5],
     ]);
+});
+
+test("a prescribed weight seeds the stepper over last time, and the planned rows show it", async ({
+  page,
+}) => {
+  const SQUAT = "Back Squat";
+  const prescribed = (weight: number) => ({
+    targetRepsMin: 5,
+    targetRepsMax: 5,
+    targetWeight: weight,
+    weightUnit: "LB" as const,
+  });
+  const api = new FakeApi();
+  api.addProgram({
+    name: "Wave",
+    workouts: [
+      ["Heavy", [{ exercise: SQUAT, sets: 3 }]],
+      [
+        "Deload",
+        [
+          {
+            exercise: SQUAT,
+            sets: 3,
+            prescribed: [prescribed(185), prescribed(195), prescribed(205)],
+          },
+        ],
+      ],
+    ],
+  });
+  api.seedFinished(api.workout("Heavy").id, "2026-10-20T13:00:00.000Z", {
+    [SQUAT]: [
+      [225, 5],
+      [225, 5],
+      [225, 5],
+    ],
+  });
+  await api.install(page);
+  await signIn(page);
+  await page.getByRole("button", { name: "Start Deload" }).click();
+  const squat = live(page, SQUAT);
+
+  // The plan is the plan: a written deload beats last time's 225, which
+  // still shows beside it.
+  await expect(squat).toContainText(figures(225, "lb", 5));
+  await expect(squat.getByRole("spinbutton", { name: "Weight" })).toHaveValue(
+    "185",
+  );
+  await expect(squat.getByRole("spinbutton", { name: "Reps" })).toHaveValue(
+    "5",
+  );
+  // The planned rows show each set's prescribed weight, not a blank.
+  await expect(rows(page, SQUAT).nth(1)).toContainText(figures(195, "lb", 5));
+  await expect(rows(page, SQUAT).nth(2)).toContainText(figures(205, "lb", 5));
+
+  // Set 2 seeds its own prescription, over the weight just used.
+  await logSet(page, SQUAT, { weight: 190 });
+  await expect(squat.getByRole("spinbutton", { name: "Weight" })).toHaveValue(
+    "195",
+  );
 });

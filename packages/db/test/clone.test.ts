@@ -152,6 +152,7 @@ async function fixture(): Promise<Fixture> {
           setNumber: 1,
           targetRepsMin: 10,
           targetRepsMax: 15,
+          targetRir: "2.5",
         },
         {
           id: uuidv7(),
@@ -182,7 +183,8 @@ async function shape(planId: string) {
                  SELECT ps.set_number, ps.target_reps_min, ps.target_reps_max,
                         ps.target_weight, ps.weight_unit, ps.target_weight_kg,
                         ps.target_duration_seconds, ps.target_distance,
-                        ps.distance_unit, ps.target_rpe, ps.notes
+                        ps.distance_unit, ps.target_rpe, ps.target_rir,
+                        ps.notes
                  FROM planned_sets ps WHERE ps.planned_exercise_id = pe.id) ps
               ) AS sets
             FROM planned_exercises pe WHERE pe.workout_id = w.id) pe
@@ -316,6 +318,26 @@ describe("clonePlan", () => {
     assert.deepEqual(plans, [
       { cycleNumber: 1, name: "Base", notes: "cycle notes" },
       { cycleNumber: 2, name: "Base", notes: "cycle notes" },
+    ]);
+
+    // Both effort targets come across as written (design D16), not just
+    // "the same as the source" -- which an all-NULL column also satisfies.
+    // (Every fixture workout carries the same sets, hence DISTINCT.)
+    const { rows: efforts } = await pool.query<{
+      target_rpe: string | null;
+      target_rir: string | null;
+    }>(
+      `SELECT DISTINCT ps.target_rpe, ps.target_rir FROM planned_sets ps
+         JOIN planned_exercises pe ON pe.id = ps.planned_exercise_id
+         JOIN workouts w ON w.id = pe.workout_id
+       WHERE w.plan_id = $1
+         AND (ps.target_rpe IS NOT NULL OR ps.target_rir IS NOT NULL)
+       ORDER BY ps.target_rpe NULLS LAST`,
+      [result.planId],
+    );
+    assert.deepEqual(efforts, [
+      { target_rpe: "8.0", target_rir: null },
+      { target_rpe: null, target_rir: "2.5" },
     ]);
 
     await assertRerunIsNoOp(f.user, [f.program], input, result);

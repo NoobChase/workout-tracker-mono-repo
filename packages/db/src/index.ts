@@ -6,4 +6,5 @@ export * from "./catalog";
 export * from "./seed";
 export * from "./predicates";
 export * from "./clone";
+export * from "./fingerprint";
 export * from "./templates";

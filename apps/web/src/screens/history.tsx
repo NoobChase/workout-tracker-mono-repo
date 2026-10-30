@@ -1,4 +1,4 @@
-import { ArrowLeft, CloudOff } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { AppHeader } from "../app/app-header.js";
@@ -11,7 +11,8 @@ import {
 } from "../data/hooks.js";
 import { errorText } from "./errors.js";
 import { HistoryList } from "./history-rows.js";
-import { Notice } from "./notice.js";
+import { Notice, OfflineLine, RetryNotice } from "./notice.js";
+import { ServerRead } from "./server-read.js";
 import { formatDay, formatTime, plural, unitLabel } from "./format.js";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -28,47 +29,43 @@ import { SetFigures, SetLog } from "@/ui/set-row";
 export function HistoryScreen() {
   const history = useHistory();
   const online = useOnline();
-  const items = history.data?.pages.flatMap((p) => p.items) ?? [];
-
-  let body: ReactNode;
-  if (history.data) {
-    body =
-      items.length === 0 ? (
-        <EmptyState
-          title="No finished workouts yet"
-          action={
-            <Button asChild variant="primary">
-              <Link to="/">See what’s next</Link>
-            </Button>
-          }
-        >
-          Finish a workout and it lands here, newest first, with every set you
-          logged.
-        </EmptyState>
-      ) : (
-        <HistoryList items={items} label="Finished workouts" />
-      );
-  } else if (!online) {
-    body = (
-      <Notice offline>
-        History loads with a connection, and there’s no signal right now. Your
-        finished workouts are safe on the server and will show here when you’re
-        back.
-      </Notice>
-    );
-  } else if (history.error) {
-    body = (
-      <Notice
-        action={
-          <Button onClick={() => void history.refetch()}>Try again</Button>
-        }
-      >
-        Couldn’t load your history. {errorText(history.error)}
-      </Notice>
-    );
-  } else {
-    body = <RowsSkeleton />;
-  }
+  const body = (
+    <ServerRead
+      query={history}
+      offline={
+        <Notice offline>
+          History loads with a connection, and there’s no signal right now. Your
+          finished workouts are safe on the server and will show here when
+          you’re back.
+        </Notice>
+      }
+      error={(e, retry) => (
+        <RetryNotice retry={retry}>
+          Couldn’t load your history. {errorText(e)}
+        </RetryNotice>
+      )}
+      skeleton={<RowsSkeleton />}
+    >
+      {(data) => {
+        const items = data.pages.flatMap((p) => p.items);
+        return items.length === 0 ? (
+          <EmptyState
+            title="No finished workouts yet"
+            action={
+              <Button asChild variant="primary">
+                <Link to="/">See what’s next</Link>
+              </Button>
+            }
+          >
+            Finish a workout and it lands here, newest first, with every set you
+            logged.
+          </EmptyState>
+        ) : (
+          <HistoryList items={items} label="Finished workouts" />
+        );
+      }}
+    </ServerRead>
+  );
 
   return (
     <>
@@ -81,18 +78,10 @@ export function HistoryScreen() {
         <div className="flex max-w-3xl flex-col gap-6">
           <UnsyncedFinishes />
           {history.data && !online ? (
-            <p
-              role="status"
-              className="flex gap-2 text-[15px] text-muted-foreground"
-            >
-              <CloudOff
-                aria-hidden="true"
-                strokeWidth={1.75}
-                className="mt-1 size-4 shrink-0"
-              />
+            <OfflineLine>
               No signal. This is what loaded earlier; newer workouts show here
               when you’re back.
-            </p>
+            </OfflineLine>
           ) : null}
           {body}
           {history.hasNextPage ? (
@@ -125,102 +114,93 @@ function UnsyncedFinishes() {
   );
   if (waiting.length === 0) return null;
   return (
-    <p role="status" className="flex gap-2 text-[15px] text-muted-foreground">
-      <CloudOff
-        aria-hidden="true"
-        strokeWidth={1.75}
-        className="mt-1 size-4 shrink-0"
-      />
-      <span>
-        {waiting.map((r) => r.context.workout.name).join(", ")}{" "}
-        {waiting.length === 1 ? "was" : "were"} finished on this device and will
-        appear here once synced.
-      </span>
-    </p>
+    <OfflineLine>
+      {waiting.map((r) => r.context.workout.name).join(", ")}{" "}
+      {waiting.length === 1 ? "was" : "were"} finished on this device and will
+      appear here once synced.
+    </OfflineLine>
   );
 }
 
 export function SessionDetailScreen() {
   const { sessionId = "" } = useParams();
   const detail = useSessionDetail(sessionId);
-  const online = useOnline();
   const data = detail.data;
 
-  let body: ReactNode;
-  if (data) {
-    body = (
-      <ol className="flex max-w-3xl flex-col gap-8">
-        {[...data.exercises]
-          .sort((a, b) => a.position - b.position)
-          .map((e) => (
-            <li key={`${e.position}-${e.exerciseId}`} className="flex flex-col">
-              <div className="flex min-h-11 items-center justify-between gap-3 pb-1">
-                <h2 className="text-[17px] font-semibold">{e.name}</h2>
+  const body = (
+    <ServerRead
+      query={detail}
+      offline={
+        <Notice offline>
+          This workout loads with a connection, and there’s no signal right now.
+        </Notice>
+      }
+      error={(e, retry) => (
+        <RetryNotice retry={retry}>{errorText(e)}</RetryNotice>
+      )}
+      skeleton={<RowsSkeleton />}
+    >
+      {(shown) => (
+        <ol className="flex max-w-3xl flex-col gap-8">
+          {[...shown.exercises]
+            .sort((a, b) => a.position - b.position)
+            .map((e) => (
+              <li
+                key={`${e.position}-${e.exerciseId}`}
+                className="flex flex-col"
+              >
+                <div className="flex min-h-11 items-center justify-between gap-3 pb-1">
+                  <h2 className="text-[17px] font-semibold">{e.name}</h2>
+                  {e.skipped ? (
+                    <Badge>Skipped</Badge>
+                  ) : (
+                    <span className="text-[13px] text-muted-foreground">
+                      <span className="num">{e.sets.length}</span>{" "}
+                      {plural(e.sets.length, "set")}
+                    </span>
+                  )}
+                </div>
                 {e.skipped ? (
-                  <Badge>Skipped</Badge>
+                  <p className="border-t border-line pt-3 text-sm text-muted-foreground">
+                    Nothing logged; the plan is unchanged.
+                  </p>
                 ) : (
-                  <span className="text-[13px] text-muted-foreground">
-                    <span className="num">{e.sets.length}</span>{" "}
-                    {plural(e.sets.length, "set")}
-                  </span>
+                  <SetLog aria-label={`${e.name} sets`}>
+                    {[...e.sets]
+                      .sort((a, b) => a.setNumber - b.setNumber)
+                      .map((s) => (
+                        <li
+                          key={s.id}
+                          className="grid min-h-13 grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-3 border-b border-line py-2"
+                        >
+                          <span className="num text-[15px] font-medium">
+                            <span className="sr-only">Set </span>
+                            {s.setNumber}
+                          </span>
+                          <span className="flex min-w-0 items-center gap-2.5">
+                            <SetFigures
+                              weight={s.weight}
+                              reps={s.reps}
+                              unit={
+                                s.weightUnit ? unitLabel(s.weightUnit) : "lb"
+                              }
+                            />
+                            {s.kind === "WARMUP" ? (
+                              <Badge variant="warmup" />
+                            ) : s.kind === "DROP" ? (
+                              <Badge variant="drop" />
+                            ) : null}
+                          </span>
+                        </li>
+                      ))}
+                  </SetLog>
                 )}
-              </div>
-              {e.skipped ? (
-                <p className="border-t border-line pt-3 text-sm text-muted-foreground">
-                  Nothing logged; the plan is unchanged.
-                </p>
-              ) : (
-                <SetLog aria-label={`${e.name} sets`}>
-                  {[...e.sets]
-                    .sort((a, b) => a.setNumber - b.setNumber)
-                    .map((s) => (
-                      <li
-                        key={s.id}
-                        className="grid min-h-13 grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-3 border-b border-line py-2"
-                      >
-                        <span className="num text-[15px] font-medium">
-                          <span className="sr-only">Set </span>
-                          {s.setNumber}
-                        </span>
-                        <span className="flex min-w-0 items-center gap-2.5">
-                          <SetFigures
-                            weight={s.weight}
-                            reps={s.reps}
-                            unit={s.weightUnit ? unitLabel(s.weightUnit) : "lb"}
-                          />
-                          {s.kind === "WARMUP" ? (
-                            <Badge variant="warmup" />
-                          ) : s.kind === "DROP" ? (
-                            <Badge variant="drop" />
-                          ) : null}
-                        </span>
-                      </li>
-                    ))}
-                </SetLog>
-              )}
-            </li>
-          ))}
-      </ol>
-    );
-  } else if (!online) {
-    body = (
-      <Notice offline>
-        This workout loads with a connection, and there’s no signal right now.
-      </Notice>
-    );
-  } else if (detail.error) {
-    body = (
-      <Notice
-        action={
-          <Button onClick={() => void detail.refetch()}>Try again</Button>
-        }
-      >
-        {errorText(detail.error)}
-      </Notice>
-    );
-  } else {
-    body = <RowsSkeleton />;
-  }
+              </li>
+            ))}
+        </ol>
+      )}
+    </ServerRead>
+  );
 
   return (
     <>

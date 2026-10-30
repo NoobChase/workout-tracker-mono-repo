@@ -1,5 +1,7 @@
 import { CloudOff } from "lucide-react";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/ui/button";
 
 /**
  * A screen-level message in place of content: a problem (an alert, with the
@@ -32,5 +34,47 @@ export function Notice({
       </p>
       {action}
     </div>
+  );
+}
+
+/** `Notice` for a failed read: what went wrong, and "Try again". */
+export function RetryNotice({
+  children,
+  retry,
+}: {
+  children: ReactNode;
+  retry: () => void;
+}) {
+  return (
+    <Notice action={<Button onClick={retry}>Try again</Button>}>
+      {children}
+    </Notice>
+  );
+}
+
+/**
+ * One muted line saying something waits for a connection, with the
+ * cloud-off glyph: in place of a list that hasn't loaded, or above one
+ * shown as last seen.
+ */
+export function OfflineLine({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <p
+      role="status"
+      className={cn("flex gap-2 text-[15px] text-muted-foreground", className)}
+    >
+      <CloudOff
+        aria-hidden="true"
+        strokeWidth={1.75}
+        className="mt-1 size-4 shrink-0"
+      />
+      <span>{children}</span>
+    </p>
   );
 }

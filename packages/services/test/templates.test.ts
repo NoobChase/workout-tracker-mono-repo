@@ -2,10 +2,7 @@
 import assert from "node:assert/strict";
 import { after, describe, it } from "node:test";
 import { TEMPLATES, findTemplate } from "@workout-tracker/db";
-import {
-  startFromTemplateResponse,
-  templatesResponse,
-} from "@workout-tracker/shared";
+import { programResponse, templatesResponse } from "@workout-tracker/shared";
 import { listTemplates, startProgramFromTemplate } from "../src/index";
 import { createProgramFromTemplate } from "../src/templates";
 import { cleanup, db, newId, newUser, pool, rejectsWith, rowCount } from "./db";
@@ -64,7 +61,7 @@ describe("startProgramFromTemplate", () => {
   it("creates one ACTIVE open-ended program with one cycle in template order and no weights", async () => {
     const user = await newUser();
     const programId = newId();
-    const result = startFromTemplateResponse.parse(
+    const result = programResponse.parse(
       await startProgramFromTemplate(db, user, {
         programId,
         templateSlug: "push-pull-legs",
@@ -75,6 +72,7 @@ describe("startProgramFromTemplate", () => {
       name: "Push Pull Legs",
       status: "ACTIVE",
       targetCycles: null,
+      currentCycle: 1,
     });
 
     const { rows: programs } = await pool.query<{
@@ -173,10 +171,8 @@ describe("startProgramFromTemplate", () => {
       programId: newId(),
       templateSlug: "push-pull-legs",
     });
-    const b = await startProgramFromTemplate(db, user, {
-      programId: newId(),
-      templateSlug: "push-pull-legs",
-    });
+    const bInput = { programId: newId(), templateSlug: "push-pull-legs" };
+    const b = await startProgramFromTemplate(db, user, bInput);
     const c = await startProgramFromTemplate(db, user, {
       programId: newId(),
       templateSlug: "push-pull-legs",
@@ -184,6 +180,8 @@ describe("startProgramFromTemplate", () => {
     assert.equal(a.program.name, "Push Pull Legs");
     assert.equal(b.program.name, "Push Pull Legs (2)");
     assert.equal(c.program.name, "Push Pull Legs (3)");
+    // A replay of the suffixed start is recognised by its suffixed name.
+    assert.deepEqual(await startProgramFromTemplate(db, user, bInput), b);
     const { rows } = await pool.query(
       "SELECT DISTINCT status FROM workout_programs WHERE user_id = $1",
       [user],

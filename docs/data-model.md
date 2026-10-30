@@ -103,8 +103,11 @@ what makes "how has my bench moved across every program I've run" answerable.
 
 ### 2.3 Per-set prescription is optional
 
-`planned_exercises.target_sets` says *how many* sets. `planned_sets` rows are
-optional detail saying *what* each set should be. Three valid states:
+`planned_exercises.target_sets` says *how many* sets, and every slot says it:
+the column is `NOT NULL` (and `> 0`), because the logger, the builder and the
+fingerprint all need a count, and a missing one could only be guessed.
+`planned_sets` rows are optional detail saying *what* each set should be.
+Three valid states:
 
 | State | Meaning |
 |---|---|
@@ -115,6 +118,18 @@ optional detail saying *what* each set should be. Three valid states:
 Every target column on `planned_sets` is nullable, so a set can prescribe reps
 without weight, weight without reps, or a rep *range* (`target_reps_min` /
 `target_reps_max`, for "8–12 reps").
+
+A set may also carry one **effort target**: RPE (`target_rpe`) or reps in
+reserve (`target_rir`), never both — "5 × 225 lb · RIR 2". They are two
+columns, not one number with a display toggle, because the scales are not
+interchangeable in a lifter's head: RPE 8 and RIR 2 describe roughly the same
+set, but the program says whichever the author wrote, and storing RIR as
+`10 − RPE` would lose which one that was. Neither is ever converted into the
+other. Both are authored content, so both are part of the cycle fingerprint
+(`operations.md` §3.8); a target is not an annotation, which is also why it is
+not free text in `notes`. The target is shown beside the prescription;
+logging still records weight and reps only (`session_sets.rpe` is what the
+lifter reports, a separate thing).
 
 ### 2.4 Exercises declare composable metrics, not a mode
 
@@ -613,6 +628,13 @@ collides with the source's name. Decided: the application auto-suffixes the
 copy (`"Summer Strength (2)"`) rather than failing — see `operations.md` §3.9.
 
 No `kind`, no `parent_set_id` — set technique is logged, not prescribed (§2.8).
+
+The effort target (§2.3) is two `CHECK`s, not an application convention: each
+column stays within 0–10, and `num_nonnulls(target_rpe, target_rir) <= 1`
+refuses a set carrying both. The database allows RPE from 0 for symmetry with
+the existing column; the API contract narrows it to 1–10, and both to steps of
+0.5. Those are input rules a future import can relax or tighten without a
+migration; "at most one" is the invariant, so it lives in the table.
 
 `DEFERRABLE INITIALLY DEFERRED` on the position uniques matters: reordering
 exercises within a transaction would otherwise trip the constraint mid-update.

@@ -5,24 +5,26 @@ import {
   historyPageResponse,
   loggedSet,
   logSetRequest,
+  programResponse,
   sessionDetailResponse,
+  skippedSession,
+  skipWorkoutRequest,
   startedSession,
   startFromTemplateRequest,
-  startFromTemplateResponse,
   startWorkoutRequest,
   templatesResponse,
   uuidV7,
   whatsNextResponse,
   workoutContextResponse,
 } from "@workout-tracker/shared";
-import { ServiceError } from "@workout-tracker/services";
-import { Hono, type Context } from "hono";
-import type { z } from "zod";
+import { Hono } from "hono";
 import { requirePro, type AuthEnv } from "./auth.js";
-import type { TrainingDeps } from "./services.js";
+import { callerOf, json, parse } from "./request.js";
+import type { ApiDeps } from "./services.js";
 
 /**
- * The step 3 routes: the lifter's plan and sessions (design D5, D9). Each
+ * The step 3 routes: the lifter's plan and sessions (design D5, D9), and
+ * step 4a's skip (design D15). Each
  * handler parses with a `shared` schema, calls one service function and maps
  * the result -- the same functions the MCP tools will call in step 6. Reads sit
  * behind `requireAuth` alone, so a lapsed account keeps its history; every
@@ -32,16 +34,14 @@ import type { TrainingDeps } from "./services.js";
  * does, so the contract the web client reads is the one the server emits.
  */
 export function trainingRoutes(
-  deps: TrainingDeps,
+  deps: ApiDeps,
   { proBypass }: { proBypass?: boolean } = {},
 ): Hono<AuthEnv> {
   const app = new Hono<AuthEnv>();
   const { services } = deps;
   const pro = requirePro({ bypass: proBypass });
 
-  /** The service call's first two arguments, from the authenticated request. */
-  const caller = async (c: Context<AuthEnv>) =>
-    [await deps.database(), c.get("user").id] as const;
+  const caller = callerOf(deps);
 
   app.get("/templates", async (c) => {
     const [db, user] = await caller(c);
@@ -54,7 +54,7 @@ export function trainingRoutes(
     const input = parse(startFromTemplateRequest, await json(c));
     const [db, user] = await caller(c);
     const result = await services.startProgramFromTemplate(db, user, input);
-    return c.json(startFromTemplateResponse.parse(result));
+    return c.json(programResponse.parse(result));
   });
 
   app.get("/next", async (c) => {
@@ -67,6 +67,17 @@ export function trainingRoutes(
     const [db, user] = await caller(c);
     const result = await services.getWorkoutContext(db, user, id);
     return c.json(workoutContextResponse.parse(result));
+  });
+
+  app.post("/workouts/:id/skip", pro, async (c) => {
+    const workoutId = parse(entityId, c.req.param("id"), "workout id");
+    const input = parse(skipWorkoutRequest, await json(c));
+    const [db, user] = await caller(c);
+    const result = await services.skipWorkout(db, user, {
+      ...input,
+      workoutId,
+    });
+    return c.json(skippedSession.parse(result));
   });
 
   app.put("/sessions/:id", pro, async (c) => {
@@ -121,32 +132,4 @@ export function trainingRoutes(
   });
 
   return app;
-}
-
-/**
- * Validation failures are `invalid` ServiceErrors so they take the same road
- * to a 400 as the service layer's own refusals. The message names the first
- * problem and is safe to show the lifter as written.
- */
-function parse<T extends z.ZodType>(
-  schema: T,
-  value: unknown,
-  label = "request",
-): z.output<T> {
-  const result = schema.safeParse(value);
-  if (result.success) return result.data;
-  const issue = result.error.issues[0];
-  const where = issue?.path.length ? ` (${issue.path.join(".")})` : "";
-  throw new ServiceError(
-    "invalid",
-    `Invalid ${label}${where}: ${issue?.message ?? "not valid"}.`,
-  );
-}
-
-async function json(c: Context<AuthEnv>): Promise<unknown> {
-  try {
-    return await c.req.json();
-  } catch {
-    throw new ServiceError("invalid", "The request body must be JSON.");
-  }
 }

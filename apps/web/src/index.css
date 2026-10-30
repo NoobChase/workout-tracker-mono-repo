@@ -242,6 +242,17 @@
     transform: translateY(100%);
   }
 }
+/* The exercise picker's laptop side panel, from the right edge. */
+@keyframes tanren-panel-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes tanren-panel-out {
+  to {
+    transform: translateX(100%);
+  }
+}
 @keyframes tanren-spin {
   to {
     transform: rotate(360deg);

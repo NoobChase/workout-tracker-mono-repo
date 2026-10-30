@@ -1,5 +1,7 @@
-// The wire contracts of step 3: valid payloads round-trip, and the cases the
-// server must refuse (non-v7 client ids, bad numbers, bad units) are refused.
+// The wire contracts of step 3, and the workout context step 4a widened:
+// valid payloads round-trip, and the cases the server must refuse (non-v7
+// client ids, bad numbers, bad units) are refused. Step 4a's program and
+// catalog contracts are programs.test.ts and exercises.test.ts.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { describe, it } from "node:test";
@@ -11,9 +13,11 @@ import {
   logSetRequest,
   newId,
   sessionDetailResponse,
+  skippedSession,
+  skipWorkoutInput,
+  skipWorkoutRequest,
   startFromTemplateRequest,
   startedSession,
-  startFromTemplateResponse,
   startWorkoutRequest,
   templatesResponse,
   uuidV7,
@@ -93,24 +97,6 @@ describe("templates", () => {
     assert.equal(
       startFromTemplateRequest.safeParse({ ...ok, programId: randomUUID() })
         .success,
-      false,
-    );
-  });
-
-  it("start response has an open-ended program", () => {
-    const body = {
-      program: {
-        id: newId(),
-        name: "PPL",
-        status: "ACTIVE",
-        targetCycles: null,
-      },
-    };
-    assert.deepEqual(startFromTemplateResponse.parse(body), body);
-    assert.equal(
-      startFromTemplateResponse.safeParse({
-        program: { ...body.program, targetCycles: 4 },
-      }).success,
       false,
     );
   });
@@ -245,6 +231,34 @@ describe("training", () => {
     assert.deepEqual(loggedSet.parse(bare), bare);
     assert.equal(loggedSet.safeParse({ ...set, kind: "BONUS" }).success, false);
     assert.equal(loggedSet.safeParse(omit(set, "loggedAt")).success, false);
+  });
+
+  it("round-trips a skip, needing a v7 session id, and answers SKIPPED only", () => {
+    const skip = { sessionId: newId(), performedAt: NOW };
+    assert.deepEqual(skipWorkoutRequest.parse(skip), skip);
+    assert.equal(
+      skipWorkoutRequest.safeParse({ ...skip, sessionId: randomUUID() })
+        .success,
+      false,
+    );
+    assert.equal(
+      skipWorkoutRequest.safeParse(omit(skip, "performedAt")).success,
+      false,
+    );
+    const input = { ...skip, workoutId: randomUUID() };
+    assert.deepEqual(skipWorkoutInput.parse(input), input);
+
+    const skipped = {
+      id: skip.sessionId,
+      workoutId: newId(),
+      status: "SKIPPED",
+      performedAt: NOW,
+    };
+    assert.deepEqual(skippedSession.parse(skipped), skipped);
+    assert.equal(
+      skippedSession.safeParse({ ...skipped, status: "IN_PROGRESS" }).success,
+      false,
+    );
   });
 
   it("rejects non-v7 client ids", () => {
@@ -410,5 +424,107 @@ describe("history", () => {
       }).success,
       false,
     );
+  });
+});
+
+describe("workout context (design D12)", () => {
+  const workout = {
+    id: newId(),
+    name: "Push",
+    position: 0,
+    cycleNumber: 1,
+    programId: newId(),
+    programName: "PPL",
+  };
+  const units = { default: "LB", overrides: {} };
+
+  it("still parses a context a step-3 device cached", () => {
+    const step3 = {
+      workout,
+      units,
+      exercises: [
+        {
+          plannedExerciseId: newId(),
+          position: 0,
+          exerciseId: randomUUID(),
+          name: "Bench Press",
+          metrics: ["REPS", "WEIGHT"],
+          targetSets: 3,
+          plannedSets: [],
+          lastTime: null,
+        },
+      ],
+    };
+    assert.deepEqual(workoutContextResponse.parse(step3), step3);
+  });
+
+  it("parses a cached planned set without effort targets and round-trips ones with them", () => {
+    const planned = {
+      setNumber: 1,
+      repsMin: 5,
+      repsMax: 5,
+      weight: 225,
+      weightUnit: "LB",
+    };
+    const exercise = {
+      plannedExerciseId: newId(),
+      position: 0,
+      exerciseId: randomUUID(),
+      name: "Bench Press",
+      metrics: ["REPS", "WEIGHT"],
+      targetSets: 1,
+      lastTime: null,
+    };
+    const context = (plannedSets: unknown[]) => ({
+      workout,
+      units,
+      exercises: [{ ...exercise, plannedSets }],
+    });
+
+    const cached = context([planned]);
+    assert.deepEqual(workoutContextResponse.parse(cached), cached);
+
+    const body = context([
+      { ...planned, targetRpe: null, targetRir: 2 },
+      { ...planned, setNumber: 2, targetRpe: 8.5, targetRir: null },
+    ]);
+    assert.deepEqual(workoutContextResponse.parse(body), body);
+
+    // One range per target, the prescription's: RPE 1-10, RIR 0-10, in
+    // half steps.
+    const effort = (target: { targetRpe?: number; targetRir?: number }) =>
+      workoutContextResponse.safeParse(context([{ ...planned, ...target }]))
+        .success;
+    assert.equal(effort({ targetRir: 0 }), true);
+    assert.equal(effort({ targetRpe: 10 }), true);
+    for (const bad of [
+      { targetRpe: 0.5 },
+      { targetRpe: 7.3 },
+      { targetRir: 10.5 },
+      { targetRir: -1 },
+    ]) {
+      assert.equal(effort(bad), false, JSON.stringify(bad));
+    }
+  });
+
+  it("parses a placeholder slot with null exercise fields", () => {
+    const body = {
+      workout,
+      units,
+      exercises: [
+        {
+          plannedExerciseId: newId(),
+          position: 0,
+          exerciseId: null,
+          name: null,
+          placeholderLabel: "do something that feels good",
+          metrics: [],
+          targetSets: 3,
+          plannedSets: [],
+          lastTime: null,
+        },
+      ],
+    };
+    assert.deepEqual(workoutContextResponse.parse(body), body);
   });
 });

@@ -29,6 +29,19 @@ skills (root `CLAUDE.md`).
   row (`{ programId, newPlanId, cycleNumber }`) or an existing plan's subtree
   replaced (`{ existingPlanId }`). Returns the old → new id maps; passing them
   back as `ids` makes a rerun write nothing.
+- `src/fingerprint-core.ts` — the one cycle normalizer, pure (no Drizzle, no
+  database; `node:crypto` only), also exported as
+  `@workout-tracker/db/fingerprint` for non-database processes such as the web
+  e2e fake API. `cycleFingerprint(tree)` is the SHA-256 of a cycle's authored
+  content (operations.md §3.8: notes excluded, group keys renumbered, numerics
+  normalized to their column's scale); `cycleContentKey(tree)` is the same
+  normalization with every workout, slot and set `notes` included;
+  `canonicalJson` is its key-sorted JSON. Input type: `FingerprintInput`.
+- `src/fingerprint.ts` — `readCycleTrees` / `storedCycleFingerprints`, which
+  read stored cycles through `userScope`, one query per level, as
+  `StoredCycleTree`: the `packages/shared` cycle-tree wire shape (every column
+  present, numerics as numbers). Re-exports the core. A migration to
+  `workouts` or `planned_*` updates both.
 - `src/templates.ts` — `TEMPLATES`, the starter programs as data, like the
   catalog: frozen slugs, catalog ids, sets and rep ranges, no weights.
 

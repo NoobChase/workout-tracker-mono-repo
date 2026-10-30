@@ -208,3 +208,23 @@ export class Training {
     return finishWorkout(db, this.user, this.sessionId);
   }
 }
+
+/**
+ * Waits until some backend other than `excluding` is blocked by any of
+ * `blockers`; returns its pid. A second waiter for one row lock queues behind
+ * the first waiter's tuple lock, so it may be blocked by that waiter rather
+ * than by the holder.
+ */
+export async function blockedBy(blockers: number[], excluding: number[] = []) {
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    const { rows } = await pool.query<{ pid: number }>(
+      `SELECT pid FROM pg_stat_activity
+        WHERE pg_blocking_pids(pid) && $1::int[] AND NOT (pid = ANY($2::int[]))`,
+      [blockers, excluding],
+    );
+    if (rows[0]) return rows[0].pid;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`nothing ever blocked on backends ${blockers.join(", ")}`);
+}

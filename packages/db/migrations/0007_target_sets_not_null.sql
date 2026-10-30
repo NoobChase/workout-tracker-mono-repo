@@ -1,0 +1,1 @@
+ALTER TABLE "planned_exercises" ALTER COLUMN "target_sets" SET NOT NULL;

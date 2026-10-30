@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { EXERCISE_IDS, FakeApi } from "./support/fake-api.js";
+import { EXERCISE_IDS, FakeApi } from "./support/fake-api/router.js";
 import { signIn } from "./support/session.js";
 import { figures, live, logSet } from "./support/workout.js";
 
@@ -41,7 +41,10 @@ test("a finished session appears in history with its counted sets, units and ski
     .click();
   await expect(page.getByRole("button", { name: "Start Pull" })).toBeVisible();
 
-  await page.getByRole("link", { name: "History" }).click();
+  await page
+    .getByRole("navigation", { name: "Main" })
+    .getByRole("link", { name: "History" })
+    .click();
   const entry = page
     .getByRole("list", { name: "Finished workouts" })
     .getByRole("link");
@@ -91,8 +94,11 @@ test("history pages through older sessions with no repeats", async ({
     ],
   });
   await api.install(page);
-  await signIn(page, "/");
-  await page.getByRole("link", { name: "History" }).click();
+  await signIn(page);
+  await page
+    .getByRole("navigation", { name: "Main" })
+    .getByRole("link", { name: "History" })
+    .click();
 
   const entries = page
     .getByRole("list", { name: "Finished workouts" })
@@ -124,7 +130,10 @@ test("offline, history says what it can't load", async ({ page, context }) => {
     page.getByRole("list", { name: "Recent workouts" }).getByRole("link"),
   ).toHaveCount(1);
   await context.setOffline(true);
-  await page.getByRole("link", { name: "History" }).click();
+  await page
+    .getByRole("navigation", { name: "Main" })
+    .getByRole("link", { name: "History" })
+    .click();
   await expect(
     page.getByRole("status").filter({ hasText: "This is what loaded earlier" }),
   ).toBeVisible();

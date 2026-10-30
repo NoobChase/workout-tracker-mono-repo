@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { entityId, isoDateTime, uuidV7 } from "./ids.js";
-import { repsValue, setNumber, weightUnit, weightValue } from "./units.js";
+import {
+  repsValue,
+  rirValue,
+  rpeValue,
+  setNumber,
+  unitSettings,
+  weightUnit,
+  weightValue,
+} from "./units.js";
 
 /** `GET /next`: one workout per active program, plus resumable sessions. */
 export const whatsNextResponse = z.object({
@@ -35,16 +43,17 @@ export const workoutContextResponse = z.object({
     programId: entityId,
     programName: z.string(),
   }),
-  units: z.object({
-    default: weightUnit,
-    overrides: z.record(entityId, weightUnit),
-  }),
+  units: unitSettings,
   exercises: z.array(
     z.object({
       plannedExerciseId: entityId,
       position: z.number().int().min(0),
-      exerciseId: entityId,
-      name: z.string(),
+      // A placeholder slot (design D12 of step-4a) has no exercise: these two
+      // are null, `metrics` is empty and `placeholderLabel` is set. Optional,
+      // so a context a step-3 device cached still parses.
+      exerciseId: entityId.nullable(),
+      name: z.string().nullable(),
+      placeholderLabel: z.string().nullable().optional(),
       metrics: z.array(z.string()),
       targetSets: z.number().int().nullable(),
       plannedSets: z.array(
@@ -54,6 +63,11 @@ export const workoutContextResponse = z.object({
           repsMax: z.number().int().nullable(),
           weight: weightValue.nullable(),
           weightUnit: weightUnit.nullable(),
+          // Effort target (step-4a D16): at most one is set, in the
+          // prescription's own ranges. Optional (absent reads as null), so a
+          // context a step-3 device cached still parses.
+          targetRpe: rpeValue.nullable().optional(),
+          targetRir: rirValue.nullable().optional(),
         }),
       ),
       lastTime: z
@@ -128,6 +142,33 @@ export const finishWorkoutResponse = z.object({
   extended: z.boolean(),
 });
 export type FinishWorkoutResponse = z.infer<typeof finishWorkoutResponse>;
+
+/**
+ * `POST /workouts/:id/skip` (operations.md 4.14; design D15 of step-4a): skip
+ * the whole workout before it starts. `sessionId` is client-minted and is the
+ * idempotency key, as for start.
+ */
+export const skipWorkoutRequest = z.object({
+  sessionId: uuidV7,
+  performedAt: isoDateTime,
+});
+export type SkipWorkoutRequest = z.infer<typeof skipWorkoutRequest>;
+
+/** What `skipWorkout` takes: the request plus the path's workout id. */
+export const skipWorkoutInput = skipWorkoutRequest.extend({
+  workoutId: entityId,
+});
+export type SkipWorkoutInput = z.infer<typeof skipWorkoutInput>;
+
+/**
+ * `POST /workouts/:id/skip` response: the stored SKIPPED session, the same on
+ * every replay. Whether the skip rolled the program over is not part of it --
+ * the next read of what's next shows that, and a replay could not repeat it.
+ */
+export const skippedSession = startedSession.extend({
+  status: z.literal("SKIPPED"),
+});
+export type SkippedSession = z.infer<typeof skippedSession>;
 
 /** `PUT /sets/:id` and `PATCH /sets/:id` response: the set as stored. */
 export const loggedSet = z.object({

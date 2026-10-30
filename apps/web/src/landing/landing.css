@@ -1,0 +1,141 @@
+/*
+ * The landing page's own rules, for what utilities can't say well: the
+ * stroke-order diagram's masks and states, and its cell size. Everything
+ * else is utilities on the tokens in index.css. `@theme inline` values are
+ * not CSS variables at runtime, so the font and curve are written out here.
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.lp) {
+    scroll-behavior: smooth;
+  }
+}
+.lp [id] {
+  scroll-margin-top: 16px;
+}
+
+/* ── the diagram: two square cells, one per character ─────────────────── */
+.lp-diagram {
+  --cell: min(calc((100vw - 32px) / 2), 250px);
+  width: calc(var(--cell) * 2);
+}
+@media (min-width: 720px) and (max-width: 979px) {
+  .lp-diagram {
+    --cell: 220px;
+  }
+}
+@media (min-width: 980px) and (max-height: 820px) {
+  .lp-diagram {
+    --cell: 220px;
+  }
+}
+
+.lp-cell {
+  all: unset;
+  cursor: help;
+  position: relative;
+  display: block;
+  width: var(--cell);
+  aspect-ratio: 1;
+  color: var(--text);
+  transition: color 200ms ease;
+}
+.lp-cell + .lp-cell {
+  border-left: 1px solid var(--line-2);
+}
+.lp-cell:focus-visible {
+  outline: 2px solid var(--copper);
+  outline-offset: -2px;
+}
+.lp-cell[data-lit] {
+  color: var(--copper);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lp-cell:hover {
+    color: var(--copper);
+  }
+}
+.lp-cell svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.lp-guide {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 0.5;
+  stroke-dasharray: 2 2;
+}
+.lp-glyph {
+  font:
+    800 96px "Tanren Mark",
+    serif;
+  fill: currentColor;
+}
+.lp-glyph.lp-ghost {
+  fill: var(--ghost);
+}
+.lp-glyph.lp-hot {
+  fill: var(--copper);
+}
+
+/*
+ * The glyph is the ink; the stroke centrelines only drive the masks that
+ * reveal it. A stroke draws in the wet (copper) mask, then lands in the set
+ * mask while its copper fades.
+ */
+.lp-diagram mask path {
+  fill: none;
+  stroke: white;
+  stroke-width: 17;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lp-set path {
+  visibility: hidden;
+}
+.lp-set path.on,
+[data-intro="done"] .lp-set path {
+  visibility: visible;
+}
+.lp-wet path {
+  visibility: hidden;
+  stroke-dashoffset: 1;
+}
+[data-intro="drawing"] .lp-wet path {
+  visibility: visible;
+}
+.lp-wet path.cool {
+  stroke-opacity: 0;
+  transition: stroke-opacity 320ms ease;
+}
+/* The brush is wider than a centreline says; the last slivers fill in as it lands. */
+.lp-all {
+  fill: white;
+  opacity: 0;
+  transition: opacity 360ms ease;
+}
+[data-intro="done"] .lp-all {
+  opacity: 1;
+}
+
+/* ── the offline demo: a new cycle fades in rather than snapping back ─── */
+@keyframes lp-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.lp-fade-in {
+  animation: lp-fade-in 320ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* The pricing card's list: a copper rule before each line, as the mockup. */
+.lp-dash > li::before {
+  content: "—";
+  content: "—" / "";
+  color: var(--copper);
+  margin-right: 10px;
+}

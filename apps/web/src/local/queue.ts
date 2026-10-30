@@ -30,7 +30,7 @@ import type { LocalDb, TanrenDb } from "./db.js";
  * none are sent past it. Other sessions are unaffected.
  */
 
-export type QueueOp = "start" | "log" | "edit" | "delete" | "finish";
+export type QueueOp = "start" | "log" | "edit" | "delete" | "finish" | "skip";
 
 /** A validated wire request, built from a `packages/shared` schema. */
 export interface Mutation {

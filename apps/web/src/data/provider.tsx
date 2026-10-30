@@ -6,10 +6,14 @@ import {
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { ApiError } from "../api.js";
 import type { DataLayer } from "../local/layer.js";
+import { keys, refreshAfter } from "./queries.js";
 
 const DataLayerContext = createContext<DataLayer | null>(null);
 
-/** The query client for server reads (what's next, templates, history). */
+/**
+ * The query client for server reads (what's next, templates, history) and
+ * plan-side writes.
+ */
 export function createQueryClient(): QueryClientType {
   return new QueryClient({
     defaultOptions: {
@@ -19,14 +23,20 @@ export function createQueryClient(): QueryClientType {
           !(error instanceof ApiError && error.status < 500) && count < 3,
         staleTime: 30_000,
       },
+      // Every mutation is a plan-side write, online only by design: it fails
+      // at once offline (and says so) rather than pausing until signal.
+      // Logging writes never come through here; they queue.
+      mutations: { networkMode: "always" },
     },
   });
 }
 
 /**
  * Makes the data layer and the query client available to every screen, and
- * refreshes the server reads a delivered write changes: a start puts a
- * session in what's next, a finish moves it to history.
+ * refreshes the server reads a delivered write changes (`AFFECTS`): a start
+ * puts a session in what's next and trains its workout, a finish moves it
+ * to history, and a finish or a skip moves what's next on and may change a
+ * program's progress.
  */
 export function DataProvider({
   layer,
@@ -40,14 +50,9 @@ export function DataProvider({
   useEffect(
     () =>
       layer.onAck((item) => {
-        if (item.op === "start" || item.op === "finish") {
-          void queryClient.invalidateQueries({ queryKey: ["next"] });
-        }
-        if (item.op === "finish") {
-          void queryClient.invalidateQueries({ queryKey: ["history"] });
-        }
+        void refreshAfter(queryClient, item.op);
         void queryClient.invalidateQueries({
-          queryKey: ["session", item.sessionId],
+          queryKey: keys.session(item.sessionId),
         });
       }),
     [layer, queryClient],

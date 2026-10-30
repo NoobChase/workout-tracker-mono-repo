@@ -9,6 +9,7 @@ import {
   prefetch,
   type Harness,
   FakeAuth,
+  USER,
 } from "../test/fakes.js";
 import { buildSessionView } from "./session-view.js";
 import { LocalSessionError } from "./sessions.js";
@@ -441,27 +442,32 @@ describe("adopting a session started on another device", () => {
         performedAt: "2026-10-26T08:00:00.000Z",
         status: "IN_PROGRESS",
       },
-      exercises: context.exercises.map((e) => {
-        const se = [...h.server.sessionExercises].find(
-          ([, v]) => v.plannedExerciseId === e.plannedExerciseId,
-        );
-        return {
-          position: e.position,
-          sessionExerciseId: se?.[0] ?? null,
-          exerciseId: e.exerciseId,
-          name: e.name,
-          plannedExerciseId: e.plannedExerciseId,
-          skipped: !se,
-          sets: h.server.setsOf(e.plannedExerciseId).map((s) => ({
-            id: s.id,
-            setNumber: s.setNumber,
-            reps: s.reps,
-            weight: s.weight,
-            weightUnit: s.weightUnit as "LB" | "KG",
-            kind: "NORMAL" as const,
-          })),
-        };
-      }),
+      exercises: context.exercises
+        .filter(
+          (e): e is typeof e & { exerciseId: string; name: string } =>
+            e.exerciseId !== null && e.name !== null,
+        )
+        .map((e) => {
+          const se = [...h.server.sessionExercises].find(
+            ([, v]) => v.plannedExerciseId === e.plannedExerciseId,
+          );
+          return {
+            position: e.position,
+            sessionExerciseId: se?.[0] ?? null,
+            exerciseId: e.exerciseId,
+            name: e.name,
+            plannedExerciseId: e.plannedExerciseId,
+            skipped: !se,
+            sets: h.server.setsOf(e.plannedExerciseId).map((s) => ({
+              id: s.id,
+              setNumber: s.setNumber,
+              reps: s.reps,
+              weight: s.weight,
+              weightUnit: s.weightUnit as "LB" | "KG",
+              kind: "NORMAL" as const,
+            })),
+          };
+        }),
     };
   }
 
@@ -691,5 +697,168 @@ describe("who owns a write", () => {
     expect((await h.layer.contexts.get(ids.workout))?.userId).toBe(
       "user_recorded",
     );
+  });
+});
+
+describe("skipping a whole workout (design D15 of step-4a)", () => {
+  it("skips offline from the prefetched plan: one SKIPPED record, one queued skip, nothing else", async () => {
+    const h = await harness();
+    await prefetch(h);
+    h.connectivity.set(false);
+
+    const sessionId = await h.layer.sessions.skip(ids.workout);
+
+    expect(uuidV7.safeParse(sessionId).success).toBe(true);
+    expect(h.layer.sessions.get(sessionId)).toMatchObject({
+      workoutId: ids.workout,
+      status: "SKIPPED",
+      exercises: [],
+      performedAt: "2026-10-26T09:00:00.000Z",
+    });
+    const items = h.layer.queue.getState().items;
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      op: "skip",
+      sessionId,
+      request: {
+        method: "POST",
+        path: `/api/workouts/${ids.workout}/skip`,
+        body: { sessionId, performedAt: "2026-10-26T09:00:00.000Z" },
+      },
+    });
+
+    // A second tap returns the same skip and queues nothing more; the
+    // skipped workout takes no sets and can't be finished.
+    expect(await h.layer.sessions.skip(ids.workout)).toBe(sessionId);
+    await h.layer.sessions.finish(sessionId);
+    await expect(
+      h.layer.sessions.logSet(sessionId, {
+        plannedExerciseId: bench,
+        reps: 5,
+        weight: 225,
+      }),
+    ).rejects.toBeInstanceOf(LocalSessionError);
+    expect(h.layer.queue.getState().items).toHaveLength(1);
+  });
+
+  it("a double tap that overlaps is still one skip: one record, one queued write", async () => {
+    const h = await harness();
+    await prefetch(h);
+    h.connectivity.set(false);
+
+    const [a, b] = await Promise.all([
+      h.layer.sessions.skip(ids.workout),
+      h.layer.sessions.skip(ids.workout),
+    ]);
+
+    expect(b).toBe(a);
+    expect(h.layer.queue.getState().items.map((i) => i.op)).toEqual(["skip"]);
+    expect(
+      [...h.layer.sessions.getSnapshot().values()].filter(
+        (r) => r.workoutId === ids.workout,
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("two overlapping starts of one workout open one session with one queued start", async () => {
+    const h = await harness();
+    await prefetch(h);
+    h.connectivity.set(false);
+
+    const [a, b] = await Promise.all([
+      h.layer.sessions.start(ids.workout),
+      h.layer.sessions.start(ids.workout),
+    ]);
+
+    expect(b).toBe(a);
+    expect(h.layer.queue.getState().items.map((i) => i.op)).toEqual(["start"]);
+  });
+
+  it("an overlapping start and skip of one workout: the start wins, the skip is refused", async () => {
+    const h = await harness();
+    await prefetch(h);
+    h.connectivity.set(false);
+
+    const [started, skipped] = await Promise.allSettled([
+      h.layer.sessions.start(ids.workout),
+      h.layer.sessions.skip(ids.workout),
+    ]);
+
+    expect(started.status).toBe("fulfilled");
+    expect(skipped.status).toBe("rejected");
+    expect(h.layer.queue.getState().items.map((i) => i.op)).toEqual(["start"]);
+  });
+
+  it("serializes per workout only: different workouts still start side by side", async () => {
+    const h = await harness();
+    await prefetch(h);
+    await h.layer.contexts.prefetchWorkouts(USER, [ids.workout2]);
+    h.connectivity.set(false);
+
+    const [push, legs] = await Promise.all([
+      h.layer.sessions.start(ids.workout),
+      h.layer.sessions.skip(ids.workout2),
+    ]);
+
+    expect(push).not.toBe(legs);
+    expect(
+      h.layer.queue
+        .getState()
+        .items.map((i) => i.op)
+        .sort(),
+    ).toEqual(["skip", "start"]);
+  });
+
+  it("never skips a workout already started here, naming it", async () => {
+    const h = await harness();
+    await offlineSession(h);
+
+    await expect(h.layer.sessions.skip(ids.workout)).rejects.toThrow(
+      "Push A is already started, so it can't be skipped. Finish it instead.",
+    );
+    expect(h.layer.queue.getState().items.map((i) => i.op)).toEqual(["start"]);
+  });
+
+  it("survives a reload, then reaches the server in order on reconnect and is dropped", async () => {
+    const first = await makeHarness();
+    await prefetch(first);
+    first.connectivity.set(false);
+    const push = await first.layer.sessions.skip(ids.workout);
+    const legs = await first.layer.sessions.skip(ids.workout2);
+    first.layer.close();
+
+    const offline = new FakeConnectivity();
+    offline.online = false;
+    const h = await harness({ dbName: first.dbName, connectivity: offline });
+    expect(h.layer.sessions.get(push)?.status).toBe("SKIPPED");
+    expect(h.server.applied).toEqual([]);
+
+    h.connectivity.set(true);
+    await h.layer.queue.settled();
+    expect(h.server.applied.map((r) => r.path)).toEqual([
+      `/api/workouts/${ids.workout}/skip`,
+      `/api/workouts/${ids.workout2}/skip`,
+    ]);
+    expect(h.server.sessions.get(push)).toEqual({
+      workoutId: ids.workout,
+      status: "SKIPPED",
+    });
+    expect(h.server.sessions.get(legs)?.status).toBe("SKIPPED");
+    // Delivered: the records go, and the workouts stay resolved until a
+    // fresher server read arrives.
+    expect(h.layer.sessions.get(push)).toBeUndefined();
+    expect([...h.layer.sessions.settledWorkouts().keys()].sort()).toEqual(
+      [ids.workout, ids.workout2].sort(),
+    );
+  });
+
+  it("can't skip offline a workout that was never prefetched", async () => {
+    const h = await harness();
+    h.connectivity.set(false);
+    h.api.failContext.add(ids.workout);
+    await expect(h.layer.sessions.skip(ids.workout)).rejects.toMatchObject({
+      code: "no-context",
+    });
+    expect(h.layer.queue.getState().items).toEqual([]);
   });
 });

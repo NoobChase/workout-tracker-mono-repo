@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { contextFor } from "../test/fakes.js";
-import type { ExerciseView, SetView } from "../local/session-view.js";
-import { seed } from "./workout.js";
+import { contextFor } from "../../test/fakes.js";
+import type { ExerciseView, SetView } from "../../local/session-view.js";
+import { prescribedWeight, seed } from "./plan.js";
 
 /** Bench from the test context: plan 3 × 5–8, last time 225 × 5 (one set). */
 function bench(
@@ -11,6 +11,7 @@ function bench(
   const planned = { ...contextFor().exercises[0]!, lastTime };
   return {
     planned,
+    loggable: true,
     unit: "LB",
     sessionExerciseId: sets.length > 0 ? "se" : null,
     sets: sets.map((s, i) => ({
@@ -106,5 +107,80 @@ describe("seed", () => {
       },
     ]);
     expect(seed(view).weight).toBe(225);
+  });
+
+  describe("a prescribed weight", () => {
+    /** Bench with set weights written in the plan (a deload: 185, 185, 205). */
+    const prescribed = (
+      sets: Partial<SetView>[] = [],
+      weights: (number | null)[] = [185, 185, 205],
+      weightUnit: "LB" | "KG" = "LB",
+      lastTime = threeLastTime,
+    ): ExerciseView => {
+      const view = bench(sets, lastTime);
+      return {
+        ...view,
+        planned: {
+          ...view.planned,
+          plannedSets: view.planned.plannedSets.map((p, i) => ({
+            ...p,
+            weight: weights[i] ?? null,
+            weightUnit: weights[i] == null ? null : weightUnit,
+          })),
+        },
+      };
+    };
+
+    it("beats last time: a written deload is the seed", () => {
+      // Last time was 225 × 5; the plan says 185.
+      expect(seed(prescribed())).toEqual({ weight: 185, reps: 5 });
+    });
+
+    it("beats the weight just used, set by set", () => {
+      const view = prescribed([{ weight: 190 }, { weight: 190 }]);
+      expect(seed(view).weight).toBe(205);
+    });
+
+    it("an unprescribed set falls back to the weight just used, then last time", () => {
+      expect(
+        seed(prescribed([{ weight: 190 }], [185, null, null])).weight,
+      ).toBe(190);
+      expect(seed(prescribed([], [null, null, null])).weight).toBe(225);
+    });
+
+    it("past the plan's sets, an extra set carries the weight just used", () => {
+      const view = prescribed([
+        { weight: 185 },
+        { weight: 185 },
+        { weight: 205 },
+      ]);
+      expect(seed(view).weight).toBe(205);
+      expect(prescribedWeight(view, 4)).toBeNull();
+    });
+
+    it("is converted when the plan wrote it in the other unit", () => {
+      // 100 kg is 220.46 lb: a whole lb.
+      expect(prescribedWeight(prescribed([], [100, 100, 100], "KG"), 1)).toBe(
+        220,
+      );
+      // 225 lb is 102.06 kg: a half kg.
+      const inKg = { ...prescribed(), unit: "KG" as const };
+      expect(
+        prescribedWeight(
+          {
+            ...inKg,
+            planned: {
+              ...inKg.planned,
+              plannedSets: inKg.planned.plannedSets.map((p) => ({
+                ...p,
+                weight: 225,
+                weightUnit: "LB" as const,
+              })),
+            },
+          },
+          1,
+        ),
+      ).toBe(102);
+    });
   });
 });

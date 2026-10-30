@@ -21,6 +21,7 @@ const PLANNED_EXERCISE = "01900000-0000-7000-8000-000000000007";
 
 const UNIQUE_VIOLATION = "23505";
 const CHECK_VIOLATION = "23514";
+const NOT_NULL_VIOLATION = "23502";
 const INVALID_TEXT_REPRESENTATION = "22P02";
 
 /** Asserts `sql` fails with `code`, leaving the transaction usable. */
@@ -115,7 +116,7 @@ describe("planned_sets.target_weight_kg", () => {
         [WORKOUT_A, PLAN],
       );
       await client.query(
-        "INSERT INTO planned_exercises (id, workout_id, placeholder_label, position) VALUES ($1, $2, 'Quads', 0)",
+        "INSERT INTO planned_exercises (id, workout_id, placeholder_label, position, target_sets) VALUES ($1, $2, 'Quads', 0, 3)",
         [PLANNED_EXERCISE, WORKOUT_A],
       );
       const { rows } = await client.query<{
@@ -146,6 +147,96 @@ describe("planned_sets.target_weight_kg", () => {
   });
 });
 
+describe("planned_sets effort target (step-4a design D16)", () => {
+  const insert =
+    "INSERT INTO planned_sets (id, planned_exercise_id, set_number, target_rpe, target_rir) VALUES ($1, $2, $3, $4, $5)";
+
+  async function seedSlot(client: PoolClient): Promise<void> {
+    await seedPlan(client);
+    await client.query(
+      "INSERT INTO workouts (id, plan_id, name, position) VALUES ($1, $2, 'A', 0)",
+      [WORKOUT_A, PLAN],
+    );
+    await client.query(
+      "INSERT INTO planned_exercises (id, workout_id, placeholder_label, position, target_sets) VALUES ($1, $2, 'Quads', 0, 3)",
+      [PLANNED_EXERCISE, WORKOUT_A],
+    );
+  }
+
+  it("target_rir is stored as written, 0 to 10, on the numeric(3,1) scale", async () => {
+    await inRolledBackTransaction(async (client) => {
+      await seedSlot(client);
+      const { rows } = await client.query<{
+        target_rpe: string | null;
+        target_rir: string | null;
+      }>(
+        `INSERT INTO planned_sets (id, planned_exercise_id, set_number, target_rpe, target_rir) VALUES
+           ('01900000-0000-7000-8000-0000000000b1', $1, 1, NULL, 0),
+           ('01900000-0000-7000-8000-0000000000b2', $1, 2, NULL, 2.5),
+           ('01900000-0000-7000-8000-0000000000b3', $1, 3, NULL, 10),
+           ('01900000-0000-7000-8000-0000000000b4', $1, 4, 8, NULL),
+           ('01900000-0000-7000-8000-0000000000b5', $1, 5, NULL, NULL)
+         RETURNING target_rpe, target_rir`,
+        [PLANNED_EXERCISE],
+      );
+      assert.deepEqual(rows, [
+        { target_rpe: null, target_rir: "0.0" },
+        { target_rpe: null, target_rir: "2.5" },
+        { target_rpe: null, target_rir: "10.0" },
+        { target_rpe: "8.0", target_rir: null },
+        { target_rpe: null, target_rir: null },
+      ]);
+    });
+  });
+
+  it("planned_sets_target_rir_check refuses below 0 and above 10", async () => {
+    await inRolledBackTransaction(async (client) => {
+      await seedSlot(client);
+      const id = "01900000-0000-7000-8000-0000000000b6";
+      for (const rir of ["-0.5", "10.5"]) {
+        await assertRejects(
+          client,
+          insert,
+          [id, PLANNED_EXERCISE, 1, null, rir],
+          CHECK_VIOLATION,
+        );
+      }
+      const { rows } = await client.query<{ conname: string }>(
+        "SELECT conname FROM pg_constraint WHERE conname IN ('planned_sets_target_rir_check', 'planned_sets_rpe_or_rir_check') ORDER BY conname",
+      );
+      assert.deepEqual(
+        rows.map((r) => r.conname),
+        ["planned_sets_rpe_or_rir_check", "planned_sets_target_rir_check"],
+      );
+    });
+  });
+
+  it("planned_sets_rpe_or_rir_check refuses a set carrying both", async () => {
+    await inRolledBackTransaction(async (client) => {
+      await seedSlot(client);
+      const id = "01900000-0000-7000-8000-0000000000b7";
+      await client.query("SAVEPOINT rpe_and_rir");
+      await assert.rejects(
+        client.query(insert, [id, PLANNED_EXERCISE, 1, "8", "2"]),
+        (err: { code?: string; constraint?: string }) => {
+          assert.equal(err.code, CHECK_VIOLATION);
+          assert.equal(err.constraint, "planned_sets_rpe_or_rir_check");
+          return true;
+        },
+      );
+      await client.query("ROLLBACK TO SAVEPOINT rpe_and_rir");
+      // Nor can an update add the second target to a set that has one.
+      await client.query(insert, [id, PLANNED_EXERCISE, 1, "8", null]);
+      await assertRejects(
+        client,
+        "UPDATE planned_sets SET target_rir = 2 WHERE id = $1",
+        [id],
+        CHECK_VIOLATION,
+      );
+    });
+  });
+});
+
 describe("planned_exercises exercise-or-placeholder", () => {
   it("requires exactly one of exercise_id and placeholder_label", async () => {
     await inRolledBackTransaction(async (client) => {
@@ -159,7 +250,7 @@ describe("planned_exercises exercise-or-placeholder", () => {
         [EXERCISE],
       );
       const insert =
-        "INSERT INTO planned_exercises (id, workout_id, exercise_id, placeholder_label, position) VALUES ($1, $2, $3, $4, 0)";
+        "INSERT INTO planned_exercises (id, workout_id, exercise_id, placeholder_label, position, target_sets) VALUES ($1, $2, $3, $4, 0, 3)";
 
       await assertRejects(
         client,
@@ -174,6 +265,32 @@ describe("planned_exercises exercise-or-placeholder", () => {
         CHECK_VIOLATION,
       );
       await client.query(insert, [PLANNED_EXERCISE, WORKOUT_A, EXERCISE, null]);
+    });
+  });
+
+  it("requires target_sets, above zero: every slot says how many sets", async () => {
+    await inRolledBackTransaction(async (client) => {
+      await seedPlan(client);
+      await client.query(
+        "INSERT INTO workouts (id, plan_id, name, position) VALUES ($1, $2, 'A', 0)",
+        [WORKOUT_A, PLAN],
+      );
+      const insert =
+        "INSERT INTO planned_exercises (id, workout_id, placeholder_label, position, target_sets) VALUES ($1, $2, 'Quads', 0, $3)";
+
+      await assertRejects(
+        client,
+        insert,
+        [PLANNED_EXERCISE, WORKOUT_A, null],
+        NOT_NULL_VIOLATION,
+      );
+      await assertRejects(
+        client,
+        insert,
+        [PLANNED_EXERCISE, WORKOUT_A, 0],
+        CHECK_VIOLATION,
+      );
+      await client.query(insert, [PLANNED_EXERCISE, WORKOUT_A, 3]);
     });
   });
 });

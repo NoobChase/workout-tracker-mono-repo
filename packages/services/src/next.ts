@@ -22,6 +22,7 @@ import {
   type UserId,
 } from "@workout-tracker/db";
 import type {
+  UnitSettings,
   WeightUnit,
   WhatsNextResponse,
   WorkoutContextResponse,
@@ -96,8 +97,10 @@ export async function whatsNext(
  * user's unit settings, and for each exercise the sets that counted in the
  * most recent COMPLETED session containing it, from any workout.
  *
- * Placeholder slots (no exercise yet) are omitted: templates have none, and
- * filling one is out of scope for step 3.
+ * Every slot comes back, in position order (design D12 of step-4a): a
+ * placeholder slot has a null `exerciseId` and `name`, no metrics, no last
+ * time, and its `placeholderLabel`. Which slots the logger can log is the
+ * client's rule.
  */
 export async function getWorkoutContext(
   db: Db,
@@ -127,17 +130,20 @@ export async function getWorkoutContext(
       position: plannedExercises.position,
       exerciseId: exercises.id,
       name: exercises.name,
+      placeholderLabel: plannedExercises.placeholderLabel,
       targetSets: plannedExercises.targetSets,
     })
     .from(plannedExercises)
-    .innerJoin(exercises, eq(exercises.id, plannedExercises.exerciseId))
+    .leftJoin(exercises, eq(exercises.id, plannedExercises.exerciseId))
     .where(
       and(scope.plannedExercises, eq(plannedExercises.workoutId, workoutId)),
     )
     .orderBy(plannedExercises.position);
 
   const plannedIds = planned.map((p) => p.plannedExerciseId);
-  const exerciseIds = [...new Set(planned.map((p) => p.exerciseId))];
+  const exerciseIds = [
+    ...new Set(planned.flatMap((p) => (p.exerciseId ? [p.exerciseId] : []))),
+  ];
 
   const [metrics, sets, units, lastTime] = await Promise.all([
     exerciseIds.length === 0
@@ -160,6 +166,8 @@ export async function getWorkoutContext(
             repsMax: plannedSets.targetRepsMax,
             weight: plannedSets.targetWeight,
             weightUnit: plannedSets.weightUnit,
+            targetRpe: plannedSets.targetRpe,
+            targetRir: plannedSets.targetRir,
           })
           .from(plannedSets)
           .where(
@@ -183,17 +191,24 @@ export async function getWorkoutContext(
         .map((m) => m.metric),
       plannedSets: sets
         .filter((s) => s.plannedExerciseId === p.plannedExerciseId)
-        .map(({ plannedExerciseId: _, weight, ...s }) => ({
-          ...s,
-          weight: toNumber(weight),
-        })),
-      lastTime: lastTime.get(p.exerciseId) ?? null,
+        .map(
+          ({ plannedExerciseId: _, weight, targetRpe, targetRir, ...s }) => ({
+            ...s,
+            weight: toNumber(weight),
+            targetRpe: toNumber(targetRpe),
+            targetRir: toNumber(targetRir),
+          }),
+        ),
+      lastTime: (p.exerciseId && lastTime.get(p.exerciseId)) || null,
     })),
   };
 }
 
 /** The user's default unit and per-exercise overrides (data-model.md 2.5). */
-async function unitSettings(db: Db, user: UserId) {
+export async function unitSettings(
+  db: Db,
+  user: UserId,
+): Promise<UnitSettings> {
   // `users` is keyed by the user id itself; there is no chain to scope.
   const [row] = await db
     .select({ unit: users.defaultWeightUnit })

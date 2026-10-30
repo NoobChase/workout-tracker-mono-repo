@@ -40,6 +40,7 @@ const variables = {
   borderRadius: "0.5rem",
 };
 
+/** Sign-in and sign-up alike (`/sign-in`, `/sign-up`). */
 export const signInAppearance = {
   variables,
   elements: {
@@ -53,7 +54,10 @@ export const signInAppearance = {
     },
     // On the first step the page's own heading says what this is; later
     // steps ("Check your email") keep Clerk's header, which names the step.
-    header: { ".cl-signIn-start &": { display: "none" } },
+    header: {
+      ".cl-signIn-start &": { display: "none" },
+      ".cl-signUp-start &": { display: "none" },
+    },
     headerTitle: {
       fontSize: "20px",
       fontWeight: 700,
