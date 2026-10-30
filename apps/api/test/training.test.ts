@@ -12,10 +12,17 @@ import {
   errorResponse,
   newId,
   type LoggedSet,
+  type SkippedSession,
   type StartedSession,
 } from "@workout-tracker/shared";
 import type { Services } from "../src/services";
-import { FAKE_DB, bearer, fakes, viaCloudFront } from "./support";
+import {
+  FAKE_DB,
+  bearer,
+  fakes,
+  unfakedServices,
+  viaCloudFront,
+} from "./support";
 
 const NOW = "2026-10-26T12:00:00.000Z";
 
@@ -23,6 +30,7 @@ const sessionId = newId();
 const workoutId = newId();
 const setId = newId();
 const programId = newId();
+const skipId = newId();
 
 const startBody = { workoutId, performedAt: NOW };
 const logBody = {
@@ -57,6 +65,13 @@ const startedSession: StartedSession = {
   status: "IN_PROGRESS",
   performedAt: NOW,
 };
+const skipBody = { sessionId: skipId, performedAt: NOW };
+const skipped: SkippedSession = {
+  id: skipId,
+  workoutId,
+  status: "SKIPPED",
+  performedAt: NOW,
+};
 
 interface Call {
   name: keyof Services;
@@ -75,6 +90,8 @@ function recordingServices(overrides: Partial<Services> = {}) {
       return Promise.resolve(result);
     }) as Services[K];
   const services: Services = {
+    // The catalog and program routes have their own test file.
+    ...unfakedServices(),
     listTemplates: record("listTemplates", { templates: [] }),
     startProgramFromTemplate: record("startProgramFromTemplate", {
       program: {
@@ -82,6 +99,7 @@ function recordingServices(overrides: Partial<Services> = {}) {
         name: "PPL",
         status: "ACTIVE",
         targetCycles: null,
+        currentCycle: 1,
       },
     }),
     whatsNext: record("whatsNext", { next: [], inProgress: [] }),
@@ -122,6 +140,7 @@ function recordingServices(overrides: Partial<Services> = {}) {
       items: [],
       nextCursor: null,
     }),
+    skipWorkout: record("skipWorkout", skipped),
     ...overrides,
   };
   return { services, calls };
@@ -176,6 +195,16 @@ const routes: Route[] = [
     status: 200,
     write: false,
     args: [workoutId],
+  },
+  {
+    label: "POST /workouts/:id/skip",
+    method: "POST",
+    path: `/api/workouts/${workoutId}/skip`,
+    body: skipBody,
+    service: "skipWorkout",
+    status: 200,
+    write: true,
+    args: [{ ...skipBody, workoutId }],
   },
   {
     label: "PUT /sessions/:id",
@@ -526,6 +555,13 @@ describe("training routes", () => {
         ["POST", "/api/programs/from-template", { templateSlug: "ppl" }],
         [
           "POST",
+          `/api/workouts/${workoutId}/skip`,
+          { sessionId: randomUUID(), performedAt: NOW },
+        ],
+        ["POST", `/api/workouts/${workoutId}/skip`, { sessionId: skipId }],
+        ["POST", "/api/workouts/nope/skip", skipBody],
+        [
+          "POST",
           "/api/programs/from-template",
           { programId: randomUUID(), templateSlug: "ppl" },
         ],
@@ -584,6 +620,34 @@ describe("training routes", () => {
         },
       });
       const route = routes.find((r) => r.service === "logSet")!;
+
+      const first = await app.request(route.path, init(route, "valid:user_a"));
+      const second = await app.request(route.path, init(route, "valid:user_a"));
+
+      assert.equal(first.status, 200);
+      assert.equal(second.status, 200);
+      assert.deepEqual(await second.json(), await first.json());
+      assert.equal(rows.size, 1);
+    });
+
+    it("POST /workouts/:id/skip twice: one SKIPPED session, equal responses", async () => {
+      // The contract's behaviour (insert ON CONFLICT DO NOTHING, re-read);
+      // the real one is tested against Neon in packages/services.
+      const rows = new Map<string, SkippedSession>();
+      const { app } = setup("ACTIVE", {
+        skipWorkout: (_db, _user, input) => {
+          if (!rows.has(input.sessionId)) {
+            rows.set(input.sessionId, {
+              id: input.sessionId,
+              workoutId: input.workoutId,
+              status: "SKIPPED",
+              performedAt: input.performedAt,
+            });
+          }
+          return Promise.resolve(rows.get(input.sessionId)!);
+        },
+      });
+      const route = routes.find((r) => r.service === "skipWorkout")!;
 
       const first = await app.request(route.path, init(route, "valid:user_a"));
       const second = await app.request(route.path, init(route, "valid:user_a"));

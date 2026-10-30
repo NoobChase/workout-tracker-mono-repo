@@ -32,6 +32,19 @@ export function formatDay(iso: string, now: Date = new Date()): string {
     : DAY_YEAR.format(date);
 }
 
+/**
+ * "today", "yesterday", else `formatDay` ("Mon, Oct 26"): calendar days in
+ * the device's time zone, as home's "Started today, 6:40 PM" reads.
+ */
+export function relativeDay(iso: string, now: Date = new Date()): string {
+  const midnight = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round(
+    (midnight(now) - midnight(new Date(iso))) / 86_400_000,
+  );
+  return days === 0 ? "today" : days === 1 ? "yesterday" : formatDay(iso, now);
+}
+
 /** "9:04 AM". */
 export function formatTime(iso: string): string {
   return TIME.format(new Date(iso));

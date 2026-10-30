@@ -17,7 +17,7 @@ export default defineConfig({
       manifest: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,woff2,svg,png}"],
-        // Bundled clerk-js + @clerk/ui push the entry chunk past the 2 MiB
+        // Bundled clerk-js + @clerk/ui push the app chunk past the 2 MiB
         // default (design D10 spike).
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallback: "/index.html",

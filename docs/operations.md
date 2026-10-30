@@ -61,7 +61,7 @@ Only these, and they are all in §4:
 | §4.15 edit a logged set | **yes** |
 | §4.16 delete a logged set | **yes** — one request: delete, renumber, and drop an emptied exercise row in a single transaction |
 | §4.13 finish the workout | **yes**, minus the extension check |
-| §4.14 skip the workout | **yes** |
+| §4.14 skip the workout | **yes**, minus the extension check |
 | everything in §1, §2, §3, §5 | no — plan-side and review work happens with a connection |
 
 The client mints UUIDs for `workout_sessions`, `session_exercises`, and
@@ -77,9 +77,10 @@ tables, where the client mints it offline, and the clone, where holding the id i
 advance is what removes a pass. Elsewhere it is omitted for readability and
 should be read as present.
 
-The one operation that does not fully survive offline is §4.13. Marking a
-session `COMPLETED` is a plain update and queues fine, but the program-extension
-check it triggers is a server-side transaction over the plan tree. It therefore
+The operations that do not fully survive offline are §4.13 and §4.14. Marking a
+session `COMPLETED`, or writing a `SKIPPED` one, queues fine, but the
+program-extension check each triggers is a server-side transaction over the
+plan tree. It therefore
 runs **when the finish reaches the server**, not when the user taps the button.
 The user-visible effect is nil: the extension only matters for what "what's
 next?" returns, and that is a read they cannot do offline anyway.
@@ -173,7 +174,17 @@ ORDER BY name;
 ```
 
 Standard rows (`owner_user_id IS NULL`) and the user's own come back in one
-query.
+query, each with its metrics and the user's setup and cues (§2.3).
+
+`includeRetired=1` also returns the user's **own** retired exercises, so they
+can be reactivated (§2.4); a retired standard exercise never comes back.
+Filtering by muscle, equipment and name happens on the client: the list is
+bounded (the standard catalog plus the user's own), so it is fetched whole and
+not paginated. The response also carries the user's weight `units` (default and
+per-exercise overrides, data-model §2.5), so the builder prescribes in the
+lifter's unit outside a workout.
+
+**Implemented in** [`listExercises`](../packages/services/src/catalog.ts) (`GET /api/exercises`).
 
 ### 2.2 Create a custom exercise
 
@@ -199,13 +210,28 @@ ids are minted before the write.
 `is_required = FALSE` on weight is what makes this work for a movement that is
 usually bodyweight but sometimes loaded.
 
+The client mints `$ex_id`, and it is the idempotency key: a replay returns the
+stored exercise and writes nothing, and an id that is a standard exercise's or
+another user's is a conflict. The name must not match a standard exercise or
+one of the user's own, **ignoring case** (`data-model.md` §3.3 says why a
+custom exercise must not shadow a standard one; the two partial unique indexes
+do not stop it, so the check is in code).
+
+**Implemented in** [`createExercise`](../packages/services/src/catalog.ts) and
+[`assertExerciseNameFree`](../packages/services/src/names.ts) (`POST /api/exercises`).
+
 ### 2.3 Record setup and cues for an exercise
 
 Rack pin heights, form reminders. Persists across every program forever.
 
 **Writes:** `user_exercise_settings.setup` / `.cues` (upsert)
 
-This is the same row as §1.3 — settings and notes share a table.
+This is the same row as §1.3 — settings and notes share a table. The upsert
+is `ON CONFLICT (user_id, exercise_id) DO UPDATE` of `setup` and `cues` only,
+so the §1.3 unit override is never touched. It applies to any exercise the user
+can see, standard ones included. Blank text is stored as `NULL`.
+
+**Implemented in** [`saveExerciseNotes`](../packages/services/src/catalog.ts) (`PUT /api/exercises/:id/notes`).
 
 ### 2.4 Retire an exercise
 
@@ -214,6 +240,27 @@ This is the same row as §1.3 — settings and notes share a table.
 Never a `DELETE`. `planned_exercises` and `session_exercises` both reference it
 `ON DELETE RESTRICT`, so a used exercise cannot be removed; retiring hides it
 from pickers while leaving history intact.
+
+**Reactivate** is the reverse (`is_active = TRUE`). Both apply to the user's
+own exercises only; a standard exercise is refused. Repeating either writes
+nothing.
+
+**Implemented in** [`retireExercise`](../packages/services/src/catalog.ts), [`reactivateExercise`](../packages/services/src/catalog.ts)
+(`POST /api/exercises/:id/retire`, `/reactivate`).
+
+### 2.5 Edit a custom exercise
+
+**Writes:** `exercises.name`, `primary_muscles`, `secondary_muscles`,
+`equipment` — the user's own exercise only
+
+The **metrics never change**, and the request has no field for them: logged
+sets were validated against the metrics, so different metrics make a different
+exercise. The muscle rules (secondary needs a primary; no muscle in both) are
+checked on the row as it will be, so sending only the secondary muscles is
+judged against the stored primary ones. A new name is checked as in §2.2.
+Values are absolute, so a replay writes nothing.
+
+**Implemented in** [`editExercise`](../packages/services/src/catalog.ts) (`PATCH /api/exercises/:id`).
 
 ---
 
@@ -255,6 +302,32 @@ cycle without a buffer.
 
 "Cycle 4 of 12" reads `target_cycles`. An open-ended program has `NULL` there and
 renders no denominator — no rule to remember, nothing to get wrong.
+
+**One request.** The builder assembles cycle 1 on the device with every id
+client-minted (program, plan, workouts, slots, sets) and sends it whole, so
+§3.2–3.6 are not separate requests: they are the parts of the tree that this
+create, or a cycle save (§3.7), writes. The new program is a `DRAFT`. A replay
+is recognised by the program id: if the stored program has the request's name
+and `target_cycles` and its cycle 1 fingerprints the same as the request's
+(§3.8), the program is returned and nothing is written; any difference is a
+conflict ("That program id is already in use." for the name or length, "A
+different program was already created with this id." for cycle 1). Template
+start, whose name may have been auto-suffixed, accepts the suffixed form of
+its name; so does a copy (§3.9), which goes through this same path. The name
+must be free, exactly; manual create never auto-suffixes (that is §3.9's rule
+for copies).
+
+**Size bounds**, enforced by the request contract with messages that name the
+workout and slot: `target_cycles` at most 104 (open-ended has no bound), at
+most 14 workouts per cycle, 40 slots per workout, and 30 for a slot's
+`target_sets` and its prescribed sets. They bound what one create or save
+writes; a stored program extended (§3.12) past 104 cycles still reads. Together
+they also cap one create at 20,000 rows: cycles (1 if open-ended) times the
+cycle's workouts, slots and prescribed sets.
+
+**Implemented in** [`createProgram`](../packages/services/src/programs.ts) (`POST /api/programs`).
+Template start (`templates.ts`) builds a tree from the template and goes
+through the same function, then activates, in one transaction.
 
 ### 3.2 Add a workout to a cycle
 
@@ -321,10 +394,66 @@ at render time, not stored.
 
 ### 3.7 Edit one cycle
 
-**Writes:** whichever `planned_*` rows changed, in that cycle only
+**Writes:** whichever `workouts` and `planned_*` rows changed, in that cycle only
 
 Nothing propagates. That is the whole point of materialized cycles — cycle 7 is
 just rows.
+
+**The save.** The builder edits a copy of the cycle and sends the whole desired
+tree, keeping the ids of the rows it kept and minting ids for new ones. In one
+transaction the server locks the program row `FOR UPDATE` (the lock §4.13
+takes), then diffs by id: it deletes rows that are gone, updates rows that
+changed, and inserts rows that are new. Kept rows keep their ids because
+`session_exercises.planned_exercise_id` points at them; deleting and recreating
+would turn logged exercises into "improvised" ones (`SET NULL`). The position
+uniques are deferred, so rows can trade places. A changed planned set is
+deleted and reinserted under the same id. The apply to later cycles (§3.8)
+runs in the same transaction.
+
+**Trained workouts are frozen.** A workout is *trained* if any
+`workout_sessions` row references it, whatever its status, so an
+`IN_PROGRESS` session counts. A save must give back each trained workout
+exactly as stored:
+
+- its row (name, position **and notes**) and its whole subtree — slots and
+  planned sets, ids and notes included — unchanged;
+- its position fixed: no workout newly placed before it, and no existing
+  workout moved across it in either direction.
+
+Deleting an untrained workout that sits before a trained one is allowed, as
+long as the trained workout's own position value holds (positions may have
+gaps). A refusal is a conflict that names the workout. The cycle read
+(`GET /api/programs/:id/cycles/:n`) flags each workout `trained` and carries
+`trainedAt`, its earliest session's `performed_at` (null untrained), for the
+builder's "Logged <day> · locked". The freeze exists
+because plan versus actual (§5.3) compares the session against these rows.
+Freezing the whole cycle instead would block the common mid-cycle tweak
+("bump Thursday's bench").
+
+**A finished program takes nothing new.** Every workout of a `COMPLETED`
+program is resolved, so all of them are frozen, but the freeze alone would
+still allow a new workout at the end. That would leave the program `COMPLETED`
+with an unresolved workout. A save that adds any workout or slot to a
+`COMPLETED` program is refused: "This program is finished. Run another cycle
+to change it." Extending it (§3.12) is how it runs again.
+
+**A save rolls the program over like a finish.** Removing an `ACTIVE`
+program's last unresolved workouts would otherwise leave it `ACTIVE` with
+nothing next — and an open-ended one stuck, since extend refuses it and
+activate is a no-op on it. So the save ends with §4.13's exhaustion check,
+under the program lock it already holds: a fixed program becomes `COMPLETED`,
+an open-ended one gains its next cycle. An ordinary save leaves something
+unresolved and the check does nothing; a retried save finds it already done.
+
+**Reading the cycle for the editor.** `GET /api/programs/:id/cycles/:n`
+reads the tree, the trained flags and the cycle's fingerprint in one
+`REPEATABLE READ` read-only snapshot, so they describe the same moment. The
+builder sends that fingerprint back as the save's `expected.source` (§3.8), so
+a save made on another device between this read and the save is refused as
+stale rather than silently overwritten.
+
+**Implemented in** [`saveCycle`](../packages/services/src/cycles.ts) (`PUT /api/programs/:id/cycles/:n`);
+the diff is `applyDiff` and the freeze `assertFrozenKept` in the same file.
 
 ### 3.8 Apply an edit to remaining cycles
 
@@ -380,6 +509,52 @@ source. It needs no schema change and no stored version — the comparison
 happens inside the same flow as the edit, which is why edit-time-only is a hard
 constraint and not a UX preference.
 
+**The exact normalization** is [`cycleFingerprint`](../packages/db/src/fingerprint.ts),
+a SHA-256 over a canonical JSON form that one normalizer builds from a stored
+cycle or a request tree:
+
+- workouts: `name`, `position`;
+- slots: `exercise_id` or `placeholder_label`, `position`, `target_sets`, and
+  `group_key` **renumbered 1, 2, … by first appearance in position order
+  within the workout**, so supersets keyed `{1,1}` and `{7,7}` are the same;
+- planned sets: `set_number` and every target column (`target_reps_min`,
+  `target_reps_max`, `target_weight`, `weight_unit`,
+  `target_duration_seconds`, `target_distance`, `distance_unit`,
+  `target_rpe`, `target_rir`), numerics at their column's scale.
+
+Excluded: every `notes` column, the plan row's own `name` and `notes` (an
+apply leaves the target's plan row alone, so including them would make an
+applied cycle never match its source), the generated `target_weight_kg`, and
+all ids.
+
+**The preview, and the recheck at save time.** `GET
+/api/programs/:id/cycles/:n/apply-preview` is a read. It returns the edited
+cycle's fingerprint before the edit, and for each later cycle its fingerprint,
+whether it is trained, and whether it matches. The client pre-checks the
+matching, untrained cycles and sends with the save `expected.source`, the
+edited cycle's fingerprint as the editor loaded it (§3.7's cycle read), so the
+guard covers the whole load-to-save window, and `applyTo`, each chosen cycle
+with its fingerprint from the preview (`{ cycleNumber, fingerprint }`).
+Inside the save's transaction, after the program lock:
+
+- **as previewed** — the edited cycle and every chosen target still have their
+  expected fingerprints, and no chosen target is trained: the save goes ahead;
+- **already done** — the edited cycle and every chosen target already have
+  the desired tree's content, notes included (its fingerprint plus every
+  workout, slot and set `notes`): the save succeeds and writes nothing, which
+  is how a retried save stays idempotent with no request-id table. Notes
+  changed by another device since the first attempt make a retry a conflict,
+  never an overwrite;
+- **anything else** — a conflict, "reload and try again", with nothing written.
+
+**The rewrite is conditional.** A chosen target is replaced (§0.2, cloning the
+saved cycle over the target's existing plan row) only if it is not already
+identical to the saved cycle, notes included. A trained target, or one already
+identical, is never rewritten: the guard refuses a trained target unless every
+target is already identical.
+
+**Implemented in** [`getApplyPreview`](../packages/services/src/cycles.ts), [`saveCycle`](../packages/services/src/cycles.ts).
+
 ### 3.9 Copy from an old program
 
 **Writes:** a fresh `workout_programs` row and a full clone of the source's
@@ -390,7 +565,20 @@ Nothing is shared with the source (§2.2 of the data model) — every row is new
 `UNIQUE (user_id, name)` makes the obvious default name collide with the
 source. The application auto-suffixes — `"Summer Strength"` → `"Summer
 Strength (2)"`, incrementing until free — rather than surfacing a constraint
-error; the user can rename in the same flow.
+error; the user can rename in the same flow. A name the user typed for the copy
+is suffixed the same way when it is taken.
+
+The copy is a `DRAFT` of the source's length: cycle 1 cloned as cycle 1, then
+cloned again for cycles 2…N. The program's `notes` are copied, and cycle 1's
+plan `name` and `notes` are carried to every cycle of the copy. The source
+program is locked while it is read. The copy goes through create's path
+(§3.1): the program row, then cycle 1 (here cloned from the source rather
+than sent), then §0.2 for the rest. The client mints the new program id, and
+a replay returns the copy without writing, by create's rule: a program
+already under that id is the copy only if its name is the requested one (the
+source's, by default) or a suffix of it, its length is the source's, and its
+cycle 1 fingerprints the same as the source's cycle 1 (§3.8). Otherwise the
+request is a conflict, not a success that answers with an unrelated program.
 
 The id remapping is straightforward because every level has a natural key. Each
 child level joins old to new through the unique the schema already declares:
@@ -432,6 +620,8 @@ That column is gone (§2.8 of the data model), and with it the only
 self-reference in the plan tree. Nothing in a clone now refers to a sibling, so
 each level is one insert and one join.
 
+**Implemented in** [`copyProgram`](../packages/services/src/programs.ts) (`POST /api/programs/:id/copy`).
+
 ### 3.10 Activate a program
 
 **Writes:** `workout_programs.status`
@@ -448,21 +638,38 @@ may offer the second as a follow-up; it is never implied.
 
 An abandoned program becomes `ARCHIVED`, not `COMPLETED`. Stopping a program is
 abandonment, not completion, and marking it `COMPLETED` would make "programs I
-finished" a lie. `COMPLETED` is written in exactly one place: §4.13, when the
-final cycle is actually trained.
+finished" a lie. `COMPLETED` is written by exactly one rule: §4.13's exhaustion
+check, when the final cycle is actually trained.
+
+Activate takes a `DRAFT` or `ARCHIVED` program; an `ACTIVE` one is a no-op. A
+`COMPLETED` program is refused — it runs again only by extending it (§3.12).
+
+**Activation runs §4.13's exhaustion check** in the same transaction, under the
+program lock. A finish or skip under an archived program never rolls it over,
+so an archived program can have every workout resolved; activating it must not
+leave an `ACTIVE` program with nothing next. An open-ended one gains its next
+cycle; a fixed one becomes `COMPLETED`.
+
+**Implemented in** [`activateProgram`](../packages/services/src/programs.ts) and
+[`advanceProgram`](../packages/services/src/plan.ts) (`POST /api/programs/:id/activate`).
 
 ### 3.11 Archive a program
 
 **Writes:** `workout_programs.status = 'ARCHIVED'`
 
 A program with logged sessions cannot be deleted; `RESTRICT` up the chain sees
-to that. Archiving is the intended end state.
+to that. Archiving is the intended end state. Any status can be archived,
+`COMPLETED` included, and the result is always `ARCHIVED`; archiving an
+archived program writes nothing.
+
+**Implemented in** [`archiveProgram`](../packages/services/src/programs.ts) (`POST /api/programs/:id/archive`).
 
 ### 3.12 Extend a program by one cycle
 
 For a **fixed** program this is a user action: they finished cycle 12 and want
 another. For an **open-ended** program it is automatic (§4.13) and the user is
-never asked.
+never asked. A fixed program at 104 cycles (the create maximum) is refused
+(`invalid`), not extended.
 
 **Writes:** `workout_plans` ×1, plus a clone of its whole subtree, plus
 `workout_programs.target_cycles` for a fixed program
@@ -495,7 +702,8 @@ Then clone `workouts` → `planned_exercises` → `planned_sets` from `$src_id`
 (§3.9) — one pass per level, no self-references to remap.
 
 For a **fixed** program, the same transaction also increments the denominator and
-reopens the program:
+sets the program `ACTIVE` — reopening a `COMPLETED` one, and re-activating a
+`DRAFT` or `ARCHIVED` one:
 
 ```sql
 UPDATE workout_programs
@@ -508,7 +716,17 @@ Reactivating needs nothing else to be inactive — any number of programs may be
 active at once (data-model.md §7 #30).
 
 For an **open-ended** program `target_cycles` stays `NULL` and `status` is
-already `ACTIVE`; only the clone runs.
+already `ACTIVE`; only the clone runs. The user-facing extend refuses an
+open-ended program: it extends itself.
+
+**Idempotent on the new plan id.** The client mints `$new_id`. A replay finds
+that plan already in this program and returns without writing; the id in
+another program is a conflict. The program row is locked first, the lock
+§4.13 takes, so an extend and a finish's completion cannot interleave and leave
+the cycle count off by one.
+
+**Implemented in** [`extendProgram`](../packages/services/src/programs.ts) (`POST /api/programs/:id/extend`);
+the automatic path is [`advanceProgram`](../packages/services/src/plan.ts).
 
 ### 3.13 Import a program
 
@@ -542,6 +760,17 @@ The pipeline:
 Import never updates an existing program — it always creates. "Re-import to
 edit" would reintroduce every propagation question §3.8 exists to answer;
 editing happens in the app. Export is the same format in reverse — §5.4.
+
+### 3.14 Rename a program
+
+**Writes:** `workout_programs.name`
+
+An exact clash with another of the user's programs is refused, naming it;
+unlike a copy (§3.9), a rename never auto-suffixes. The same name writes
+nothing. The program row is locked first, as for every write to an existing
+program.
+
+**Implemented in** [`renameProgram`](../packages/services/src/programs.ts) (`PATCH /api/programs/:id`).
 
 ---
 
@@ -712,7 +941,9 @@ VALUES ($set_id, $se, 1, TRUE);
 
 This is what advances §4.1. Without it, the same workout stays "next."
 
-It is also the **only** place program extension is evaluated. After marking the
+It is also where program extension is evaluated: this exhaustion check is the
+one rule, and it runs here and in the three other writes that can resolve or
+remove a program's last unresolved workout (listed below). After marking the
 session complete, in the same transaction, check whether that was the last
 workout of the last materialized cycle:
 
@@ -756,8 +987,18 @@ status update that exhausted the program, so by the time any read happens there
 is always a cycle to return. No spare cycle is materialized ahead of time and
 none is needed (§2.10 of the data model).
 
-**Offline note.** This is the one logged operation that is not fully local
-(§0.3). The `status = 'COMPLETED'` update queues and replays like any other
+The same check, with the same lock, also runs after a skip (§4.14), on
+activation (§3.10), and at the end of a cycle save (§3.7), which can remove
+the last unresolved workouts. Together they keep an `ACTIVE` program from ever
+having nothing next. `COMPLETED` stays final until §3.12: a cycle save cannot
+add a workout or slot to a `COMPLETED` program (§3.7), so it is never
+`COMPLETED` with an unresolved workout.
+
+**Implemented in** [`finishWorkout`](../packages/services/src/sessions.ts) and
+[`advanceProgram`](../packages/services/src/plan.ts) (`POST /api/sessions/:id/finish`).
+
+**Offline note.** This is one of the two logged operations that are not fully
+local (§0.3; the other is §4.14). The `status = 'COMPLETED'` update queues and replays like any other
 write; the exhaustion check and extension run when it reaches the server. Nothing
 the user can see offline depends on the difference.
 
@@ -767,6 +1008,45 @@ the user can see offline depends on the difference.
 
 A row is still required — it is the marker that says "resolved, nothing logged."
 Writing no row at all would leave the workout as "next" forever.
+
+```sql
+INSERT INTO workout_sessions (id, user_id, workout_id, performed_at, status)
+VALUES ($session_id, $user, $workout, $performed_at, 'SKIPPED')
+ON CONFLICT (id) DO NOTHING;
+```
+
+One row and nothing else: no `session_exercises`, no sets. Only a workout with
+**no session at all** can be skipped; a started one is finished instead (it is
+offered "Finish & start next"), and a resolved one needs no skip. The refusal
+names the workout.
+
+**Deliberately permissive otherwise.** The server accepts a skip of *any* of
+the user's workouts that has no session — not only the one "what's next?"
+offers, any cycle, and under a program of any status (`DRAFT`, `ARCHIVED`,
+`COMPLETED` included). A skip is an offline, queued write (§0.3): by the time
+it replays, the device's idea of "next" may be stale, and refusing it would
+strand the queue on a write the lifter made in good faith. Only the roll-over
+is status-gated: it runs for an `ACTIVE` program only, as for a finish, so a
+skip under any other status writes its row and changes nothing else.
+
+**Idempotent on the client-minted session id**, like §4.2: after the insert
+the row is re-read through the scoping helper. The same id for the same
+workout returns the stored session and writes nothing; the id on another
+workout, or another user's, is a conflict.
+
+**It rolls the program over like a finish.** In the same transaction, under the
+program lock, a skip runs §4.13's exhaustion check: skipping the last
+unresolved workout extends an open-ended program by one cycle, or completes a
+fixed one. Only the call that wrote the row runs it, so a replay adds nothing.
+The program is locked before the workout row (`FOR UPDATE`), the order a cycle
+save uses; a start inserts its session under a key-share lock on the workout,
+so a skip racing a start waits for it and then refuses.
+
+Offline, skip is a queued write like start. The device treats a locally
+skipped workout as resolved, so home moves on at once; the roll-over runs when
+the skip reaches the server (§0.3).
+
+**Implemented in** [`skipWorkout`](../packages/services/src/sessions.ts) (`POST /api/workouts/:id/skip`).
 
 ### 4.15 Edit a logged set
 
@@ -939,12 +1219,12 @@ transaction and what a repository layer should own.
 | Table | Written by |
 |---|---|
 | `users` | 1.1 sign-in, 1.2 unit preference, 1.4 delete, Stripe webhooks (§3.8 of the data model) |
-| `exercises` | 2.2 create, 2.4 retire |
+| `exercises` | 2.2 create, 2.4 retire and reactivate, 2.5 edit |
 | `exercise_metrics` | 2.2 create |
 | `user_exercise_settings` | 1.3 unit override, 2.3 setup/cues |
-| `workout_programs` | 3.1 create, 3.10 activate (both programs), 3.11 archive, 3.12 extend, 3.13 import, 4.13 finish |
-| `workout_plans` | 3.1 create, 3.8 apply-to-remaining, 3.9 copy, 3.12 extend, 3.13 import |
-| `workouts` | 3.2, 3.8, 3.9, 3.12, 3.13 |
+| `workout_programs` | 3.1 create, 3.9 copy, 3.10 activate (that program only), 3.11 archive, 3.12 extend, 3.13 import, 3.14 rename, 4.13 finish, 4.14 skip |
+| `workout_plans` | 3.1 create, 3.9 copy, 3.10 activate, 3.12 extend, 3.13 import, 4.13 finish, 4.14 skip |
+| `workouts` | 3.2, 3.7, 3.8, 3.9, 3.12, 3.13 |
 | `planned_exercises` | 3.3, 3.5, 3.6, 3.7, 3.8, 3.9, 3.12, 3.13 |
 | `planned_sets` | 3.4, 3.7, 3.8, 3.9, 3.12, 3.13 |
 | `workout_sessions` | 4.2 start, 4.13 finish, 4.14 skip |
@@ -952,12 +1232,12 @@ transaction and what a repository layer should own.
 | `session_sets` | 4.3, 4.4, 4.10, 4.11, 4.12, 4.15 edit, 4.16 delete and renumber |
 | `processed_stripe_events` | Stripe webhook handler (§3.8 of the data model) |
 
-Operations that must be one transaction: **3.1** (create program), **3.8**
-(apply to remaining cycles), **3.9** (copy program), **3.10** (activate),
+Operations that must be one transaction: **3.1** (create program), **3.7**
+(save a cycle, with **3.8** apply to remaining cycles in the same transaction), **3.9** (copy program), **3.10** (activate),
 **3.12** (extend), **3.13** (import — validation and preview happen before the
 transaction; the confirmed create is one), **4.3** (session exercise + first
-set), **4.11** (drop set parent + children), **4.16** (delete a set: delete, renumber, and drop an emptied exercise row), and **4.13** (finish, which may
-extend the program).
+set), **4.11** (drop set parent + children), **4.16** (delete a set: delete, renumber, and drop an emptied exercise row), **4.13** (finish, which may
+extend the program), and **4.14** (skip, which may too).
 
 Several of those are genuinely *interactive* transactions — the clone reads a
 level, then writes the next using what it read. That is the reason for the driver

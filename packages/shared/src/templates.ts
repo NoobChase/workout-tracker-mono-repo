@@ -28,21 +28,12 @@ export const templatesResponse = z.object({
 });
 export type TemplatesResponse = z.infer<typeof templatesResponse>;
 
-/** `POST /programs/from-template`: `programId` is the client-minted idempotency key. */
+/**
+ * `POST /programs/from-template`: `programId` is the client-minted idempotency
+ * key. Answered with `programResponse`, like every other program write.
+ */
 export const startFromTemplateRequest = z.object({
   programId: uuidV7,
   templateSlug: z.string().min(1),
 });
 export type StartFromTemplateRequest = z.infer<typeof startFromTemplateRequest>;
-
-export const startFromTemplateResponse = z.object({
-  program: z.object({
-    id: entityId,
-    name: z.string(),
-    status: z.enum(["DRAFT", "ACTIVE", "COMPLETED", "ARCHIVED"]),
-    targetCycles: z.null(),
-  }),
-});
-export type StartFromTemplateResponse = z.infer<
-  typeof startFromTemplateResponse
->;

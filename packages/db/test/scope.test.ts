@@ -84,6 +84,7 @@ async function seed(db: Db, ids: ReturnType<typeof idsFor>, n: number) {
     workoutId: ids.workout,
     exerciseId: ids.exercise,
     position: 0,
+    targetSets: 3,
   });
   await db.insert(plannedSets).values({
     id: ids.plannedSet,

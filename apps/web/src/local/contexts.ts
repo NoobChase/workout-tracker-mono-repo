@@ -2,7 +2,13 @@ import type {
   WhatsNextResponse,
   WorkoutContextResponse,
 } from "@workout-tracker/shared";
-import type { LocalDb, NextSnapshot, StoredContext } from "./db.js";
+import type {
+  LocalDb,
+  NextSnapshot,
+  OutlineSnapshot,
+  StoredContext,
+} from "./db.js";
+import type { ProgramOutline } from "./outline.js";
 
 /**
  * Prefetched workout contexts and the last what's-next snapshot (design D9).
@@ -55,12 +61,18 @@ export class ContextCache {
     userId: string,
     next: WhatsNextResponse,
   ): Promise<{ stored: string[]; failed: string[] }> {
-    const ids = [
-      ...new Set([
-        ...next.next.map((n) => n.workoutId),
-        ...next.inProgress.map((s) => s.workoutId),
-      ]),
-    ];
+    return this.prefetchWorkouts(userId, [
+      ...next.next.map((n) => n.workoutId),
+      ...next.inProgress.map((s) => s.workoutId),
+    ]);
+  }
+
+  /** Fetches and stores each workout's context; the ids that failed are returned. */
+  async prefetchWorkouts(
+    userId: string,
+    workoutIds: readonly string[],
+  ): Promise<{ stored: string[]; failed: string[] }> {
+    const ids = [...new Set(workoutIds)];
     const results = await Promise.allSettled(
       ids.map(async (id) => this.put(userId, await this.fetchContext(id))),
     );
@@ -87,6 +99,35 @@ export class ContextCache {
     return snapshot?.userId === userId ? snapshot : null;
   }
 
+  /** The active programs' outlines (`outline.ts`), replacing the last ones. */
+  async saveOutline(userId: string, programs: ProgramOutline[]): Promise<void> {
+    const snapshot: OutlineSnapshot = {
+      userId,
+      fetchedAt: this.now().toISOString(),
+      programs,
+    };
+    await this.db.put("meta", snapshot, "outline");
+  }
+
+  async readOutline(userId: string): Promise<ProgramOutline[]> {
+    const snapshot = (await this.db.get("meta", "outline")) as
+      OutlineSnapshot | undefined;
+    return snapshot?.userId === userId ? snapshot.programs : [];
+  }
+
+  /**
+   * The user's unit settings as the newest cached context has them, for
+   * plan-side screens (the builder writes new weights in the default unit).
+   * `null` when nothing is cached for this user.
+   */
+  async units(userId: string): Promise<WorkoutContextResponse["units"] | null> {
+    const mine = (await this.db.getAll("contexts")).filter(
+      (c) => c.userId === userId,
+    );
+    mine.sort((a, b) => b.fetchedAt.localeCompare(a.fetchedAt));
+    return mine[0]?.context.units ?? null;
+  }
+
   /** Another account signed in on this device: its plan isn't theirs to see. */
   async forgetOtherUsers(userId: string): Promise<void> {
     const tx = this.db.transaction(["contexts", "meta"], "readwrite");
@@ -99,6 +140,11 @@ export class ContextCache {
       NextSnapshot | undefined;
     if (next && next.userId !== userId) {
       await tx.objectStore("meta").delete("next");
+    }
+    const outline = (await tx.objectStore("meta").get("outline")) as
+      OutlineSnapshot | undefined;
+    if (outline && outline.userId !== userId) {
+      await tx.objectStore("meta").delete("outline");
     }
     await tx.done;
   }

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { onLocalDbEvent } from "../local/db.js";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { toast } from "@/ui/toaster";
 
@@ -28,6 +29,24 @@ export function UpdatePrompt() {
       onDismiss: () => setNeedRefresh(false),
     });
   }, [needRefresh, setNeedRefresh, updateServiceWorker]);
+
+  // A newer version opened in another tab and took the device's storage
+  // (this tab's connection closed itself so the upgrade isn't held up).
+  // Same toast, one tap: reloading brings this tab onto that version.
+  useEffect(
+    () =>
+      onLocalDbEvent((event) => {
+        if (event.kind !== "replaced") return;
+        toast("Tanren was updated in another tab", {
+          id: TOAST_ID,
+          description:
+            "Reload this tab to keep going. Nothing you’ve logged is lost.",
+          duration: Infinity,
+          action: { label: "Reload", onClick: () => window.location.reload() },
+        });
+      }),
+    [],
+  );
 
   return null;
 }

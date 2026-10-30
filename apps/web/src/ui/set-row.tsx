@@ -5,6 +5,7 @@ import {
   type ComponentProps,
   type RefObject,
 } from "react";
+import type { EffortTarget as Effort } from "@/lib/effort";
 import { cn } from "@/lib/utils";
 import { Badge } from "./badge.js";
 
@@ -43,6 +44,8 @@ export type SetRowProps = Omit<ComponentProps<"li">, "children"> & {
    * pencil at the end so it reads as editable.
    */
   onPress?: () => void;
+  /** The plan's effort target for this set, beside the figures. */
+  target?: Effort | null;
 };
 
 const STATUS_TEXT: Record<SetStatus, string> = {
@@ -83,6 +86,7 @@ export function SetRow({
   queuedReason = "no-signal",
   reason,
   onPress,
+  target,
   className,
   ...props
 }: SetRowProps) {
@@ -170,6 +174,7 @@ export function SetRow({
           unit={unit}
           muted={!settled && !live}
         />
+        {target ? <EffortTarget target={target} /> : null}
         {kind !== "working" ? <Badge variant={kind} /> : null}
       </span>
 
@@ -246,6 +251,20 @@ export function SetRow({
   );
 }
 
+/**
+ * A prescribed effort target in words beside a set's figures: "· RIR 2".
+ * Words in Albert Sans, the number in mono; muted, never copper.
+ */
+export function EffortTarget({ target }: { target: Effort }) {
+  return (
+    <span className="text-[13px] whitespace-nowrap text-muted-foreground">
+      <span aria-hidden="true">· </span>
+      <span className="sr-only">, target </span>
+      {target.scale} <span className="num">{target.value}</span>
+    </span>
+  );
+}
+
 /** "Set 2, 225 lb for 5 reps, logged. Edit": what a pressable row is called. */
 function pressLabel({
   index,
@@ -273,7 +292,8 @@ function pressLabel({
 /**
  * A set's numbers in the one grammar every set line uses: mono numerals, the
  * unit small after the weight, "×", then reps. Screen readers hear
- * "225 lb for 5 reps".
+ * "225 lb for 5 reps". A plan's line passes its rep range as written
+ * ("5–8"), or no reps at all when it prescribes a weight alone.
  */
 export function SetFigures({
   weight,
@@ -282,9 +302,13 @@ export function SetFigures({
   muted = false,
   className,
 }: {
-  /** `null` shows a dash: nothing entered yet. */
+  /** `null` shows a blank: nothing entered yet. */
   weight: number | null;
-  reps: number | null;
+  /**
+   * A count, a range as written ("5–8"), `null` for a blank (nothing
+   * entered yet), or absent when the line has no reps part.
+   */
+  reps?: number | string | null;
   unit: "lb" | "kg";
   muted?: boolean;
   className?: string;
@@ -301,17 +325,27 @@ export function SetFigures({
       {/* Heard (and copied) as "225 lb", not "225lb". */}
       <span className="sr-only"> </span>
       <span className="ml-1 text-[0.8em] text-muted-foreground">{unit}</span>
-      <span aria-hidden="true" className="px-1.5 text-muted-foreground">
-        ×
-      </span>
-      <span className="sr-only"> for </span>
-      <Figure value={reps} missing="no reps yet" />
-      <span className="sr-only"> reps</span>
+      {reps === undefined ? null : (
+        <>
+          <span aria-hidden="true" className="px-1.5 text-muted-foreground">
+            ×
+          </span>
+          <span className="sr-only"> for </span>
+          <Figure value={reps} missing="no reps yet" />
+          <span className="sr-only"> reps</span>
+        </>
+      )}
     </span>
   );
 }
 
-function Figure({ value, missing }: { value: number | null; missing: string }) {
+function Figure({
+  value,
+  missing,
+}: {
+  value: number | string | null;
+  missing: string;
+}) {
   if (value !== null) return <>{value}</>;
   return (
     <>

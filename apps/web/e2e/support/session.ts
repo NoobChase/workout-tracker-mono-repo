@@ -9,18 +9,20 @@ export const TEST_EMAIL = "spike+clerk_test@example.com";
 export const TEST_CODE = "424242";
 
 /**
- * Opens the app signed out and signs in through the bundled Clerk form, as
+ * Opens `/sign-in` signed out and signs in through the bundled Clerk form, as
  * a lifter would: email, "Use another method", the emailed code. (The test
- * account has a password too, so the form asks for it first.) In the dev
- * server `window.Clerk` is not the instance React holds, so the form is the
- * only reliable way in; it is also the honest test of the sign-in screen.
+ * account has a password too, so the form asks for it first.) It ends on
+ * home, where signing in always lands. In the dev server `window.Clerk` is
+ * not the instance React holds, so the form is the only reliable way in; it
+ * is also the honest test of the sign-in screen. (Signed out, `/` is the
+ * landing page, whose "Log in" leads here.)
  */
-export async function signIn(page: Page, path = "/"): Promise<void> {
-  await page.goto(path);
+export async function signIn(page: Page): Promise<void> {
+  await page.goto("/sign-in");
   await signInHere(page);
 }
 
-/** The same, on a page already showing the signed-out screen. */
+/** The same, on a page already showing the sign-in screen. */
 export async function signInHere(page: Page): Promise<void> {
   await expect(
     page.getByRole("heading", { name: "Sign in to log today’s workout" }),

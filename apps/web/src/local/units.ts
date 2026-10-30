@@ -11,7 +11,8 @@ import type {
  */
 export function resolveUnit(
   units: WorkoutContextResponse["units"],
-  exerciseId: string,
+  exerciseId: string | null,
 ): WeightUnit {
+  if (exerciseId === null) return units.default;
   return units.overrides[exerciseId] ?? units.default;
 }

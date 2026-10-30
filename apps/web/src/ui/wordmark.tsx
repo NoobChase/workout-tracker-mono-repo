@@ -1,28 +1,20 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The 鍛錬 TANREN lockup, the one place the kanji and Shippori Mincho appear in
- * the app. Read aloud as "Tanren": the kanji are hidden from assistive tech
- * and the romaji is real text, uppercased by CSS.
+ * The TANREN wordmark: the name alone, 13px at 700 with 0.22em tracking.
+ * The kanji are not part of it; 鍛錬 and Shippori Mincho appear only in the
+ * landing page's hero and closing lockup. Read aloud as "Tanren": the text is
+ * real, uppercased by CSS.
  */
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2.5 text-foreground",
+        "inline-flex items-center text-[13px] leading-none font-bold tracking-[0.22em] text-foreground uppercase",
         className,
       )}
     >
-      <span
-        lang="ja"
-        aria-hidden="true"
-        className="font-mark text-[20px] leading-none font-extrabold"
-      >
-        鍛錬
-      </span>
-      <span className="text-[13px] leading-none font-bold tracking-[0.22em] uppercase">
-        Tanren
-      </span>
+      Tanren
     </span>
   );
 }

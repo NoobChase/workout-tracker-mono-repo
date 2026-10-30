@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
-import type { ComponentProps } from "react";
+import type { ComponentProps, MouseEvent } from "react";
 import { cn } from "@/lib/utils";
 
 /*
@@ -56,6 +56,7 @@ export function Button({
   loading = false,
   children,
   type,
+  onClick,
   ...props
 }: ButtonProps) {
   const Comp = asChild ? Slot.Root : "button";
@@ -66,6 +67,14 @@ export function Button({
       type={asChild ? undefined : (type ?? "button")}
       aria-busy={loading || undefined}
       className={cn(buttonVariants({ variant, size }), className)}
+      // Busy ignores every activation, keyboard included (the CSS only stops
+      // the pointer). Not `disabled`: that would drop focus from the button
+      // the lifter just pressed, and its ring with it.
+      onClick={
+        loading
+          ? (event: MouseEvent<HTMLButtonElement>) => event.preventDefault()
+          : onClick
+      }
       {...props}
     >
       {loading && !asChild ? (

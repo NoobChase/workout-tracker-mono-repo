@@ -274,6 +274,7 @@ export async function clonePlan(
             targetDistance: plannedSets.targetDistance,
             distanceUnit: plannedSets.distanceUnit,
             targetRpe: plannedSets.targetRpe,
+            targetRir: plannedSets.targetRir,
             notes: plannedSets.notes,
           })
           .from(plannedSets)

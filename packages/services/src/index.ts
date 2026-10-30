@@ -4,12 +4,32 @@
 export { ServiceError, type ServiceErrorKind } from "./errors";
 export type { LoggedSet } from "./rows";
 export { listTemplates, startProgramFromTemplate } from "./templates";
+export {
+  createExercise,
+  editExercise,
+  listExercises,
+  reactivateExercise,
+  retireExercise,
+  saveExerciseNotes,
+} from "./catalog";
+export {
+  activateProgram,
+  archiveProgram,
+  copyProgram,
+  createProgram,
+  extendProgram,
+  getProgram,
+  listPrograms,
+  renameProgram,
+} from "./programs";
+export { getApplyPreview, getCycle, saveCycle } from "./cycles";
 export { getWorkoutContext, whatsNext } from "./next";
 export {
   deleteSet,
   editSet,
   finishWorkout,
   logSet,
+  skipWorkout,
   startWorkout,
   type StartedSession,
 } from "./sessions";

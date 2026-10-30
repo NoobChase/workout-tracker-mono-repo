@@ -92,6 +92,17 @@ writes nothing. Like migrations, never run it by hand against either.
   `CASE`s name every value and have no `ELSE` (`data-model.md` §2.5) precisely
   so this breaks the build instead of silently defaulting.
 
+## Plan tables and the cycle fingerprint
+
+A migration that touches `workouts` or any `planned_*` table must update the
+cycle fingerprint normalizer in `packages/db/src/fingerprint-core.ts`, and
+the stored-cycle read and its `StoredCycle*` types in
+`packages/db/src/fingerprint.ts`, in the same change. Decide whether each new or changed column is authoring (included) or
+annotation (excluded, like `notes`). Then update its tests,
+`packages/db/test/fingerprint.test.ts` and
+`packages/db/test/fingerprint-stored.test.ts`. The column-coverage test fails
+on a new column until you decide.
+
 ## Schema docs
 
 Generated from the Drizzle schema as a build step. Do not hand-write them, and

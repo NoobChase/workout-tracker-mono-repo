@@ -119,6 +119,8 @@ export function describeBlocked(blocked: Blocked, records: Records): string {
       return `Starting ${workout ?? "the workout"} wasn’t saved:`;
     case "finish":
       return `Finishing ${workout ?? "the workout"} wasn’t saved:`;
+    case "skip":
+      return `Skipping ${workout ?? "the workout"} wasn’t saved:`;
     default:
       return "A change wasn’t saved:";
   }
@@ -142,7 +144,10 @@ function ShowBlocked({
 }) {
   const location = useLocation();
   const [params] = useSearchParams();
-  if (!records.has(sessionId)) return null;
+  // A skipped workout has no screen to show.
+  if (!records.has(sessionId) || records.get(sessionId)?.status === "SKIPPED") {
+    return null;
+  }
   const found =
     blocked?.sessionId === sessionId ? findSet(blocked, records) : null;
   const path = `/workout/${sessionId}`;

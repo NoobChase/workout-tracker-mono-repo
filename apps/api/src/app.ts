@@ -15,13 +15,14 @@ import {
   type AuthDeps,
   type AuthEnv,
 } from "./auth.js";
+import { catalogRoutes } from "./catalog.js";
 import { requireCloudFront, type OriginDeps } from "./origin.js";
-import type { TrainingDeps } from "./services.js";
+import { programRoutes } from "./programs.js";
+import type { ApiDeps } from "./services.js";
 import { trainingRoutes } from "./training.js";
 import { clerkWebhooks, type WebhookDeps } from "./webhooks.js";
 
-export interface AppDeps
-  extends OriginDeps, AuthDeps, WebhookDeps, TrainingDeps {
+export interface AppDeps extends OriginDeps, AuthDeps, WebhookDeps, ApiDeps {
   /** `select now(), version()` for the health route. */
   databaseHealth(): Promise<{ now: Date; version: string }>;
 }
@@ -107,6 +108,8 @@ export function createApp(
 
   // The plan and the sessions: reads are authenticated, writes also Pro.
   app.route("/", trainingRoutes(deps, options));
+  app.route("/", catalogRoutes(deps, options));
+  app.route("/", programRoutes(deps, options));
 
   app.notFound((c) => c.json({ ok: false, error: "not found" }, 404));
 

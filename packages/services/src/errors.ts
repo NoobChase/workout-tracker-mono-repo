@@ -70,6 +70,8 @@ const UNIQUES: Record<string, string> = {
     "Another exercise already holds that place in this workout.",
   workout_programs_user_id_name_key:
     "You already have a program with that name. Try again.",
+  exercises_user_name_key:
+    "You already have an exercise with that name. Try again.",
 };
 
 function translate(error: unknown): unknown {

@@ -2,13 +2,20 @@ import {
   editSetRequest,
   logSetRequest,
   newId,
+  skipWorkoutRequest,
   startWorkoutRequest,
+  type CycleDetailResponse,
+  type ProgramListResponse,
   type WhatsNextResponse,
   type WorkoutContextResponse,
 } from "@workout-tracker/shared";
 import { ApiError } from "../api.js";
 import { OfflineError } from "../auth.js";
-import { DataLayer, type Connectivity, type ReadApi } from "../local/layer.js";
+import {
+  DataLayer,
+  type Connectivity,
+  type ServerApi,
+} from "../local/layer.js";
 import { openLocalDb } from "../local/db.js";
 import type { Mutation, Timers, Transport } from "../local/queue.js";
 
@@ -25,6 +32,7 @@ export const ids = {
   program: newId(),
   workout: newId(),
   workout2: newId(),
+  workout3: newId(),
   lastSession: newId(),
   bench: { planned: newId(), exercise: newId() },
   frontSquat: { planned: newId(), exercise: newId() },
@@ -35,7 +43,12 @@ export function contextFor(workoutId = ids.workout): WorkoutContextResponse {
   return {
     workout: {
       id: workoutId,
-      name: workoutId === ids.workout ? "Push A" : "Legs A",
+      name:
+        workoutId === ids.workout
+          ? "Push A"
+          : workoutId === ids.workout3
+            ? "Pull A"
+            : "Legs A",
       position: 0,
       cycleNumber: 1,
       programId: ids.program,
@@ -90,8 +103,60 @@ export const nextFixture: WhatsNextResponse = {
   inProgress: [],
 };
 
-export class FakeReadApi implements ReadApi {
+/** A cycle's tree as `GET /programs/:id/cycles/:n` returns it, slots left out. */
+export function cycleFixture(
+  cycleNumber: number,
+  workouts: { id: string; name: string }[],
+): CycleDetailResponse {
+  return {
+    programId: ids.program,
+    cycleNumber,
+    fingerprint: "f".repeat(64),
+    cycle: {
+      id: newId(),
+      workouts: workouts.map((w, position) => ({
+        ...w,
+        position,
+        notes: null,
+        plannedExercises: [],
+        trained: false,
+        trainedAt: null,
+      })),
+    },
+  };
+}
+
+/**
+ * The fixture program as an open-ended Push A, Pull A, Legs A cycle, so the
+ * outline knows what follows Push A (`outline.ts`).
+ */
+export function withOutlineFixture(api: FakeServerApi): void {
+  api.programsResponse = {
+    programs: [
+      {
+        id: ids.program,
+        name: "Push Pull Legs",
+        status: "ACTIVE",
+        targetCycles: null,
+        currentCycle: 1,
+      },
+    ],
+  };
+  api.cycles.set(
+    `${ids.program}/1`,
+    cycleFixture(1, [
+      { id: ids.workout, name: "Push A" },
+      { id: ids.workout3, name: "Pull A" },
+      { id: ids.workout2, name: "Legs A" },
+    ]),
+  );
+}
+
+export class FakeServerApi implements ServerApi {
   nextResponse: WhatsNextResponse = nextFixture;
+  programsResponse: ProgramListResponse = { programs: [] };
+  /** `programId/cycleNumber` -> the cycle; anything else is a 404. */
+  readonly cycles = new Map<string, CycleDetailResponse>();
   failContext = new Set<string>();
   contextCalls: string[] = [];
 
@@ -104,9 +169,48 @@ export class FakeReadApi implements ReadApi {
     return Promise.resolve(contextFor(workoutId));
   };
   templates = () => Promise.resolve({ templates: [] });
-  startFromTemplate = () => Promise.reject(new Error("not used"));
+  startFromTemplate: ServerApi["startFromTemplate"] = () =>
+    Promise.reject(new Error("not used"));
   history = () => Promise.resolve({ items: [], nextCursor: null });
-  session = () => Promise.reject(new Error("not used"));
+  session: ServerApi["session"] = () => Promise.reject(new Error("not used"));
+  programs = () => Promise.resolve(this.programsResponse);
+  program: ServerApi["program"] = () => Promise.reject(new Error("not used"));
+  cycle = (programId: string, cycleNumber: number) => {
+    const cycle = this.cycles.get(`${programId}/${cycleNumber}`);
+    return cycle
+      ? Promise.resolve(cycle)
+      : Promise.reject(
+          new ApiError(404, "/api/programs", "That cycle doesn't exist."),
+        );
+  };
+  renameProgram: ServerApi["renameProgram"] = () =>
+    Promise.reject(new Error("not used"));
+  copyProgram: ServerApi["copyProgram"] = () =>
+    Promise.reject(new Error("not used"));
+  activateProgram: ServerApi["activateProgram"] = () =>
+    Promise.reject(new Error("not used"));
+  archiveProgram: ServerApi["archiveProgram"] = () =>
+    Promise.reject(new Error("not used"));
+  extendProgram: ServerApi["extendProgram"] = () =>
+    Promise.reject(new Error("not used"));
+  createProgram: ServerApi["createProgram"] = () =>
+    Promise.reject(new Error("not used"));
+  applyPreview: ServerApi["applyPreview"] = () =>
+    Promise.reject(new Error("not used"));
+  saveCycle: ServerApi["saveCycle"] = () =>
+    Promise.reject(new Error("not used"));
+  exercises: ServerApi["exercises"] = () =>
+    Promise.resolve({ exercises: [], units: { default: "LB", overrides: {} } });
+  createExercise: ServerApi["createExercise"] = () =>
+    Promise.reject(new Error("not used"));
+  editExercise: ServerApi["editExercise"] = () =>
+    Promise.reject(new Error("not used"));
+  saveExerciseNotes: ServerApi["saveExerciseNotes"] = () =>
+    Promise.reject(new Error("not used"));
+  retireExercise: ServerApi["retireExercise"] = () =>
+    Promise.reject(new Error("not used"));
+  reactivateExercise: ServerApi["reactivateExercise"] = () =>
+    Promise.reject(new Error("not used"));
 }
 
 interface ServerSet {
@@ -174,6 +278,18 @@ export class FakeServer {
           status: "IN_PROGRESS",
         });
       }
+    } else if (resource === "workouts" && action === "skip") {
+      const body = skipWorkoutRequest.parse(request.body);
+      if (this.sessions.has(body.sessionId)) return;
+      const other = [...this.sessions.values()].some((s) => s.workoutId === id);
+      if (other) {
+        throw new ApiError(
+          409,
+          request.path,
+          "That workout is already started.",
+        );
+      }
+      this.sessions.set(body.sessionId, { workoutId: id, status: "SKIPPED" });
     } else if (resource === "sessions" && action === "finish") {
       const session = this.sessions.get(id);
       if (!session) throw new ApiError(404, request.path, "No such session");
@@ -300,7 +416,7 @@ export function freshDbName(): string {
 export interface Harness {
   layer: DataLayer;
   server: FakeServer;
-  api: FakeReadApi;
+  api: FakeServerApi;
   timers: ManualTimers;
   connectivity: FakeConnectivity;
   dbName: string;
@@ -322,7 +438,7 @@ export async function makeHarness(
   } = {},
 ): Promise<Harness> {
   const server = overrides.server ?? new FakeServer();
-  const api = overrides.api ?? new FakeReadApi();
+  const api = overrides.api ?? new FakeServerApi();
   const timers = overrides.timers ?? new ManualTimers();
   const connectivity = overrides.connectivity ?? new FakeConnectivity();
   const dbName = overrides.dbName ?? freshDbName();
@@ -332,6 +448,7 @@ export async function makeHarness(
   const db = await openLocalDb(dbName);
   const layer = new DataLayer(db, api, {
     api,
+    dbName,
     // Like the real transport: offline, nothing reaches the server.
     transport: (request, options) =>
       connectivity.isOnline()

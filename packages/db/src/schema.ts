@@ -320,7 +320,7 @@ export const plannedExercises = pgTable(
     // "Quads", "Hamstring accessory" -- the exercise is chosen on the day.
     placeholderLabel: text("placeholder_label"),
     position: smallint("position").notNull(),
-    targetSets: smallint("target_sets"),
+    targetSets: smallint("target_sets").notNull(),
     // NULL = standalone; equal values = one superset/circuit.
     groupKey: smallint("group_key"),
     notes: text("notes"),
@@ -363,7 +363,10 @@ export const plannedSets = pgTable(
     targetDurationSeconds: integer("target_duration_seconds"),
     targetDistance: numeric("target_distance", { precision: 9, scale: 3 }),
     distanceUnit: distanceUnit("distance_unit"),
+    // The effort target, as written: RPE or reps in reserve, never both, and
+    // never converted one into the other (step-4a design D16).
     targetRpe: numeric("target_rpe", { precision: 3, scale: 1 }),
+    targetRir: numeric("target_rir", { precision: 3, scale: 1 }),
     notes: text("notes"),
   },
   (t) => [
@@ -383,6 +386,14 @@ export const plannedSets = pgTable(
     check(
       "planned_sets_target_rpe_check",
       sql`${t.targetRpe} BETWEEN 0 AND 10`,
+    ),
+    check(
+      "planned_sets_target_rir_check",
+      sql`${t.targetRir} BETWEEN 0 AND 10`,
+    ),
+    check(
+      "planned_sets_rpe_or_rir_check",
+      sql`num_nonnulls(${t.targetRpe}, ${t.targetRir}) <= 1`,
     ),
     check(
       "planned_sets_reps_range_check",

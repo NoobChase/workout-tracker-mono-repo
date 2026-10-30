@@ -2,6 +2,7 @@ import {
   editSetRequest,
   logSetRequest,
   newId,
+  skipWorkoutRequest,
   startWorkoutRequest,
   type SessionDetailResponse,
   type WeightUnit,
@@ -16,6 +17,7 @@ import {
   type QueueItemInput,
 } from "./queue.js";
 import { resolveUnit } from "./units.js";
+import { isLoggable } from "./loggable.js";
 
 /**
  * The in-progress workout's local record (design D8). The logger renders only
@@ -50,7 +52,13 @@ export interface LocalSession {
   workoutId: string;
   /** The device's clock when the lifter started (design D5). */
   performedAt: string;
-  status: "IN_PROGRESS" | "FINISHED";
+  /**
+   * SKIPPED: the whole workout was skipped before it started (operations.md
+   * 4.14). It has no exercises, is never opened in the logger, and resolves
+   * the workout on this device at once, like FINISHED.
+   */
+  status: "IN_PROGRESS" | "FINISHED" | "SKIPPED";
+  /** When it was finished or skipped, on the device's clock. */
   finishedAt: string | null;
   /** The prefetched context as it was at the start (design D9). */
   context: WorkoutContextResponse;
@@ -67,7 +75,10 @@ export class LocalSessionError extends Error {
       | "finished"
       | "unknown-exercise"
       | "unknown-set"
-      | "not-signed-in",
+      | "not-loggable"
+      | "not-signed-in"
+      | "already-started"
+      | "needs-connection",
     message: string,
     options?: { cause?: unknown },
   ) {
@@ -88,10 +99,30 @@ export interface SessionStoreOptions {
 
 type Change = { record: LocalSession; item: QueueItemInput | null };
 
+/** Resolved on this device: finished or skipped, delivered or not. */
+export function isResolved(record: LocalSession): boolean {
+  return record.status === "FINISHED" || record.status === "SKIPPED";
+}
+
 export class SessionStore {
   #records: ReadonlyMap<string, LocalSession> = new Map();
+  /**
+   * Workouts whose finish or skip was delivered and whose record was then
+   * dropped: workout id -> the settle's sequence number (`settledMark`).
+   * What's next keeps treating them as resolved until a server read that
+   * began after it arrives, so home never flashes the old workout between
+   * the ack and the refetch.
+   */
+  #settled: ReadonlyMap<string, number> = new Map();
+  #settles = 0;
   readonly #listeners = new Set<() => void>();
   readonly #now: () => Date;
+  /**
+   * The start or skip running for each workout. A second call for the same
+   * workout (a double tap, a key repeat, two screens) waits for the first and
+   * then finds its record, so one workout never gets two sessions queued.
+   */
+  readonly #byWorkout = new Map<string, Promise<unknown>>();
 
   constructor(
     private readonly db: LocalDb,
@@ -121,7 +152,7 @@ export class SessionStore {
     ]);
     const queued = new Set(items.map((i) => i.sessionId));
     const orphans = all.filter(
-      (r) => r.status === "FINISHED" && !queued.has(r.sessionId),
+      (r) => isResolved(r) && !queued.has(r.sessionId),
     );
     await Promise.all(
       orphans.map((r) => tx.objectStore("sessions").delete(r.sessionId)),
@@ -136,13 +167,31 @@ export class SessionStore {
     return this.#records.get(sessionId);
   }
 
+  /** See `#settled`. Changes only together with the records snapshot. */
+  settledWorkouts(): ReadonlyMap<string, number> {
+    return this.#settled;
+  }
+
+  /**
+   * The newest settle's sequence number. A what's-next read records it when
+   * it starts; every workout settled after that is newer than the read.
+   */
+  settledMark(): number {
+    return this.#settles;
+  }
+
   /**
    * Starts `workoutId` (operations.md §4.2): one session, no exercises, no
    * sets. Uses the prefetched context, so it works offline; online, a workout
    * that was never prefetched is fetched first. Starting a workout that
-   * already has a local in-progress session returns that one instead.
+   * already has a local in-progress session returns that one instead, even
+   * when the two calls overlap (`#serial`).
    */
-  async start(workoutId: string): Promise<string> {
+  start(workoutId: string): Promise<string> {
+    return this.#serial(workoutId, () => this.#start(workoutId));
+  }
+
+  async #start(workoutId: string): Promise<string> {
     const userId = this.#requireUser();
     const existing = [...this.#records.values()].find(
       (r) =>
@@ -187,6 +236,73 @@ export class SessionStore {
   }
 
   /**
+   * Skips `workoutId` before it starts (operations.md 4.14; design D15 of
+   * step-4a): one SKIPPED session, minted here, queued in its own lane like
+   * a start, so it works offline. The record resolves the workout on this
+   * device at once; the server rolls the program over when the skip
+   * arrives. A workout this device has already started, finished or skipped
+   * is refused (a started one is finished instead); skipping the same
+   * workout twice, overlapping or not, returns the first skip.
+   */
+  skip(workoutId: string): Promise<string> {
+    return this.#serial(workoutId, () => this.#skip(workoutId));
+  }
+
+  async #skip(workoutId: string): Promise<string> {
+    const userId = this.#requireUser();
+    const existing = [...this.#records.values()].find(
+      (r) => r.workoutId === workoutId && r.userId === userId,
+    );
+    if (existing?.status === "SKIPPED") return existing.sessionId;
+    if (existing) {
+      const name = existing.context.workout.name;
+      throw new LocalSessionError(
+        "already-started",
+        existing.status === "IN_PROGRESS"
+          ? `${name} is already started, so it can't be skipped. Finish it instead.`
+          : `${name} is already done, so it can't be skipped.`,
+      );
+    }
+
+    let context: WorkoutContextResponse;
+    try {
+      context = await this.options.contexts.ensure(workoutId, userId);
+    } catch (error) {
+      throw new LocalSessionError(
+        "no-context",
+        "This workout wasn't saved to the device before the signal dropped. Skip it once you're back online.",
+        { cause: error },
+      );
+    }
+
+    const sessionId = newId();
+    const performedAt = this.#now().toISOString();
+    const body = skipWorkoutRequest.parse({ sessionId, performedAt });
+    const record: LocalSession = {
+      sessionId,
+      userId,
+      workoutId,
+      performedAt,
+      status: "SKIPPED",
+      finishedAt: performedAt,
+      context,
+      exercises: [],
+    };
+    await this.#commit(record, {
+      op: "skip",
+      request: {
+        method: "POST",
+        path: `/api/workouts/${encodeURIComponent(workoutId)}/skip`,
+        body,
+      },
+      sessionId,
+      affects: [sessionId],
+      userId,
+    });
+    return sessionId;
+  }
+
+  /**
    * Logs a set against a planned exercise (§4.3-4.4). The first set mints the
    * session exercise too; both travel in one request (design D5). The unit is
    * resolved here, override first.
@@ -207,12 +323,21 @@ export class SessionStore {
           "That exercise isn't part of this workout.",
         );
       }
+      // A placeholder slot has no exercise to log against until 4c fills
+      // it, and the logger takes weight and reps only (design D12).
+      const exerciseId = planned.exerciseId;
+      if (exerciseId === null || !isLoggable(planned)) {
+        throw new LocalSessionError(
+          "not-loggable",
+          "Logging this slot isn't available yet.",
+        );
+      }
       const entry: LocalSessionExercise = record.exercises.find(
         (e) => e.plannedExerciseId === planned.plannedExerciseId,
       ) ?? {
         id: minted,
         plannedExerciseId: planned.plannedExerciseId,
-        exerciseId: planned.exerciseId,
+        exerciseId,
         position: planned.position,
         sets: [],
       };
@@ -221,7 +346,7 @@ export class SessionStore {
         setNumber: entry.sets.length + 1,
         reps: input.reps,
         weight: input.weight,
-        weightUnit: resolveUnit(record.context.units, planned.exerciseId),
+        weightUnit: resolveUnit(record.context.units, exerciseId),
         loggedAt: this.#now().toISOString(),
       };
       const body = logSetRequest.parse({
@@ -339,7 +464,7 @@ export class SessionStore {
     await this.#mutate(
       sessionId,
       (record) =>
-        record.status === "FINISHED"
+        record.status !== "IN_PROGRESS"
           ? { record, item: null }
           : {
               record: {
@@ -413,10 +538,13 @@ export class SessionStore {
     this.#setRecord(record);
   }
 
-  /** The queue's ack hook: a finished, fully delivered session is dropped. */
+  /**
+   * The queue's ack hook: a finished or skipped, fully delivered session is
+   * dropped, and its workout remembered as settled (`#settled`).
+   */
   async acknowledged(item: QueueItem): Promise<void> {
     const record = this.#records.get(item.sessionId);
-    if (record?.status !== "FINISHED") return;
+    if (!record || !isResolved(record)) return;
     const tx = this.db.transaction(["sessions", "queue"], "readwrite");
     const remaining = (await tx.objectStore("queue").getAll()).some(
       (i) => i.sessionId === item.sessionId,
@@ -426,6 +554,11 @@ export class SessionStore {
     if (!remaining) {
       const next = new Map(this.#records);
       next.delete(item.sessionId);
+      this.#settles += 1;
+      this.#settled = new Map(this.#settled).set(
+        record.workoutId,
+        this.#settles,
+      );
       this.#records = next;
       this.#emit();
     }
@@ -453,6 +586,19 @@ export class SessionStore {
     this.#emit();
   }
 
+  /** Runs `work` after every earlier start or skip of `workoutId` settles. */
+  #serial<T>(workoutId: string, work: () => Promise<T>): Promise<T> {
+    const before = this.#byWorkout.get(workoutId) ?? Promise.resolve();
+    const run = before.then(work, work);
+    this.#byWorkout.set(workoutId, run);
+    const release = () => {
+      if (this.#byWorkout.get(workoutId) === run)
+        this.#byWorkout.delete(workoutId);
+    };
+    run.then(release, release);
+    return run;
+  }
+
   async #mutate(
     sessionId: string,
     change: (record: LocalSession) => Change,
@@ -470,7 +616,7 @@ export class SessionStore {
           "That workout isn't on this device.",
         );
       }
-      if (record.status === "FINISHED" && !allowFinished) {
+      if (isResolved(record) && !allowFinished) {
         throw new LocalSessionError(
           "finished",
           "This workout is finished; its sets can't change.",

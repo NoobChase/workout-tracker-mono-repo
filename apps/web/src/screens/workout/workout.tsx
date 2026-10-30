@@ -1,53 +1,53 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { AppHeader } from "../app/app-header.js";
+import { AppHeader } from "../../app/app-header.js";
 import {
   useOnline,
   useSessionDetail,
   useSessionRecord,
   useWorkoutActions,
-} from "../data/hooks.js";
+} from "../../data/hooks.js";
+import { nameOf } from "../../local/loggable.js";
 import type {
   ExerciseView,
   SessionView,
   SetView,
-} from "../local/session-view.js";
-import type { RowSyncState } from "../local/sync-state.js";
-import { errorText } from "./errors.js";
+} from "../../local/session-view.js";
+import type { RowSyncState } from "../../local/sync-state.js";
+import { errorText } from "../errors.js";
 import {
   formatDay,
   plural,
+  repRange,
   repRangeOf,
   targetSets,
   unitLabel,
-} from "./format.js";
-import { Button } from "@/ui/button";
+} from "../format.js";
+import { EditSetSheet, FinishDialog } from "./dialogs.js";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/ui/dialog";
+  defaultCurrent,
+  effortAt,
+  exerciseStatus,
+  MAX_REPS,
+  MAX_WEIGHT,
+  prescribedWeight,
+  seed,
+  WEIGHT_STEP,
+  type Values,
+} from "./plan.js";
+import { SlotTitle, StopgapExercise } from "./stopgap.js";
+import { Button } from "@/ui/button";
 import { NumberStepper } from "@/ui/number-stepper";
 import {
   BlankFigure,
+  EffortTarget,
   SetFigures,
   SetLog,
   SetRow,
   type QueuedReason,
   type SetStatus,
 } from "@/ui/set-row";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/ui/sheet";
 import { toast } from "@/ui/toaster";
 
 /*
@@ -59,13 +59,12 @@ import { toast } from "@/ui/toaster";
  * Which exercise is current lives in the URL (`?ex=`), so skipping (which
  * writes nothing) survives a reload, and `?set=` opens a set from the sync
  * band ("Show set").
+ *
+ * Slots the logger can't log yet (step 4a D12: a placeholder, or metrics
+ * other than exactly weight and reps) are shown in their place with their
+ * target sets, "Logging this arrives soon" and Skip, and take no sets; they
+ * don't count toward the sets left.
  */
-
-type Values = { weight: number | null; reps: number | null };
-
-const STEP = { LB: 5, KG: 2.5 } as const;
-const MAX_WEIGHT = { LB: 2000, KG: 1000 } as const;
-const MAX_REPS = 100;
 
 const ROW_STATUS: Record<
   RowSyncState,
@@ -87,43 +86,6 @@ export function WorkoutScreen() {
       {view ? <Workout view={view} /> : <NotOnDevice sessionId={sessionId} />}
     </>
   );
-}
-
-/**
- * The seed for the next set. Weight: the last set logged that the server
- * hasn't refused (a rejected number is never offered again), else last
- * time's same set, else its first, else blank. Reps: never below the plan's
- * floor for this set: the higher of last time's same set and the floor;
- * with no floor, last time's same set, else the last good set, else the
- * plan's ceiling.
- */
-export function seed(exercise: ExerciseView): Values {
-  const good = exercise.sets.filter((s) => s.sync.state !== "rejected").at(-1);
-  const n = exercise.sets.length + 1;
-  const last = exercise.planned.lastTime?.sets;
-  const sameSet = last?.find((s) => s.setNumber === n);
-  const plan =
-    exercise.planned.plannedSets.find((s) => s.setNumber === n) ??
-    exercise.planned.plannedSets[0];
-  return {
-    weight: good?.weight ?? sameSet?.weight ?? last?.[0]?.weight ?? null,
-    reps:
-      plan?.repsMin != null
-        ? Math.max(sameSet?.reps ?? 0, plan.repsMin)
-        : (sameSet?.reps ?? good?.reps ?? plan?.repsMax ?? null),
-  };
-}
-
-/** Where to pick up: the exercise in progress, else the one after the last touched. */
-function defaultCurrent(exercises: ExerciseView[]): number {
-  let lastTouched = -1;
-  exercises.forEach((e, i) => {
-    if (e.sets.length > 0) lastTouched = i;
-  });
-  if (lastTouched < 0) return 0;
-  const touched = exercises[lastTouched]!;
-  if (touched.sets.length < targetSets(touched.planned)) return lastTouched;
-  return Math.min(lastTouched + 1, exercises.length - 1);
 }
 
 function Workout({ view }: { view: SessionView }) {
@@ -193,9 +155,11 @@ function Workout({ view }: { view: SessionView }) {
         .find((x) => x.set.id === editing.id)
     : undefined;
 
-  const planned = exercises.reduce((n, e) => n + targetSets(e.planned), 0);
+  // Sets the logger can't take yet don't count as left to do.
+  const loggable = exercises.filter((e) => e.loggable);
+  const planned = loggable.reduce((n, e) => n + targetSets(e.planned), 0);
   const logged = exercises.reduce((n, e) => n + e.sets.length, 0);
-  const left = exercises.reduce(
+  const left = loggable.reduce(
     (n, e) => n + Math.max(0, targetSets(e.planned) - e.sets.length),
     0,
   );
@@ -233,7 +197,16 @@ function Workout({ view }: { view: SessionView }) {
       </div>
 
       <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
-        {current ? (
+        {current && !current.loggable ? (
+          <StopgapExercise
+            key={current.planned.plannedExerciseId}
+            exercise={current}
+            next={exercises[currentIndex + 1] ?? null}
+            inProgress={inProgress}
+            onNext={() => goTo(currentIndex + 1)}
+            onFinish={() => setFinishing(true)}
+          />
+        ) : current ? (
           <LiveExercise
             key={current.planned.plannedExerciseId}
             sessionId={view.sessionId}
@@ -362,6 +335,9 @@ function LiveExercise({
   const n = exercise.sets.length + 1;
   const reps = repRangeOf(planned, n);
   const last = planned.lastTime;
+  const thisSet = planned.plannedSets.find((s) => s.setNumber === n);
+  const thisRange = thisSet ? repRange(thisSet.repsMin, thisSet.repsMax) : null;
+  const effort = effortAt(planned, n);
 
   async function logSet() {
     if (logging.current) return;
@@ -452,6 +428,30 @@ function LiveExercise({
               ) : null}
             </dd>
           </div>
+          {inProgress && thisSet && (effort || thisSet.weight !== null) ? (
+            <div className="flex flex-wrap gap-x-2">
+              <dt className="text-muted-foreground">
+                Set <span className="num">{n}</span>
+              </dt>
+              <dd className="flex flex-wrap items-baseline gap-x-1.5 text-foreground">
+                {thisSet.weight !== null ? (
+                  // The set grammar, with the plan's rep range where it
+                  // has one.
+                  <SetFigures
+                    weight={thisSet.weight}
+                    reps={thisRange ?? undefined}
+                    unit={unitLabel(thisSet.weightUnit ?? exercise.unit)}
+                    className="text-sm"
+                  />
+                ) : thisRange ? (
+                  <span>
+                    <span className="num">{thisRange}</span> reps
+                  </span>
+                ) : null}
+                {effort ? <EffortTarget target={effort} /> : null}
+              </dd>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-x-2">
             <dt className="text-muted-foreground">
               {last ? `Last time, ${formatDay(last.performedAt)}` : "Last time"}
@@ -476,7 +476,7 @@ function LiveExercise({
             label="Weight"
             unit={unit}
             decimal
-            step={STEP[exercise.unit]}
+            step={WEIGHT_STEP[exercise.unit]}
             max={MAX_WEIGHT[exercise.unit]}
             value={values.weight}
             onValueChange={(weight) => change({ ...values, weight })}
@@ -516,7 +516,7 @@ function LiveExercise({
           {next ? (
             <Button size="md" className="w-full" onClick={onNext}>
               {exercise.sets.length === 0 ? "Skip to" : "Next:"}{" "}
-              {next.planned.name}
+              {nameOf(next.planned)}
               <ArrowRight aria-hidden="true" strokeWidth={1.75} />
             </Button>
           ) : (
@@ -581,19 +581,13 @@ function ExerciseLog({
   const target = targetSets(planned);
   const unit = unitLabel(exercise.unit);
   const nextNumber = sets.length + 1;
-  const showLive = current && inProgress;
+  const showLive = current && inProgress && exercise.loggable;
   const plannedAfter = showLive
     ? Array.from(
         { length: Math.max(0, target - nextNumber) },
         (_, i) => nextNumber + 1 + i,
       )
     : [];
-  const state =
-    sets.length > 0
-      ? `${sets.length} of ${target} ${plural(target, "set")}`
-      : passed || !inProgress
-        ? "skipped"
-        : `${target} ${plural(target, "set")} planned`;
 
   return (
     <li className="flex flex-col">
@@ -611,19 +605,19 @@ function ExerciseLog({
           <span
             className={
               current
-                ? "text-[15px] font-semibold text-foreground"
-                : "text-[15px] font-semibold text-muted-foreground"
+                ? "flex min-w-0 items-center gap-2 text-[15px] font-semibold text-foreground"
+                : "flex min-w-0 items-center gap-2 text-[15px] font-semibold text-muted-foreground"
             }
           >
-            {planned.name}
+            <SlotTitle planned={planned} />
           </span>
           <span className="text-[13px] whitespace-nowrap text-muted-foreground">
-            {state}
+            {exerciseStatus(exercise, { passed, inProgress })}
           </span>
         </button>
       </h3>
       {sets.length > 0 || showLive ? (
-        <SetLog aria-label={`${planned.name} sets`} className="border-t-0">
+        <SetLog aria-label={`${nameOf(planned)} sets`} className="border-t-0">
           {sets.map((set) => (
             <LoggedRow
               key={`n-${set.setNumber}`}
@@ -640,16 +634,18 @@ function ExerciseLog({
               reps={live.reps}
               unit={unit}
               status="live"
+              target={effortAt(planned, nextNumber)}
             />
           ) : null}
           {plannedAfter.map((n) => (
             <SetRow
               key={`n-${n}`}
               index={n}
-              weight={live.weight}
+              weight={prescribedWeight(exercise, n) ?? live.weight}
               reps={live.reps}
               unit={unit}
               status="planned"
+              target={effortAt(planned, n)}
             />
           ))}
         </SetLog>
@@ -684,226 +680,6 @@ function LoggedRow({
 }
 
 /**
- * Correct a set's numbers, or delete it. Its number and stamped unit stay;
- * deleting renumbers the sets after it, which the confirmation says first.
- */
-function EditSetSheet({
-  sessionId,
-  target,
-  open,
-  onClose,
-}: {
-  sessionId: string;
-  target: { set: SetView; exercise: ExerciseView } | null;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const actions = useWorkoutActions();
-  // The set as it was when the sheet opened: a delete removes it from the
-  // record while the sheet is still leaving.
-  const [snapshot] = useState(target);
-  const [weight, setWeight] = useState(target?.set.weight ?? 0);
-  const [reps, setReps] = useState(target?.set.reps ?? 0);
-  const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  if (!snapshot) return null;
-  const { set, exercise } = snapshot;
-  const unit = unitLabel(set.weightUnit);
-  const after = exercise.sets.filter((s) => s.setNumber > set.setNumber);
-
-  async function run(op: () => Promise<void>) {
-    setError(null);
-    try {
-      await op();
-      onClose();
-    } catch (e) {
-      setError(errorText(e, "continue"));
-    }
-  }
-
-  return (
-    <Sheet open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>
-            Set {set.setNumber} of {exercise.planned.name}
-          </SheetTitle>
-          <SheetDescription>
-            For this workout only. The plan stays the plan.
-          </SheetDescription>
-        </SheetHeader>
-        {confirming ? (
-          <div className="flex flex-col gap-4">
-            <p className="text-[15px] text-foreground">
-              Delete set <span className="num">{set.setNumber}</span>,{" "}
-              <SetFigures weight={set.weight} reps={set.reps} unit={unit} />?{" "}
-              {after.length > 0 ? (
-                <span className="text-muted-foreground">
-                  {after.length === 1 ? "Set " : "Sets "}
-                  <span className="num">
-                    {after.map((s) => s.setNumber).join(", ")}
-                  </span>{" "}
-                  {after.length === 1 ? "becomes " : "become "}
-                  <span className="num">
-                    {after.map((s) => s.setNumber - 1).join(", ")}
-                  </span>
-                  .
-                </span>
-              ) : exercise.sets.length === 1 ? (
-                <span className="text-muted-foreground">
-                  It’s the only one, so {exercise.planned.name} will read as
-                  skipped.
-                </span>
-              ) : null}
-            </p>
-            <div className="flex flex-col gap-2 sm:flex-row-reverse">
-              <Button
-                variant="destructive"
-                size="log"
-                className="w-full sm:flex-1"
-                onClick={() =>
-                  void run(() => actions.deleteSet(sessionId, set.id))
-                }
-              >
-                Delete set {set.setNumber}
-              </Button>
-              <Button
-                size="log"
-                className="w-full sm:flex-1"
-                onClick={() => setConfirming(false)}
-              >
-                Keep it
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <NumberStepper
-              label="Weight"
-              unit={unit}
-              decimal
-              step={STEP[set.weightUnit]}
-              max={MAX_WEIGHT[set.weightUnit]}
-              value={weight}
-              onValueChange={setWeight}
-            />
-            <NumberStepper
-              label="Reps"
-              unit="reps"
-              step={1}
-              max={MAX_REPS}
-              value={reps}
-              onValueChange={setReps}
-            />
-            <Button
-              variant="primary"
-              size="log"
-              className="mt-2 w-full"
-              onClick={() =>
-                void run(() =>
-                  actions.editSet(sessionId, set.id, { weight, reps }),
-                )
-              }
-            >
-              Save set {set.setNumber}
-            </Button>
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={() => setConfirming(true)}
-            >
-              Delete set {set.setNumber}
-            </Button>
-          </div>
-        )}
-        {error ? (
-          <p role="alert" className="text-sm text-danger">
-            {error}
-          </p>
-        ) : null}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function FinishDialog({
-  open,
-  onOpenChange,
-  workoutName,
-  logged,
-  planned,
-  left,
-  online,
-  onFinish,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  workoutName: string;
-  logged: number;
-  planned: number;
-  left: number;
-  online: boolean;
-  onFinish: () => Promise<void>;
-}) {
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const short = left > 0;
-
-  async function finish() {
-    setError(null);
-    setBusy(true);
-    try {
-      await onFinish();
-    } catch (e) {
-      setError(errorText(e, "continue"));
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {short
-              ? `Finish with ${left} ${plural(left, "set")} left?`
-              : `Finish ${workoutName}?`}
-          </DialogTitle>
-          <DialogDescription>
-            {logged === 0
-              ? "Nothing is logged yet. Finishing records the workout as done, with no sets."
-              : short
-                ? `${logged} of ${planned} planned sets are logged. The sets you didn’t do stay unlogged, and your program doesn’t change.`
-                : "Every planned set is logged."}
-            {online
-              ? ""
-              : " No signal: the finish waits in line behind your sets and syncs when you’re back."}
-          </DialogDescription>
-        </DialogHeader>
-        {error ? (
-          <p role="alert" className="text-sm text-danger">
-            {error}
-          </p>
-        ) : null}
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button>Keep training</Button>
-          </DialogClose>
-          <Button
-            variant="primary"
-            loading={busy}
-            onClick={() => void finish()}
-          >
-            Finish workout
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/**
  * No record on this device: started elsewhere (offer to continue it here,
  * online), already finished and synced (point to history), or unknown.
  */
@@ -920,7 +696,7 @@ function NotOnDevice({ sessionId }: { sessionId: string }) {
     setBusy(true);
     setError(null);
     try {
-      await actions.adopt({ sessionId, workoutId: session.workoutId });
+      await actions.ensureOnDevice({ sessionId, workoutId: session.workoutId });
     } catch (e) {
       setError(errorText(e, "continue"));
       setBusy(false);

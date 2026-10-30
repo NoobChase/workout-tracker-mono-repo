@@ -8,8 +8,11 @@ lives in the service layer, queries in `packages/db` (root `CLAUDE.md`).
 - `src/app.ts` — `createApp(deps)`: every route and the auth wiring. Takes its
   dependencies as an argument so tests run the real app with fakes.
 - `src/training.ts` — the step 3 routes (templates, what's next, sessions,
-  sets, history). `src/services.ts` types the injected service functions
-  (`deps.services`) and `deps.database()`, so tests fake the services.
+  sets, history) and the workout skip. `src/catalog.ts` (exercises) and
+  `src/programs.ts` (programs, cycles, apply preview, lifecycle) are step 4a's.
+  `src/request.ts` holds the shared `parse`/`json`/`callerOf` helpers.
+  `src/services.ts` types the injected service functions (`deps.services`) and
+  `deps.database()` as `ApiDeps`, so tests fake the services.
 - `src/deps.ts` — the production dependencies (Clerk, Neon, SSM, Secrets
   Manager). The only file that reads the `CLERK_*` and `ORIGIN_*` env vars.
 - `src/lambda.ts` — `handle(createApp(productionDeps()))`, nothing else.
@@ -29,7 +32,7 @@ lives in the service layer, queries in `packages/db` (root `CLAUDE.md`).
   unknown paths get 401, not 404.
 - `c.get("user")` is `{ id, subStatus }` — `id` is `users.id`, the thing every
   query is scoped by. Never pass the Clerk id further than identity resolution.
-- `requirePro` is on every mutating route (`src/training.ts`, per route),
+- `requirePro` is on every mutating route (per route, in each route file),
   `/analytics/*` and the MCP tools (step 6); lapsed accounts are read-only
   (`data-model.md` §3.8), so a read never carries it. It stays inert until
   step 5 only because of `BILLING_NOT_LIVE`. Moving a feature across the line

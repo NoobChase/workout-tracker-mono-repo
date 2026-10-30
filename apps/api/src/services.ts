@@ -3,8 +3,8 @@ import type * as serviceLayer from "@workout-tracker/services";
 
 /**
  * The service functions the routes call. Injected rather than imported by
- * `training.ts` so route tests can fake them without a database; production
- * passes the real module (`deps.ts`).
+ * the route files so route tests can fake them without a database;
+ * production passes the real module (`deps.ts`).
  */
 export type Services = Pick<
   typeof serviceLayer,
@@ -19,9 +19,28 @@ export type Services = Pick<
   | "editSet"
   | "deleteSet"
   | "getWorkoutHistory"
+  | "skipWorkout"
+  | "listExercises"
+  | "createExercise"
+  | "editExercise"
+  | "saveExerciseNotes"
+  | "retireExercise"
+  | "reactivateExercise"
+  | "listPrograms"
+  | "createProgram"
+  | "getProgram"
+  | "getCycle"
+  | "renameProgram"
+  | "copyProgram"
+  | "activateProgram"
+  | "archiveProgram"
+  | "extendProgram"
+  | "getApplyPreview"
+  | "saveCycle"
 >;
 
-export interface TrainingDeps {
+/** What every route file needs: a database handle and the services. */
+export interface ApiDeps {
   database(): Promise<Db>;
   services: Services;
 }

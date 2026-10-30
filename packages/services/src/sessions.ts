@@ -1,15 +1,15 @@
 // Training a session: the offline operations (operations.md 0.3) -- start
-// (4.2), log (4.3-4.4), edit (4.15), delete (4.16), finish (4.13). Each is one
-// transaction, and each is safe to replay: the queue delivers at least once.
+// (4.2), log (4.3-4.4), edit (4.15), delete (4.16), finish (4.13) and skip the
+// whole workout (4.14). Each is one transaction, and each is safe to replay:
+// the queue delivers at least once.
 //
 // Client-minted ids are inserted `ON CONFLICT (id) DO NOTHING` and then
 // re-read through `userScope`, so an id that collides with another user's row
 // is a conflict rather than a silent "success" (packages/db/CLAUDE.md).
-import { and, desc, eq, notExists, sql } from "drizzle-orm";
+import { and, eq, ne, notExists, sql } from "drizzle-orm";
 import {
   assertExercisesUsable,
   assertOwned,
-  clonePlan,
   plannedExercises,
   sessionExercises,
   sessionSets,
@@ -17,29 +17,24 @@ import {
   userScope,
   users,
   workoutPlans,
-  workoutPrograms,
   workoutSessions,
   workouts,
   type Db,
   type Tx,
   type UserId,
 } from "@workout-tracker/db";
-import {
-  newId,
-  type EditSetRequest,
-  type FinishWorkoutResponse,
-  type LogSetRequest,
-  type StartWorkoutRequest,
-  type WeightUnit,
+import type {
+  EditSetRequest,
+  FinishWorkoutResponse,
+  LogSetRequest,
+  SkippedSession,
+  SkipWorkoutInput,
+  StartWorkoutRequest,
+  WeightUnit,
 } from "@workout-tracker/shared";
 import { conflict, invalid, notFound, transact } from "./errors";
-import {
-  loggedSetColumns,
-  resolvingSession,
-  toIso,
-  toLoggedSet,
-  type LoggedSet,
-} from "./rows";
+import { advanceProgram, lockProgram } from "./plan";
+import { loggedSetColumns, toIso, toLoggedSet, type LoggedSet } from "./rows";
 
 export interface StartedSession {
   id: string;
@@ -338,100 +333,133 @@ export async function finishWorkout(
       return { sessionId, status: "COMPLETED", extended: false };
     }
 
+    // The roll-over (operations.md 4.13) for the program the workout belongs
+    // to, under the program lock.
+    const programId =
+      finished.workoutId === null
+        ? undefined
+        : await programOfWorkout(tx, user, finished.workoutId);
     const extended =
-      finished.workoutId !== null &&
-      (await advanceProgram(tx, user, finished.workoutId));
+      programId !== undefined && (await advanceProgram(tx, user, programId));
     return { sessionId, status: "COMPLETED", extended };
   });
 }
 
 /**
- * The exhaustion check and its consequence (operations.md 4.13). Returns
- * whether a cycle was added.
+ * Skips a whole workout before it starts (POST /workouts/:id/skip;
+ * operations.md 4.14; design D15 of step-4a). Writes one SKIPPED
+ * `workout_sessions` row with the client-minted `sessionId` and nothing else,
+ * then runs the finish's roll-over under the same program lock, so skipping
+ * a cycle's last workout extends an open-ended program or completes a fixed
+ * one exactly as finishing it would.
  *
- * The program row is locked first. Without it, two sessions finishing the
- * last two unresolved workouts concurrently would each see the other's as
- * unresolved and neither would extend, leaving an ACTIVE program with nothing
- * next. With it they serialize, and the second sees the first's commit.
+ * Refused (`conflict`, naming the workout) when the workout already has any
+ * session: a started one is finished, not skipped, and a resolved one needs
+ * no skip. A replay -- the same id for the same workout -- returns the stored
+ * session and writes nothing; the id anywhere else is a `conflict`.
+ *
+ * Locks the program, then the workout, in saveCycle's order. A start inserts
+ * its session under a key-share lock on the workout, so holding the workout
+ * `FOR UPDATE` makes "no other session" stay true until COMMIT.
  */
-async function advanceProgram(
+export async function skipWorkout(
+  db: Db,
+  user: UserId,
+  input: SkipWorkoutInput,
+): Promise<SkippedSession> {
+  const scope = userScope(user);
+  return transact(db, async (tx) => {
+    const programId = await programOfWorkout(tx, user, input.workoutId);
+    if (!programId) throw notFound("That workout doesn't exist.");
+    await lockProgram(tx, user, programId);
+    const [workout] = await tx
+      .select({ name: workouts.name })
+      .from(workouts)
+      .where(and(scope.workouts, eq(workouts.id, input.workoutId)))
+      .for("update");
+    if (!workout) throw notFound("That workout doesn't exist.");
+
+    const [other] = await tx
+      .select({ status: workoutSessions.status })
+      .from(workoutSessions)
+      .where(
+        and(
+          scope.workoutSessions,
+          eq(workoutSessions.workoutId, input.workoutId),
+          ne(workoutSessions.id, input.sessionId),
+        ),
+      )
+      .limit(1);
+    if (other) throw conflict(alreadyHasSession(workout.name, other.status));
+
+    const inserted = await tx
+      .insert(workoutSessions)
+      .values({
+        id: input.sessionId,
+        userId: user,
+        workoutId: input.workoutId,
+        performedAt: new Date(input.performedAt),
+        status: "SKIPPED",
+      })
+      .onConflictDoNothing({ target: workoutSessions.id })
+      .returning({ id: workoutSessions.id });
+
+    const [row] = await tx
+      .select({
+        id: workoutSessions.id,
+        workoutId: workoutSessions.workoutId,
+        status: workoutSessions.status,
+        performedAt: workoutSessions.performedAt,
+      })
+      .from(workoutSessions)
+      .where(
+        and(scope.workoutSessions, eq(workoutSessions.id, input.sessionId)),
+      );
+    if (row?.workoutId !== input.workoutId) {
+      throw conflict("That session id is already in use.");
+    }
+    if (row.status !== "SKIPPED") {
+      throw conflict(alreadyHasSession(workout.name, row.status));
+    }
+
+    // Only the call that wrote the row rolls the program over: a replay adds
+    // nothing, as a replayed finish adds nothing.
+    if (inserted.length > 0) await advanceProgram(tx, user, programId);
+    return {
+      id: row.id,
+      workoutId: row.workoutId,
+      status: row.status,
+      performedAt: toIso(row.performedAt),
+    };
+  });
+}
+
+function alreadyHasSession(
+  workoutName: string,
+  status: "IN_PROGRESS" | "COMPLETED" | "SKIPPED",
+): string {
+  switch (status) {
+    case "IN_PROGRESS":
+      return `${workoutName} is already started, so it can't be skipped. Finish it instead.`;
+    case "COMPLETED":
+      return `${workoutName} is already done, so it can't be skipped.`;
+    case "SKIPPED":
+      return `${workoutName} is already skipped.`;
+  }
+}
+
+/** The program a workout belongs to, or undefined if it is not the user's. */
+async function programOfWorkout(
   tx: Tx,
   user: UserId,
   workoutId: string,
-): Promise<boolean> {
-  const scope = userScope(user);
+): Promise<string | undefined> {
   const [owner] = await tx
     .select({ programId: workoutPlans.programId })
     .from(workouts)
     .innerJoin(workoutPlans, eq(workoutPlans.id, workouts.planId))
-    .where(and(scope.workouts, eq(workouts.id, workoutId)));
-  if (!owner) return false;
-
-  const [program] = await tx
-    .select({
-      status: workoutPrograms.status,
-      targetCycles: workoutPrograms.targetCycles,
-    })
-    .from(workoutPrograms)
-    .where(and(scope.workoutPrograms, eq(workoutPrograms.id, owner.programId)))
-    .for("update");
-  // Only an ACTIVE program advances. An ARCHIVED one was abandoned, not
-  // finished (operations.md 3.10): a late session under it (say, started
-  // offline from a cached workout) completes, but never extends the program
-  // or marks it COMPLETED.
-  if (program?.status !== "ACTIVE") return false;
-
-  const [unresolved] = await tx
-    .select({ id: workouts.id })
-    .from(workouts)
-    .innerJoin(workoutPlans, eq(workoutPlans.id, workouts.planId))
-    .where(
-      and(
-        scope.workouts,
-        eq(workoutPlans.programId, owner.programId),
-        notExists(resolvingSession(tx, scope)),
-      ),
-    )
-    .limit(1);
-  if (unresolved) return false;
-
-  if (program.targetCycles !== null) {
-    // Fixed length, and its last cycle is trained: the one place COMPLETED is
-    // written for a program (operations.md 3.10).
-    await tx
-      .update(workoutPrograms)
-      .set({ status: "COMPLETED" })
-      .where(
-        and(scope.workoutPrograms, eq(workoutPrograms.id, owner.programId)),
-      );
-    return false;
-  }
-
-  // Open-ended: extend by one cycle, cloned from the highest-numbered one so
-  // edits along the way carry forward (operations.md 3.12).
-  const [source] = await tx
-    .select({
-      id: workoutPlans.id,
-      cycleNumber: workoutPlans.cycleNumber,
-      name: workoutPlans.name,
-      notes: workoutPlans.notes,
-    })
-    .from(workoutPlans)
-    .where(and(scope.workoutPlans, eq(workoutPlans.programId, owner.programId)))
-    .orderBy(desc(workoutPlans.cycleNumber))
-    .limit(1);
-  if (!source) return false;
-  await clonePlan(tx, user, {
-    sourcePlanId: source.id,
-    target: {
-      programId: owner.programId,
-      newPlanId: newId(),
-      cycleNumber: source.cycleNumber + 1,
-      name: source.name,
-      notes: source.notes,
-    },
-  });
-  return true;
+    .where(and(userScope(user).workouts, eq(workouts.id, workoutId)));
+  return owner?.programId;
 }
 
 /** A set this user owns, or undefined. */

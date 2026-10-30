@@ -2,6 +2,7 @@ import type {
   WeightUnit,
   WorkoutContextResponse,
 } from "@workout-tracker/shared";
+import { isLoggable } from "./loggable.js";
 import type { LocalSession, LocalSet } from "./sessions.js";
 import { rowSync, type RowSync } from "./sync-state.js";
 import { resolveUnit } from "./units.js";
@@ -15,6 +16,11 @@ export interface SetView extends LocalSet {
 export interface ExerciseView {
   /** The plan: targets, rep ranges and last time's numbers (design D9). */
   planned: PlannedExercise;
+  /**
+   * The logger takes sets for it (`isLoggable`, step 4a D12); otherwise it
+   * shows in place as "Logging this arrives soon" and counts for nothing.
+   */
+  loggable: boolean;
   /** The unit the next set will be stamped with, override first. */
   unit: WeightUnit;
   /** `null` until the first set: no row means skipped. */
@@ -56,6 +62,7 @@ export function buildSessionView(
         );
         return {
           planned,
+          loggable: isLoggable(planned),
           unit: resolveUnit(record.context.units, planned.exerciseId),
           sessionExerciseId: entry?.id ?? null,
           sets: (entry?.sets ?? []).map((s) => ({
